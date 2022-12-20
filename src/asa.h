@@ -55,6 +55,16 @@ int is_leaf(NodeTag tag);
 
 
 /**
+ * Les types d'opérateurs.
+ */
+typedef enum {
+	Arithmetic,
+	Comparative,
+	Logic
+} OpKind;
+
+
+/**
  * Un opérateur binaire.
  */
 typedef enum {
@@ -69,7 +79,11 @@ typedef enum {
 	OpLe,
 	OpLt,
 	OpEq,
-	OpNe
+	OpNe,
+	
+	OpAnd,
+	OpOr,
+	OpXor
 } BinaryOp;
 
 /**
@@ -77,12 +91,25 @@ typedef enum {
  */
 const char* binop_symbol(BinaryOp binop);
 
+/**
+ * Renvoie le type d'un opérateur binaire.
+ */
+OpKind binop_kind(BinaryOp binop);
+
 
 /**
  * Un opérateur unaire.
  */
 typedef enum {
-	OpNeg
+	/**
+	 * La négation arithmétique.
+	 */
+	OpNeg,
+	
+	/**
+	 * La négation logique.
+	 */
+	OpNot
 } UnaryOp;
 
 /**

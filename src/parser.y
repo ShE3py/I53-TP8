@@ -30,9 +30,14 @@
 %type <nval> Expr
 %type <nval> IntExpr IntValue
 %type <nval> CmpExpr
+%type <nval> BoolExpr
 
 // Opérateurs
 %right Assign
+
+%left Or Xor
+%left And
+%left Not
 
 %left Ge Gt Le Lt Eq Ne
 
@@ -64,8 +69,9 @@ Statement:
 ;
 
 Expr:
-  IntExpr { $$ = $1; }
-| CmpExpr { $$ = $1; }
+  IntExpr  { $$ = $1; }
+| CmpExpr  { $$ = $1; }
+| BoolExpr { $$ = $1; }
 ;
 
 IntExpr:
@@ -92,6 +98,15 @@ CmpExpr:
 | IntExpr Lt IntExpr { $$ = create_binop_node(OpLt, $1, $3); }
 | IntExpr Eq IntExpr { $$ = create_binop_node(OpEq, $1, $3); }
 | IntExpr Ne IntExpr { $$ = create_binop_node(OpNe, $1, $3); }
+;
+
+BoolExpr:
+  BoolExpr And BoolExpr                     { $$ = create_binop_node(OpAnd, $1, $3); }
+| BoolExpr Or BoolExpr                      { $$ = create_binop_node(OpOr, $1, $3); }
+| BoolExpr Xor BoolExpr                     { $$ = create_binop_node(OpXor, $1, $3); }
+| Not BoolExpr                              { $$ = create_unop_node(OpNot, $2); }
+| CmpExpr                                   { $$ = $1; }
+| LeftParenthesis BoolExpr RightParenthesis { $$ = $2; }
 ;
 
 %%
