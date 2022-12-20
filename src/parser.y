@@ -1,10 +1,7 @@
 %{
-  #include <stdio.h>
-  #include <ctype.h>
-  #include <unistd.h>
-  
-  #include "asa.h"
   #include "ts.h"
+  #include "asa.h"
+  #include "codegen.h"
 
   extern int yylex();
 %}
@@ -45,28 +42,29 @@
 Program: Start Statements End { codegen($2); free_asa($2); return 0; };
 
 Statements:
-  Statement Semicolon Statements { $$ = creer_noeudBloc($1, $3); }
+  Statement Semicolon Statements { $$ = make_block_node($1, $3); }
 | %empty                         { $$ = NULL; }
 ;
 
 Statement:
   Expr                        { $$ = $1; }
-| Identifier Assign Statement { $$ = creer_noeudAffect($1, $3); }
-| Print Expr                  { $$ = creer_noeudAfficher($2); }
+| Identifier Assign Statement { $$ = create_assign_node($1, $3); }
+| Print Expr                  { $$ = create_print_node($2); }
 ;
 
 Expr:
-  Expr Add Expr { $$ = creer_noeudOp('+', $1, $3); }
-| Expr Sub Expr { $$ = creer_noeudOp('-', $1, $3); }
-| Expr Mul Expr { $$ = creer_noeudOp('*', $1, $3); }
-| Expr Div Expr { $$ = creer_noeudOp('/', $1, $3); }
+  Expr Add Expr { $$ = create_binop_node(OpAdd, $1, $3); }
+| Expr Sub Expr { $$ = create_binop_node(OpSub, $1, $3); }
+| Expr Mul Expr { $$ = create_binop_node(OpMul, $1, $3); }
+| Expr Div Expr { $$ = create_binop_node(OpDiv, $1, $3); }
+| Expr Mod Expr { $$ = create_binop_node(OpMod, $1, $3); }
 | Value         { $$ = $1; }
 ;
 
 Value:
   LeftParenthesis Expr RightParenthesis { $$ = $2; }
-| Int                                   { $$ = creer_feuilleNb($1); }
-| Identifier                            { $$ = creer_noeudVar($1); }
+| Int                                   { $$ = create_int_leaf($1); }
+| Identifier                            { $$ = create_var_leaf($1); }
 ;
 
 %%
