@@ -26,13 +26,18 @@
 
 // Non-terminaux
 %start Program
-%type <nval> Statements Statement Expr Value
+%type <nval> Statements Statement
+%type <nval> Expr
+%type <nval> IntExpr IntValue
+%type <nval> CmpExpr
 
 // Opérateurs
 %right Assign
 
 %left Add Sub
 %left Mul Div Mod
+
+%left Ge Gt Le Lt Eq Ne
 
 // yylval
 %union {
@@ -58,18 +63,32 @@ Statement:
 ;
 
 Expr:
-  Expr Add Expr { $$ = create_binop_node(OpAdd, $1, $3); }
-| Expr Sub Expr { $$ = create_binop_node(OpSub, $1, $3); }
-| Expr Mul Expr { $$ = create_binop_node(OpMul, $1, $3); }
-| Expr Div Expr { $$ = create_binop_node(OpDiv, $1, $3); }
-| Expr Mod Expr { $$ = create_binop_node(OpMod, $1, $3); }
-| Value         { $$ = $1; }
+  IntExpr { $$ = $1; }
+| CmpExpr { $$ = $1; }
 ;
 
-Value:
-  LeftParenthesis Expr RightParenthesis { $$ = $2; }
-| Int                                   { $$ = create_int_leaf($1); }
-| Identifier                            { $$ = create_var_leaf($1); }
+IntExpr:
+  IntExpr Add IntExpr { $$ = create_binop_node(OpAdd, $1, $3); }
+| IntExpr Sub IntExpr { $$ = create_binop_node(OpSub, $1, $3); }
+| IntExpr Mul IntExpr { $$ = create_binop_node(OpMul, $1, $3); }
+| IntExpr Div IntExpr { $$ = create_binop_node(OpDiv, $1, $3); }
+| IntExpr Mod IntExpr { $$ = create_binop_node(OpMod, $1, $3); }
+| IntValue            { $$ = $1; }
+;
+
+IntValue:
+  LeftParenthesis IntExpr RightParenthesis { $$ = $2; }
+| Int                                      { $$ = create_int_leaf($1); }
+| Identifier                               { $$ = create_var_leaf($1); }
+;
+
+CmpExpr:
+  IntExpr Ge IntExpr { $$ = create_binop_node(OpGe, $1, $3); }
+| IntExpr Gt IntExpr { $$ = create_binop_node(OpGt, $1, $3); }
+| IntExpr Le IntExpr { $$ = create_binop_node(OpLe, $1, $3); }
+| IntExpr Lt IntExpr { $$ = create_binop_node(OpLt, $1, $3); }
+| IntExpr Eq IntExpr { $$ = create_binop_node(OpEq, $1, $3); }
+| IntExpr Ne IntExpr { $$ = create_binop_node(OpNe, $1, $3); }
 ;
 
 %%

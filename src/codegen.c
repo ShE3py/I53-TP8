@@ -19,6 +19,16 @@ const char* binop_name(BinaryOp binop) {
 		
 		case OpMod:
 			return "MOD";
+		
+		case OpGe:
+		case OpGt:
+		case OpLe:
+		case OpLt:
+		case OpEq:
+		case OpNe:
+			// x ♥ y <=> x - y ♥ 0
+			// codegen fera `♥ 0`
+			return "SUB";
 	}
 	
 	fprintf(stderr, "entered unreachable code\n");
@@ -28,7 +38,7 @@ const char* binop_name(BinaryOp binop) {
 /**
  *
  */
-void codegen_nc(asa *p, int *sp) {
+void codegen_nc(asa *p, int *sp, int *ip) {
 	if(!p) {
 		return;
 	}
@@ -36,6 +46,8 @@ void codegen_nc(asa *p, int *sp) {
 	switch(p->tag) {
 		case TagInt: {
 			printf("LOAD #%i\n", p->tag_int.value);
+			++(*ip);
+			
 			break;
 		}
 		
@@ -47,21 +59,104 @@ void codegen_nc(asa *p, int *sp) {
 			}
 			
 			printf("LOAD %i\n", var->adr);
+			++(*ip);
+			
 			break;
 		}
 		
 		case TagBinaryOp: {
-			codegen_nc(p->tag_binary_op.rhs, sp);
+			codegen_nc(p->tag_binary_op.rhs, sp, ip);
 			printf("STORE %i\n", ++(*sp));
+			++(*ip);
 			
-			codegen_nc(p->tag_binary_op.lhs, sp);
+			codegen_nc(p->tag_binary_op.lhs, sp, ip);
 			printf("%s %i\n", binop_name(p->tag_binary_op.op), *sp);
+			++(*ip);
 			--(*sp);
+			
+			switch(p->tag_binary_op.op) {
+				// remarque: il y a toujours une instruction après ce noeud,
+				// a minima un `STOP`, donc `*ip + 4` existe bien toujours.
+				
+				case OpGe:
+					// x - y >= 0 <=> !((x - y) < 0)
+					
+					printf("JUML %i\n", *ip + 3);
+					printf("LOAD #1\n");
+					printf("JUMP %i\n", *ip + 4);
+					printf("LOAD #0\n");
+					
+					*ip += 4;
+					break;
+				
+				case OpGt:
+					// x - y > 0
+					
+					printf("JUMG %i\n", *ip + 3);
+					printf("LOAD #0\n");
+					printf("JUMP %i\n", *ip + 4);
+					printf("LOAD #1\n");
+					
+					*ip += 4;
+					break;
+				
+				case OpLe:
+					// x - y <= 0 <=> !((x - y) > 0)
+					
+					printf("JUMG %i\n", *ip + 3);
+					printf("LOAD #1\n");
+					printf("JUMP %i\n", *ip + 4);
+					printf("LOAD #0\n");
+					
+					*ip += 4;
+					break;
+				
+				case OpLt:
+					// x - y < 0
+					
+					printf("JUML %i\n", *ip + 3);
+					printf("LOAD #0\n");
+					printf("JUMP %i\n", *ip + 4);
+					printf("LOAD #1\n");
+					
+					*ip += 4;
+					break;
+				
+				case OpEq:
+					// x - y == 0
+					
+					printf("JUMZ %i\n", *ip + 3);
+					printf("LOAD #0\n");
+					printf("JUMP %i\n", *ip + 4);
+					printf("LOAD #1\n");
+					
+					*ip += 4;
+					break;
+				
+				case OpNe:
+					// x - y != 0
+					
+					printf("JUMZ %i\n", *ip + 3);
+					printf("LOAD #1\n");
+					printf("JUMP %i\n", *ip + 4);
+					printf("LOAD #0\n");
+					
+					*ip += 4;
+					break;
+				
+				case OpAdd:
+				case OpSub:
+				case OpMul:
+				case OpDiv:
+				case OpMod:
+					break;
+			}
+			
 			break;
 		}
 		
 		case TagAssign: {
-			codegen_nc(p->tag_assign.expr, sp);
+			codegen_nc(p->tag_assign.expr, sp, ip);
 			
 			ts *var = ts_retrouver_id(p->tag_assign.identifier);
 			if(var == NULL) {
@@ -70,12 +165,14 @@ void codegen_nc(asa *p, int *sp) {
 			}
 			
 			printf("STORE %i\n", var->adr);
+			++(*ip);
 			break;
 		}
 		
 		case TagPrint: {
-			codegen_nc(p->tag_print.expr, sp);
+			codegen_nc(p->tag_print.expr, sp, ip);
 			printf("WRITE\n");
+			++(*ip);
 			break;
 		}
 		
@@ -84,8 +181,10 @@ void codegen_nc(asa *p, int *sp) {
 			print_asa(p->tag_block.stmt);
 			printf("\n");
 			
-			codegen_nc(p->tag_block.stmt, sp);
-			codegen_nc(p->tag_block.next, sp);
+			++(*ip);
+			
+			codegen_nc(p->tag_block.stmt, sp, ip);
+			codegen_nc(p->tag_block.next, sp, ip);
 			break;
 		}
 	}
@@ -100,7 +199,8 @@ void codegen(asa *p) {
 	printf("NOP ; DEBUT\n");
 	
   	int sp = 1;
-	codegen_nc(p, &sp);
+	int ip = 1;
+	codegen_nc(p, &sp, &ip);
 	
 	printf("STOP ; FIN\n");
 }
