@@ -11,6 +11,7 @@ int is_leaf(NodeTag tag) {
 			return 1;
 		
 		case TagBinaryOp:
+		case TagUnaryOp:
 		case TagAssign:
 		case TagPrint:
 		case TagBlock:
@@ -58,6 +59,19 @@ const char* binop_symbol(BinaryOp binop) {
 		
 		case OpNe:
 			return "!=";
+	}
+	
+	fprintf(stderr, "entered unreachable code\n");
+	exit(1);
+}
+
+/**
+ * Renvoie le symbole associé à un opérateur unaire.
+ */
+const char* unop_symbol(UnaryOp unop) {
+	switch(unop) {
+		case OpNeg:
+			return "-";
 	}
 	
 	fprintf(stderr, "entered unreachable code\n");
@@ -138,6 +152,20 @@ asa* create_binop_node(BinaryOp binop, asa *lhs, asa *rhs) {
 	p->tag_binary_op.op = binop;
 	p->tag_binary_op.lhs = lhs;
 	p->tag_binary_op.rhs = rhs;
+	
+	return p;
+}
+
+/**
+ * Créer un nouveau noeud `TagUnaryOp` avec les valeurs spécifiées.
+ */
+asa* create_unop_node(UnaryOp unop, asa *expr) {
+	asa *p = checked_malloc();
+	
+	p->tag = TagUnaryOp;
+	p->ninst = expr->ninst + 3;
+	p->tag_unary_op.op = unop;
+	p->tag_unary_op.expr = expr;
 	
 	return p;
 }
@@ -259,6 +287,20 @@ void print_asa(asa *p) {
 			
 			break;
 		
+		case TagUnaryOp:
+			printf("%s", unop_symbol(p->tag_unary_op.op));
+			
+			if(is_leaf(p->tag_unary_op.expr->tag)) {
+				print_asa(p->tag_unary_op.expr);
+			}
+			else {
+				printf("(");
+				print_asa(p->tag_unary_op.expr);
+				printf(")");
+			}
+			
+			break;
+		
 		case TagAssign:
 			printf("%s := ", p->tag_assign.identifier);
 			print_asa(p->tag_assign.expr);
@@ -289,6 +331,10 @@ void free_asa(asa *p) {
 		case TagBinaryOp:
 			free_asa(p->tag_binary_op.lhs);
 			free_asa(p->tag_binary_op.rhs);
+			break;
+		
+		case TagUnaryOp:
+			free_asa(p->tag_unary_op.expr);
 			break;
 		
 		case TagAssign:
