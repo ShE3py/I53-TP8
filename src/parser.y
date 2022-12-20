@@ -13,6 +13,7 @@
 
 // Mots-clefs
 %token Start End
+%token Var
 %token Print
 
 // Ponctuation
@@ -51,6 +52,7 @@ Statements:
 
 Statement:
   Expr                        { $$ = $1; }
+| Var Identifier              { if(ts_retrouver_id($2)) yyerror("variable dupliquée"); ts_ajouter_id($2, 1); $$ = NULL; }
 | Identifier Assign Statement { $$ = create_assign_node($1, $3); }
 | Print Expr                  { $$ = create_print_node($2); }
 ;
