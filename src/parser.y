@@ -34,10 +34,11 @@
 // Opérateurs
 %right Assign
 
+%left Ge Gt Le Lt Eq Ne
+
 %left Add Sub
 %left Mul Div Mod
-
-%left Ge Gt Le Lt Eq Ne
+%left UnaryPlus UnaryMinus
 
 // yylval
 %union {
@@ -68,12 +69,14 @@ Expr:
 ;
 
 IntExpr:
-  IntExpr Add IntExpr { $$ = create_binop_node(OpAdd, $1, $3); }
-| IntExpr Sub IntExpr { $$ = create_binop_node(OpSub, $1, $3); }
-| IntExpr Mul IntExpr { $$ = create_binop_node(OpMul, $1, $3); }
-| IntExpr Div IntExpr { $$ = create_binop_node(OpDiv, $1, $3); }
-| IntExpr Mod IntExpr { $$ = create_binop_node(OpMod, $1, $3); }
-| IntValue            { $$ = $1; }
+  IntExpr Add IntExpr           { $$ = create_binop_node(OpAdd, $1, $3); }
+| IntExpr Sub IntExpr           { $$ = create_binop_node(OpSub, $1, $3); }
+| IntExpr Mul IntExpr           { $$ = create_binop_node(OpMul, $1, $3); }
+| IntExpr Div IntExpr           { $$ = create_binop_node(OpDiv, $1, $3); }
+| IntExpr Mod IntExpr           { $$ = create_binop_node(OpMod, $1, $3); }
+| Sub IntValue %prec UnaryMinus { $$ = create_unop_node(OpNeg, $2); }
+| Add IntValue %prec UnaryPlus  { $$ = $2; }
+| IntValue                      { $$ = $1; }
 ;
 
 IntValue:

@@ -27,6 +27,11 @@ typedef enum {
 	TagBinaryOp,
 	
 	/**
+	 * Une opération unaire.
+	 */
+	TagUnaryOp,
+	
+	/**
 	 * Une affectation.
 	 */
 	TagAssign,
@@ -71,6 +76,19 @@ typedef enum {
  * Renvoie le symbole associé à un opérateur binaire.
  */
 const char* binop_symbol(BinaryOp binop);
+
+
+/**
+ * Un opérateur unaire.
+ */
+typedef enum {
+	OpNeg
+} UnaryOp;
+
+/**
+ * Renvoie le symbole associé à un opérateur unaire.
+ */
+const char* unop_symbol(UnaryOp unop);
 
 /**
  * Un noeud d'un arbre syntaxique abstrait.
@@ -129,6 +147,21 @@ typedef struct asa {
 		} tag_binary_op;
 		
 		/**
+		 * La valeur d'un noeud `TagUnaryOp`.
+		 */
+		struct {
+			/**
+			 * L'opérateur unaire.
+			 */
+			UnaryOp op;
+			
+			/**
+			 * L'opérande.
+			 */
+			struct asa *expr;
+		} tag_unary_op;
+		
+		/**
 		 * La valeur d'un noeud `TagAssign`
 		 */
 		struct {
@@ -185,6 +218,11 @@ asa* create_var_leaf(const char id[32]);
  * Créer un nouveau noeud `TagBinaryOp` avec les valeurs spécifiées.
  */
 asa* create_binop_node(BinaryOp binop, asa *lhs, asa *rhs);
+
+/**
+ * Créer un nouveau noeud `TagUnaryOp` avec les valeurs spécifiées.
+ */
+asa* create_unop_node(UnaryOp unop, asa *expr);
 
 /**
  * Créer un nouveau noeud `TagAssign` avec les valeurs spécifiées.

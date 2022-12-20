@@ -155,6 +155,16 @@ void codegen_nc(asa *p, int *sp, int *ip) {
 			break;
 		}
 		
+		case TagUnaryOp: {
+			codegen_nc(p->tag_unary_op.expr, sp, ip);
+			printf("STORE %i\n", *sp + 1);
+			printf("LOAD #0\n");
+			printf("SUB %i\n", *sp + 1);
+			
+			*ip += 3;
+			break;
+		}
+		
 		case TagAssign: {
 			codegen_nc(p->tag_assign.expr, sp, ip);
 			
