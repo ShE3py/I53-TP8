@@ -11,35 +11,42 @@
 
 %define parse.error verbose
 
-%token Start End Newline Indent Semicolon
+// Mots-clefs
+%token Start End
 %token Print
 
-%token <n> Number
-%token <s> Identifier
-%type <node> StatementList Statement Expr Value
-%token OpenParenthesis CloseParenthesis
+// Ponctuation
+%token LeftParenthesis RightParenthesis
+%token Semicolon
 
-%left Add Sub
-%left Mul Div
+// Littéraux et identifiants
+%token <ival> Int
+%token <sval> Identifier
 
+// Non-terminaux
+%start Program
+%type <nval> Statements Statement Expr Value
+
+// Opérateurs
 %right Assign
 
-%start Program
+%left Add Sub
+%left Mul Div Mod
 
+// yylval
 %union {
-	int n;
-	char s[32];
-	struct asa *node;
+	int ival;
+	char sval[32];
+	struct asa *nval;
 }
 
 %%
 
-Program: Start Newline StatementList End { codegen($3); free_asa($3); return 0; };
+Program: Start Statements End { codegen($2); free_asa($2); return 0; };
 
-StatementList:
-  Indent Statement Semicolon Newline StatementList { $$ = creer_noeudBloc($2, $5); }
-| Indent Newline StatementList                     { $$ = $3; }
-| %empty                                           { $$ = NULL; }
+Statements:
+  Statement Semicolon Statements { $$ = creer_noeudBloc($1, $3); }
+| %empty                         { $$ = NULL; }
 ;
 
 Statement:
@@ -57,8 +64,8 @@ Expr:
 ;
 
 Value:
-  OpenParenthesis Expr CloseParenthesis { $$ = $2; }
-| Number                                { $$ = creer_feuilleNb($1); }
+  LeftParenthesis Expr RightParenthesis { $$ = $2; }
+| Int                                   { $$ = creer_feuilleNb($1); }
 | Identifier                            { $$ = creer_noeudVar($1); }
 ;
 
