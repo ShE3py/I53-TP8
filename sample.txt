@@ -1,3 +1,12 @@
 DÉBUT
-	AFFICHER 1 < 2 ET 2 < 3 ET 3 < 4;
+	VAR x;
+	VAR y;
+	
+	x := 1;
+	y := 2;
+	
+	AFFICHER x > y OU y > x;
+	AFFICHER x > y OU EXCLUSIF y > x;
+	AFFICHER x < y ET y > x;
+	AFFICHER x < y OU EXCLUSIF y > x;
 FIN
