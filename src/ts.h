@@ -17,9 +17,9 @@ typedef struct ts{
 extern ts * tsymb;
 
 // ajoute l'identificateur <id> de taille <size> à la table des symboles
-void ts_ajouter_id(char *id, int size);
+void ts_ajouter_id(const char *id, int size);
 // retourne un pointeur vers le noeud contenant l'id <id>, 0 sinon
-ts * ts_retrouver_id(char *id);
+ts * ts_retrouver_id(const char *id);
 // libere la mémoire de la table de symbole
 void ts_free_table();
 // affiche la table dans la sortie standard
