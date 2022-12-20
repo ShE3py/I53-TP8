@@ -1,3 +1,7 @@
-DEBUT
-    AFFICHER e + 1;
+DÉBUT
+	VAR x;
+	VAR x;
+	VAR y;
+	
+	AFFICHER x + y;
 FIN

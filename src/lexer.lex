@@ -21,6 +21,7 @@ void yyerror(const char *s) {
 "DEBUT"|"DÉBUT" { return Start; }
 "FIN"           { return End; }
 
+"VAR"           { return Var; }
 "AFFICHER"      { return Print; }
 
  /* Littéraux et identifiants */
