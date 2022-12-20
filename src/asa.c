@@ -191,11 +191,15 @@ asa* create_binop_node(BinaryOp binop, asa *lhs, asa *rhs) {
 			break;
 		
 		case OpAnd:
-			p->ninst = lhs->ninst + rhs->ninst + 5;
+			p->ninst = lhs->ninst + rhs->ninst + 3;
 			break;
 		
 		case OpOr:
+			p->ninst = lhs->ninst + rhs->ninst + 4;
+			break;
+		
 		case OpXor:
+			p->ninst = lhs->ninst + rhs->ninst + 7;
 			break;
 	}
 	

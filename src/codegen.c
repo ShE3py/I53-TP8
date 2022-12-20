@@ -169,25 +169,87 @@ void codegen_nc(asa *p, int *sp, int *ip) {
 					break;
 				
 				case Logic:
-					printf("NOP ; TEST (");
-					print_asa(p->tag_binary_op.lhs);
-					printf(")\n");
-					++(*ip);
+					switch(p->tag_binary_op.op) {
+						case OpAnd:
+							printf("NOP ; TEST (");
+							print_asa(p->tag_binary_op.lhs);
+							printf(")\n");
+							++(*ip);
+							
+							codegen_nc(p->tag_binary_op.lhs, sp, ip);
+							printf("JUMZ %i\n", *ip + p->tag_binary_op.rhs->ninst + 2);
+							++(*ip);
+							
+							printf("NOP ; TEST (");
+							print_asa(p->tag_binary_op.rhs);
+							printf(")\n");
+							++(*ip);
+							
+							codegen_nc(p->tag_binary_op.rhs, sp, ip);
+							break;
+						
+						case OpOr:
+							printf("NOP ; TEST (");
+							print_asa(p->tag_binary_op.lhs);
+							printf(")\n");
+							++(*ip);
+							
+							codegen_nc(p->tag_binary_op.lhs, sp, ip);
+							printf("JUMZ %i\n", *ip + 2);
+							++(*ip);
+							
+							printf("JUMP %i\n", *ip + p->tag_binary_op.rhs->ninst + 2);
+							++(*ip);
+							
+							printf("NOP ; TEST (");
+							print_asa(p->tag_binary_op.rhs);
+							printf(")\n");
+							++(*ip);
+							
+							codegen_nc(p->tag_binary_op.rhs, sp, ip);
+							break;
+						
+						case OpXor:
+							printf("NOP ; TEST (");
+							print_asa(p->tag_binary_op.lhs);
+							printf(")\n");
+							++(*ip);
+							
+							codegen_nc(p->tag_binary_op.lhs, sp, ip);
+							printf("STORE %i\n", ++(*sp));
+							++(*ip);
+							
+							printf("NOP ; TEST (");
+							print_asa(p->tag_binary_op.rhs);
+							printf(")\n");
+							++(*ip);
+							
+							codegen_nc(p->tag_binary_op.rhs, sp, ip);
+							printf("JUMZ %i\n", *ip + 3);
+							printf("SUB %i\n", *sp);
+							printf("JUMP %i\n", *ip + 4);
+							printf("LOAD %i\n", *sp);
+							--(*sp);
+							
+							*ip += 4;
+							break;
+						
+						case OpAdd:
+						case OpSub:
+						case OpMul:
+						case OpDiv:
+						case OpMod:
+							break;
+						
+						case OpGe:
+						case OpGt:
+						case OpLe:
+						case OpLt:
+						case OpEq:
+						case OpNe:
+							break;
+					}
 					
-					codegen_nc(p->tag_binary_op.lhs, sp, ip);
-					printf("JUMZ %i\n", *ip + p->tag_binary_op.rhs->ninst + 4);
-					++(*ip);
-					
-					printf("NOP ; TEST (");
-					print_asa(p->tag_binary_op.rhs);
-					printf(")\n");
-					++(*ip);
-					
-					codegen_nc(p->tag_binary_op.rhs, sp, ip);
-					printf("JUMP %i\n", *ip + 2);
-					printf("LOAD #0\n");
-					
-					*ip += 2;
 					break;
 			}
 			
