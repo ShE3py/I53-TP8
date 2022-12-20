@@ -7,33 +7,38 @@ void yyerror(const char *s);
   
 %option nounput
 %option noinput
-
-DIGIT [0-9]
   
 %%
 
-"DEBUT"    { return Start; }
-"FIN"      { return End; }
-"AFFICHER" { return Print; }
+ /* Mots-clefs */
+"DEBUT"|"DÉBUT" { return Start; }
+"FIN"           { return End; }
 
-{DIGIT}                { yylval.n = atoi(yytext); return Number; }
-[A-Za-z_][A-Za-z0-9_]* { if(yyleng > 32) yyerror("identifier length exceeded"); strcpy(yylval.s, yytext); return Identifier; }
+"AFFICHER"      { return Print; }
 
+ /* Littéraux et identifiants */
+[0-9]+                 { yylval.ival = atoi(yytext); return Int; }
+[A-Za-z_][A-Za-z0-9_]* { if(yyleng > 32) yyerror("identifier length exceeded"); strcpy(yylval.sval, yytext); return Identifier; }
+
+ /* Opérateurs d'affectation */
+"->"|":=" { return Assign; }
+
+ /* Opérateurs arithmétiques */
 "+"       { return Add; }
 "-"       { return Sub; }
 "*"       { return Mul; }
 "/"       { return Div; }
+"%"       { return Mod; }
 
-"("       { return OpenParenthesis; }
-")"       { return CloseParenthesis; }
+ /* Ponctuation */
+"("       { return LeftParenthesis; }
+")"       { return RightParenthesis; }
+";"       { return Semicolon; }
 
-"->"|":=" { return Assign; }
+ /* Espaces et sauts de ligne */
+[\n\r \t]+ {}
 
-\n|\r\n|\r|\036|\n\r|\025 { return Newline; }
-\t+                       { return Indent; }
-;                         { return Semicolon; }
-" "                       {}
-.                         { fprintf(stderr, "[err lexer] caractere inconnu: '%c'\n", yytext[0]); return 1; }
+ /* Tout le reste */
+. { fprintf(stderr, "[err lexer] caractere inconnu: '%c'\n", yytext[0]); return 1; }
 
 %%
-
