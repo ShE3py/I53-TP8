@@ -1,13 +1,19 @@
 %{
 #include <string.h>
 
-#include "parser.h" 
+#include "parser.h"
 
-void yyerror(const char *s);
+extern const char *input;
+
+void yyerror(const char *s) {
+	fprintf(stderr, "%s:%i: %s\n", input, yylineno, s);
+	exit(1);
+}
 %}
   
 %option nounput
 %option noinput
+%option yylineno
   
 %%
 
@@ -22,7 +28,7 @@ void yyerror(const char *s);
 [A-Za-z_][A-Za-z0-9_]* { if(yyleng > 32) yyerror("identifier length exceeded"); strcpy(yylval.sval, yytext); return Identifier; }
 
  /* Opérateurs d'affectation */
-"->"|":=" { return Assign; }
+"<-"|":=" { return Assign; }
 
  /* Opérateurs arithmétiques */
 "+"       { return Add; }
@@ -40,6 +46,6 @@ void yyerror(const char *s);
 [\n\r \t]+ {}
 
  /* Tout le reste */
-. { fprintf(stderr, "[err lexer] caractere inconnu: '%c'\n", yytext[0]); return 1; }
+. { fprintf(stderr, "%1$s:%2$i: caractère inconnu: '%3$c' (%3$u)\n", input, yylineno, (unsigned char) yytext[0]); exit(1); }
 
 %%

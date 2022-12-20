@@ -5,7 +5,7 @@ ts * tsymb = NULL;
 static int mem_offset = 33;
 
 
-void ts_ajouter_id(char *id, int size)
+void ts_ajouter_id(const char *id, int size)
 {
   ts *new = malloc(sizeof(ts));
   new->id = malloc(strlen(id)+1);
@@ -18,7 +18,7 @@ void ts_ajouter_id(char *id, int size)
   
 }
 
-ts* ts_retrouver_id(char *id)
+ts* ts_retrouver_id(const char *id)
 {
   ts *t = tsymb;
   while (t!=NULL){
