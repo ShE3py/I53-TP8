@@ -29,6 +29,12 @@ const char* binop_name(BinaryOp binop) {
 			// x ♥ y <=> x - y ♥ 0
 			// codegen fera `♥ 0`
 			return "SUB";
+		
+		case OpAnd:
+		case OpOr:
+		case OpXor:
+			fprintf(stderr, "binop_name(...) is not defined for logic binops\n");
+			exit(1);
 	}
 	
 	fprintf(stderr, "entered unreachable code\n");
@@ -65,90 +71,123 @@ void codegen_nc(asa *p, int *sp, int *ip) {
 		}
 		
 		case TagBinaryOp: {
-			codegen_nc(p->tag_binary_op.rhs, sp, ip);
-			printf("STORE %i\n", ++(*sp));
-			++(*ip);
-			
-			codegen_nc(p->tag_binary_op.lhs, sp, ip);
-			printf("%s %i\n", binop_name(p->tag_binary_op.op), *sp);
-			++(*ip);
-			--(*sp);
-			
-			switch(p->tag_binary_op.op) {
-				// remarque: il y a toujours une instruction après ce noeud,
-				// a minima un `STOP`, donc `*ip + 4` existe bien toujours.
-				
-				case OpGe:
-					// x - y >= 0 <=> !((x - y) < 0)
+			switch(binop_kind(p->tag_binary_op.op)) {
+				case Arithmetic:
+				case Comparative:
+					codegen_nc(p->tag_binary_op.rhs, sp, ip);
+					printf("STORE %i\n", ++(*sp));
+					++(*ip);
 					
-					printf("JUML %i\n", *ip + 3);
-					printf("LOAD #1\n");
-					printf("JUMP %i\n", *ip + 4);
-					printf("LOAD #0\n");
+					codegen_nc(p->tag_binary_op.lhs, sp, ip);
+					printf("%s %i\n", binop_name(p->tag_binary_op.op), *sp);
+					++(*ip);
+					--(*sp);
 					
-					*ip += 4;
+					switch(p->tag_binary_op.op) {
+						// remarque: il y a toujours une instruction après ce noeud,
+						// a minima un `STOP`, donc `*ip + 4` existe bien toujours.
+						
+						case OpGe:
+							// x - y >= 0 <=> !((x - y) < 0)
+							
+							printf("JUML %i\n", *ip + 3);
+							printf("LOAD #1\n");
+							printf("JUMP %i\n", *ip + 4);
+							printf("LOAD #0\n");
+							
+							*ip += 4;
+							break;
+						
+						case OpGt:
+							// x - y > 0
+							
+							printf("JUMG %i\n", *ip + 3);
+							printf("LOAD #0\n");
+							printf("JUMP %i\n", *ip + 4);
+							printf("LOAD #1\n");
+							
+							*ip += 4;
+							break;
+						
+						case OpLe:
+							// x - y <= 0 <=> !((x - y) > 0)
+							
+							printf("JUMG %i\n", *ip + 3);
+							printf("LOAD #1\n");
+							printf("JUMP %i\n", *ip + 4);
+							printf("LOAD #0\n");
+							
+							*ip += 4;
+							break;
+						
+						case OpLt:
+							// x - y < 0
+							
+							printf("JUML %i\n", *ip + 3);
+							printf("LOAD #0\n");
+							printf("JUMP %i\n", *ip + 4);
+							printf("LOAD #1\n");
+							
+							*ip += 4;
+							break;
+						
+						case OpEq:
+							// x - y == 0
+							
+							printf("JUMZ %i\n", *ip + 3);
+							printf("LOAD #0\n");
+							printf("JUMP %i\n", *ip + 4);
+							printf("LOAD #1\n");
+							
+							*ip += 4;
+							break;
+						
+						case OpNe:
+							// x - y != 0
+							
+							printf("JUMZ %i\n", *ip + 3);
+							printf("LOAD #1\n");
+							printf("JUMP %i\n", *ip + 4);
+							printf("LOAD #0\n");
+							
+							*ip += 4;
+							break;
+						
+						case OpAdd:
+						case OpSub:
+						case OpMul:
+						case OpDiv:
+						case OpMod:
+							break;
+						
+						case OpAnd:
+						case OpOr:
+						case OpXor:
+							break;
+					}
+					
 					break;
 				
-				case OpGt:
-					// x - y > 0
+				case Logic:
+					printf("NOP ; TEST (");
+					print_asa(p->tag_binary_op.lhs);
+					printf(")\n");
+					++(*ip);
 					
-					printf("JUMG %i\n", *ip + 3);
-					printf("LOAD #0\n");
-					printf("JUMP %i\n", *ip + 4);
-					printf("LOAD #1\n");
+					codegen_nc(p->tag_binary_op.lhs, sp, ip);
+					printf("JUMZ %i\n", *ip + p->tag_binary_op.rhs->ninst + 4);
+					++(*ip);
 					
-					*ip += 4;
-					break;
-				
-				case OpLe:
-					// x - y <= 0 <=> !((x - y) > 0)
+					printf("NOP ; TEST (");
+					print_asa(p->tag_binary_op.rhs);
+					printf(")\n");
+					++(*ip);
 					
-					printf("JUMG %i\n", *ip + 3);
-					printf("LOAD #1\n");
-					printf("JUMP %i\n", *ip + 4);
-					printf("LOAD #0\n");
-					
-					*ip += 4;
-					break;
-				
-				case OpLt:
-					// x - y < 0
-					
-					printf("JUML %i\n", *ip + 3);
-					printf("LOAD #0\n");
-					printf("JUMP %i\n", *ip + 4);
-					printf("LOAD #1\n");
-					
-					*ip += 4;
-					break;
-				
-				case OpEq:
-					// x - y == 0
-					
-					printf("JUMZ %i\n", *ip + 3);
-					printf("LOAD #0\n");
-					printf("JUMP %i\n", *ip + 4);
-					printf("LOAD #1\n");
-					
-					*ip += 4;
-					break;
-				
-				case OpNe:
-					// x - y != 0
-					
-					printf("JUMZ %i\n", *ip + 3);
-					printf("LOAD #1\n");
-					printf("JUMP %i\n", *ip + 4);
+					codegen_nc(p->tag_binary_op.rhs, sp, ip);
+					printf("JUMP %i\n", *ip + 2);
 					printf("LOAD #0\n");
 					
-					*ip += 4;
-					break;
-				
-				case OpAdd:
-				case OpSub:
-				case OpMul:
-				case OpDiv:
-				case OpMod:
+					*ip += 2;
 					break;
 			}
 			

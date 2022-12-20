@@ -59,6 +59,45 @@ const char* binop_symbol(BinaryOp binop) {
 		
 		case OpNe:
 			return "!=";
+		
+		case OpAnd:
+			return "ET";
+		
+		case OpOr:
+			return "OU";
+		
+		case OpXor:
+			return "OU EXCLUSIF";
+	}
+	
+	fprintf(stderr, "entered unreachable code\n");
+	exit(1);
+}
+
+/**
+ * Renvoie le type d'un opérateur binaire.
+ */
+OpKind binop_kind(BinaryOp binop) {
+	switch(binop) {
+		case OpAdd:
+		case OpSub:
+		case OpMul:
+		case OpDiv:
+		case OpMod:
+			return Arithmetic;
+		
+		case OpGe:
+		case OpGt:
+		case OpLe:
+		case OpLt:
+		case OpEq:
+		case OpNe:
+			return Comparative;
+		
+		case OpAnd:
+		case OpOr:
+		case OpXor:
+			return Logic;
 	}
 	
 	fprintf(stderr, "entered unreachable code\n");
@@ -72,6 +111,9 @@ const char* unop_symbol(UnaryOp unop) {
 	switch(unop) {
 		case OpNeg:
 			return "-";
+		
+		case OpNot:
+			return "NON";
 	}
 	
 	fprintf(stderr, "entered unreachable code\n");
@@ -146,6 +188,14 @@ asa* create_binop_node(BinaryOp binop, asa *lhs, asa *rhs) {
 		case OpEq:
 		case OpNe:
 			p->ninst = lhs->ninst + rhs->ninst + 6;
+			break;
+		
+		case OpAnd:
+			p->ninst = lhs->ninst + rhs->ninst + 5;
+			break;
+		
+		case OpOr:
+		case OpXor:
 			break;
 	}
 	
