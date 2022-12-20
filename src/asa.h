@@ -57,7 +57,14 @@ typedef enum {
 	OpSub,
 	OpMul,
 	OpDiv,
-	OpMod
+	OpMod,
+	
+	OpGe,
+	OpGt,
+	OpLe,
+	OpLt,
+	OpEq,
+	OpNe
 } BinaryOp;
 
 /**
