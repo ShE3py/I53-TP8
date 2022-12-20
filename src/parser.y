@@ -4,6 +4,9 @@
   #include "codegen.h"
 
   extern int yylex();
+  extern void yyerror(const char *s);
+  
+  const char *input;
 %}
 
 %define parse.error verbose
@@ -69,16 +72,17 @@ Value:
 
 %%
 
-int main( int argc, char * argv[] ) {
-  extern FILE *yyin;
+int main(int argc, char *argv[]) {
+	extern FILE *yyin;
   
-  if(argc == 1) {
-    fprintf(stderr, "aucun fichier fournie\n");
-    return 1;
-  }
-  
-  yyin = fopen(argv[1], "r");
-  yyparse();
-  return 0;
+	if(argc == 1) {
+		fprintf(stderr, "%s <input>\n", argv[0]);
+		return 1;
+	}
+	
+	input = argv[1];
+	
+	yyin = fopen(input, "r");
+	yyparse();
+	return 0;
 }
-

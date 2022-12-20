@@ -42,7 +42,8 @@ void codegen_nc(asa *p, int *sp) {
 		case TagVar: {
 			ts *var = ts_retrouver_id(p->tag_var.identifier);
 			if(var == NULL) {
-				yyerror("variable non définie");
+				fprintf(stderr, "illegal state: '%s' should exists at this stage but it does not\n", p->tag_var.identifier);
+				exit(1);
 			}
 			
 			printf("LOAD %i\n", var->adr);

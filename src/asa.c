@@ -46,14 +46,21 @@ const char* binop_symbol(BinaryOp binop) {
 	exit(1);
 }
 
+asa* checked_malloc() {
+	asa *p = malloc(sizeof(asa));
+	if(!p) {
+		fprintf(stderr, "échec d'allocation mémoire");
+		exit(1);
+	}
+	
+	return p;
+}
+
 /**
  * Créer une nouvelle feuille `TagInt` avec la valeur spécifiée.
  */
 asa* create_int_leaf(int value) {
-	asa *p = malloc(sizeof(asa));
-	if(!p) {
-		yyerror("échec allocation mémoire");
-	}
+	asa *p = checked_malloc();
 	
 	p->tag = TagInt;
 	p->ninst = 1;
@@ -66,10 +73,15 @@ asa* create_int_leaf(int value) {
  * Créer une nouvelle feuille `TagVar` avec l'identifiant spécifié.
  */
 asa* create_var_leaf(const char id[32]) {
-	asa *p = malloc(sizeof(asa));
-	if(!p) {
-		yyerror("échec allocation mémoire");
+	if(ts_retrouver_id(id) == NULL) {
+		extern const char *input;
+		extern int yylineno;
+		
+		fprintf(stderr, "%s:%i: variable inconnue: '%s'\n", input, yylineno, id);
+		exit(1);
 	}
+	
+	asa *p = checked_malloc();
 	
 	p->tag = TagVar;
 	p->ninst = 1;
@@ -82,10 +94,7 @@ asa* create_var_leaf(const char id[32]) {
  * Créer un nouveau noeud `TagBinaryOp` avec les valeurs spécifiées.
  */
 asa* create_binop_node(BinaryOp binop, asa *lhs, asa *rhs) {
-	asa *p = malloc(sizeof(asa));
-	if(!p) {
-		yyerror("échec allocation mémoire");
-	}
+	asa *p = checked_malloc();
 	
 	p->tag = TagBinaryOp;
 	p->ninst = lhs->ninst + rhs->ninst + 2;
@@ -100,10 +109,7 @@ asa* create_binop_node(BinaryOp binop, asa *lhs, asa *rhs) {
  * Créer un nouveau noeud `TagAssign` avec les valeurs spécifiées.
  */
 asa* create_assign_node(const char id[32], asa *expr) {
-	asa *p = malloc(sizeof(asa));
-	if(!p) {
-		yyerror("échec allocation mémoire");
-	}
+	asa *p = checked_malloc();
 	
 	p->tag = TagAssign;
 	p->ninst = expr->ninst + 1;
@@ -117,10 +123,7 @@ asa* create_assign_node(const char id[32], asa *expr) {
  * Créer un nouveau noeud `TagPrint` avec l'expression spécifiée.
  */
 asa* create_print_node(asa *expr) {
-	asa *p = malloc(sizeof(asa));
-	if(!p) {
-		yyerror("échec allocation mémoire");
-	}
+	asa *p = checked_malloc();
 	
 	p->tag = TagPrint;
 	p->ninst = expr->ninst + 1;
@@ -151,10 +154,7 @@ asa* make_block_node(asa *p, asa *q) {
 			qBlock = q;
 		}
 		else {
-			qBlock = malloc(sizeof(asa));
-			if(!qBlock) {
-				yyerror("échec d'allocation mémoire");
-			}
+			qBlock = checked_malloc();
 			
 			qBlock->tag = TagBlock;
 			qBlock->tag_block.stmt = q;
@@ -163,10 +163,7 @@ asa* make_block_node(asa *p, asa *q) {
 	}
 	
 	if(p->tag != TagBlock) {
-		asa *r = malloc(sizeof(asa));
-		if(!r) {
-			yyerror("échec allocation mémoire");
-		}
+		asa *r = checked_malloc();
 		
 		r->tag = TagBlock;
 		r->tag_block.stmt = p;
@@ -276,10 +273,4 @@ void free_asa(asa *p) {
 	}
 	
 	free(p);
-}
-
-void yyerror(const char * s)
-{
-  fprintf(stderr, "%s\n", s);
-  exit(0);
 }

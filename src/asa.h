@@ -206,7 +206,4 @@ void free_asa(asa *p);
 
 extern ts * tsymb;
 
-// fonction d'erreur utilisée également par Bison
-void yyerror(const char * s);
-
 #endif
