@@ -1,0 +1,7 @@
+DEBUT
+	x := 1 - 2 * 5 * 7;
+	y := 3 * 4;
+	
+	AFFICHER y / x;
+FIN
+
