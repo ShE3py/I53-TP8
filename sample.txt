@@ -1,7 +1,3 @@
 DEBUT
-	x := 1 - 2;
-	y := 3 * 4;
-	
-	AFFICHER y / x;
+	AFFICHER 1 / 0;
 FIN
-

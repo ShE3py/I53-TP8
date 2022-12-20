@@ -1,289 +1,282 @@
 #include "asa.h"
 
-asa * creer_feuilleNb(int val)
-{
-  asa *p;
-
-  if ((p = malloc(sizeof(asa))) == NULL)
-    yyerror("echec allocation mémoire");
-
-  p->type = typeNb;
-  p->nb.val = val;
-  return p;
+/**
+ * Renvoie `1` si l'étiquette spécifiée est une feuille, sinon
+ * renvoie `0`.
+ */
+int is_leaf(NodeTag tag) {
+	switch(tag) {
+		case TagInt:
+		case TagVar:
+			return 1;
+		
+		case TagBinaryOp:
+		case TagAssign:
+		case TagPrint:
+		case TagBlock:
+			return 0;
+	}
+	
+	fprintf(stderr, "entered unreachable code\n");
+	exit(1);
 }
 
-asa * creer_noeudOp( int ope, asa * p1, asa * p2)
-{
-  asa * p;
-
-  if ((p = malloc(sizeof(asa))) == NULL)
-    yyerror("echec allocation mémoire");
-
-  p->type = typeOp;
-  p->op.ope = ope;
-  p->op.noeud[0]=p1;
-  p->op.noeud[1]=p2;
-  p->ninst = p1->ninst+p2->ninst+2;
-  
-  return p;
+/**
+ * Renvoie le symbole associé à un opérateur binaire.
+ */
+const char* binop_symbol(BinaryOp binop) {
+	switch(binop) {
+		case OpAdd:
+			return "+";
+		
+		case OpSub:
+			return "-";
+		
+		case OpMul:
+			return "*";
+		
+		case OpDiv:
+			return "/";
+		
+		case OpMod:
+			return "%";
+	}
+	
+	fprintf(stderr, "entered unreachable code\n");
+	exit(1);
 }
 
-asa* creer_noeudAffect(const char id[32], asa *expr) {
+/**
+ * Créer une nouvelle feuille `TagInt` avec la valeur spécifiée.
+ */
+asa* create_int_leaf(int value) {
 	asa *p = malloc(sizeof(asa));
 	if(!p) {
 		yyerror("échec allocation mémoire");
 	}
 	
-	p->type = typeAffect;
-	strcpy(&p->affect.id[0], &id[0]);
-	p->affect.expr = expr;
-	p->ninst = expr->ninst + 1;
+	p->tag = TagInt;
+	p->ninst = 1;
+	p->tag_int.value = value;
 	
 	return p;
 }
 
-asa* creer_noeudBloc(asa *p, asa *q) {
+/**
+ * Créer une nouvelle feuille `TagVar` avec l'identifiant spécifié.
+ */
+asa* create_var_leaf(const char id[32]) {
+	asa *p = malloc(sizeof(asa));
 	if(!p) {
-		yyerror("creer_bloc(nonnull p) with NULL p");
-	}
-	
-	if(p->type == typeBloc) {
-		yyerror("creer_bloc(nonblock p) with p->type == typeBloc");
-	}
-	
-	asa *b = malloc(sizeof(asa));
-	if(!b) {
 		yyerror("échec allocation mémoire");
 	}
 	
-	asa *svt = NULL;
-	if(q != NULL) {
-		if(q->type == typeBloc) {
-			svt = q;
+	p->tag = TagVar;
+	p->ninst = 1;
+	strcpy(&p->tag_var.identifier[0], &id[0]);
+	
+	return p;
+}
+
+/**
+ * Créer un nouveau noeud `TagBinaryOp` avec les valeurs spécifiées.
+ */
+asa* create_binop_node(BinaryOp binop, asa *lhs, asa *rhs) {
+	asa *p = malloc(sizeof(asa));
+	if(!p) {
+		yyerror("échec allocation mémoire");
+	}
+	
+	p->tag = TagBinaryOp;
+	p->ninst = lhs->ninst + rhs->ninst + 2;
+	p->tag_binary_op.op = binop;
+	p->tag_binary_op.lhs = lhs;
+	p->tag_binary_op.rhs = rhs;
+	
+	return p;
+}
+
+/**
+ * Créer un nouveau noeud `TagAssign` avec les valeurs spécifiées.
+ */
+asa* create_assign_node(const char id[32], asa *expr) {
+	asa *p = malloc(sizeof(asa));
+	if(!p) {
+		yyerror("échec allocation mémoire");
+	}
+	
+	p->tag = TagAssign;
+	p->ninst = expr->ninst + 1;
+	strcpy(&p->tag_assign.identifier[0], &id[0]);
+	p->tag_assign.expr = expr;
+	
+	return p;
+}
+
+/**
+ * Créer un nouveau noeud `TagPrint` avec l'expression spécifiée.
+ */
+asa* create_print_node(asa *expr) {
+	asa *p = malloc(sizeof(asa));
+	if(!p) {
+		yyerror("échec allocation mémoire");
+	}
+	
+	p->tag = TagPrint;
+	p->ninst = expr->ninst + 1;
+	p->tag_print.expr = expr;
+	
+	return p;
+}
+
+/**
+ * Transforme deux noeuds en un noeud `TagBlock` équivalent.
+ */
+asa* make_block_node(asa *p, asa *q) {
+	if(!p && !q) {
+		return NULL;
+	}
+	
+	if(!p && q) {
+		// swap(p, q)
+		p = q;
+		q = NULL;
+	}
+	
+	// p is now nonnull
+	
+	asa *qBlock = NULL;
+	if(q) {
+		if(q->tag == TagBlock) {
+			qBlock = q;
 		}
 		else {
-			svt = malloc(sizeof(asa));
-			if(!svt) {
-				yyerror("échec allocation mémoire");
+			qBlock = malloc(sizeof(asa));
+			if(!qBlock) {
+				yyerror("échec d'allocation mémoire");
 			}
 			
-			svt->type = typeBloc;
-			svt->bloc.p = q;
-			svt->bloc.svt = NULL;
+			qBlock->tag = TagBlock;
+			qBlock->tag_block.stmt = q;
+			qBlock->tag_block.next = NULL;
 		}
 	}
 	
-	b->type = typeBloc;
-	b->bloc.p = p;
-	b->bloc.svt = svt;
-	
-	return b;
-}
-
-asa* creer_noeudVar(const char id[32]) {
-	asa *p = malloc(sizeof(asa));
-	if(!p) {
-		yyerror("échec allocation mémoire");
+	if(p->tag != TagBlock) {
+		asa *r = malloc(sizeof(asa));
+		if(!r) {
+			yyerror("échec allocation mémoire");
+		}
+		
+		r->tag = TagBlock;
+		r->tag_block.stmt = p;
+		r->tag_block.next = qBlock;
+		
+		return r;
 	}
-	
-	p->type = typeVar;
-	strcpy(&p->var.id[0], &id[0]);
-	
-	return p;
-}
-
-asa* creer_noeudAfficher(asa *expr) {
-	asa *p = malloc(sizeof(asa));
-	if(!p) {
-		yyerror("échec allocation mémoire");
+	else {
+		asa *r = p;
+		while(r->tag_block.next) {
+			r = r->tag_block.next;
+		}
+		
+		r->tag_block.next = qBlock;
+		return p;
 	}
-	
-	p->type = typeAfficher;
-	p->af.expr = expr;
-	
-	return p;
 }
 
-
-void free_asa(asa *p)
-{
- 
-  if (!p) return;
-  switch (p->type) {
-	case typeOp:
-		free_asa(p->op.noeud[0]);
-		free_asa(p->op.noeud[1]);
-		break;
-	
-	case typeAffect:
-		free_asa(p->affect.expr);
-		break;
-	
-	case typeBloc:
-		free_asa(p->bloc.p);
-		free_asa(p->bloc.svt);
-		break;
-	
-	case typeAfficher:
-		free_asa(p->af.expr);
-		break;
-	
-	case typeNb:
-	case typeVar:
-		break;
-  }
-  
-  free(p);
-}
-
+/**
+ * Affiche le noeud dans la sortie standard.
+ */
 void print_asa(asa *p) {
 	if(!p) {
 		return;
 	}
 	
-	switch(p->type) {
-		case typeNb:
-			printf("%i", p->nb.val);
+	switch(p->tag) {
+		case TagInt:
+			printf("%i", p->tag_int.value);
 			break;
 		
-		case typeOp: ;
-			asa *lhs = p->op.noeud[0];
-			
-			if(lhs->type != typeNb && lhs->type != typeVar) {
-				printf("(");
-				print_asa(lhs);
-				printf(")");
+		case TagVar:
+			printf("%s", p->tag_var.identifier);
+			break;
+		
+		case TagBinaryOp:
+			if(is_leaf(p->tag_binary_op.lhs->tag)) {
+				print_asa(p->tag_binary_op.lhs);
 			}
 			else {
-				print_asa(lhs);
-			}
-			
-			printf(" %c ", p->op.ope);
-			
-			asa *rhs = p->op.noeud[1];
-			if(rhs->type != typeNb && rhs->type != typeVar) {
 				printf("(");
-				print_asa(rhs);
+				print_asa(p->tag_binary_op.lhs);
 				printf(")");
 			}
+			
+			printf(" %s ", binop_symbol(p->tag_binary_op.op));
+			
+			if(is_leaf(p->tag_binary_op.rhs->tag)) {
+				print_asa(p->tag_binary_op.rhs);
+			}
 			else {
-				print_asa(rhs);
+				printf("(");
+				print_asa(p->tag_binary_op.rhs);
+				printf(")");
 			}
 			
 			break;
 		
-		case typeAffect:
-			printf("%s := ", p->affect.id);
-			print_asa(p->affect.expr);
+		case TagAssign:
+			printf("%s := ", p->tag_assign.identifier);
+			print_asa(p->tag_assign.expr);
 			break;
 		
-		case typeBloc:
-			print_asa(p->bloc.p);
-			printf("\n");
-			print_asa(p->bloc.svt);
-			break;
-		
-		case typeVar:
-			printf("%s", p->var.id);
-			break;
-		
-		case typeAfficher:
+		case TagPrint:
 			printf("AFFICHER ");
-			print_asa(p->af.expr);
+			print_asa(p->tag_print.expr);
+			break;
+		
+		case TagBlock:
+			print_asa(p->tag_block.stmt);
+			printf("\n");
+			print_asa(p->tag_block.next);
 			break;
 	}
 }
 
-const char *ope_name(noeudOp n) {
-	switch(n.ope) {
-		case '+':
-			return "ADD";
-		
-		case '-':
-			return "SUB";
-		
-		case '*':
-			return "MUL";
-		
-		case '/':
-			return "DIV";
-		
-		default:
-			fprintf(stderr, "erreur interne: opérateur inconnu: '%1$c' (%1$i)\n", n.ope);
-			exit(1);
-	}
-}
-
-void codegen_nc(asa *p, int *sp) {
+/**
+ * Libère les ressources allouées à un noeud.
+ */
+void free_asa(asa *p) {
 	if(!p) {
 		return;
 	}
 	
-	switch(p->type) {
-		case typeNb:
-			printf("LOAD #%i\n", p->nb.val);
+	switch(p->tag) {
+		case TagBinaryOp:
+			free_asa(p->tag_binary_op.lhs);
+			free_asa(p->tag_binary_op.rhs);
 			break;
 		
-		case typeOp:
-			codegen_nc(p->op.noeud[1], sp);
-			printf("STORE %i\n", ++(*sp));
-			
-			codegen_nc(p->op.noeud[0], sp);
-			printf("%s %i\n", ope_name(p->op), *sp);
-			--(*sp);
+		case TagAssign:
+			free_asa(p->tag_assign.expr);
 			break;
 		
-		case typeAffect: {
-			codegen_nc(p->affect.expr, sp);
-			
-			ts *var = ts_retrouver_id(p->affect.id);
-			if(var == NULL) {
-				ts_ajouter_id(p->affect.id, 1);
-				var = ts_retrouver_id(p->affect.id);
-			}
-			
-			printf("STORE %i\n", var->adr);
-			break;
-		}
-		
-		case typeVar: {
-			ts *var = ts_retrouver_id(p->var.id);
-			if(var == NULL) {
-				yyerror("variable non définie");
-			}
-			
-			printf("LOAD %i\n", var->adr);
-			break;
-		}
-		
-		case typeBloc:
-			printf("NOP ; ");
-			print_asa(p->bloc.p);
-			printf("\n");
-			
-			codegen_nc(p->bloc.p, sp);
-			codegen_nc(p->bloc.svt, sp);
+		case TagPrint:
+			free_asa(p->tag_print.expr);
 			break;
 		
-		case typeAfficher:
-			codegen_nc(p->af.expr, sp);
-			printf("WRITE\n");
+		case TagBlock:
+			free_asa(p->tag_block.stmt);
+			free_asa(p->tag_block.next);
+			break;
+		
+		case TagInt:
+		case TagVar:
 			break;
 	}
+	
+	free(p);
 }
-
-void codegen(asa *p) {
-	if(!p) return;
-	
-	printf("NOP ; DEBUT\n");
-	
-  	int sp = 1;
-	codegen_nc(p, &sp);
-	
-	printf("NOP ; FIN\n");
-}
-
-
 
 void yyerror(const char * s)
 {

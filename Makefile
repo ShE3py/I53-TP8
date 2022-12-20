@@ -4,7 +4,7 @@ CC = gcc
 SRC = src
 OUT = out
 
-OBJS = ts.o asa.o parser.o lexer.o
+OBJS = ts.o asa.o codegen.o parser.o lexer.o
 
 CFLAGS = -Wall -Werror=switch -g -I$(SRC)
 LFLAGS = -lfl
