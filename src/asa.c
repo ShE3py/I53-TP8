@@ -40,6 +40,24 @@ const char* binop_symbol(BinaryOp binop) {
 		
 		case OpMod:
 			return "%";
+		
+		case OpGe:
+			return ">=";
+		
+		case OpGt:
+			return ">";
+		
+		case OpLe:
+			return "<=";
+		
+		case OpLt:
+			return "<";
+		
+		case OpEq:
+			return "==";
+		
+		case OpNe:
+			return "!=";
 	}
 	
 	fprintf(stderr, "entered unreachable code\n");
@@ -97,7 +115,26 @@ asa* create_binop_node(BinaryOp binop, asa *lhs, asa *rhs) {
 	asa *p = checked_malloc();
 	
 	p->tag = TagBinaryOp;
-	p->ninst = lhs->ninst + rhs->ninst + 2;
+	
+	switch(binop) {
+		case OpAdd:
+		case OpSub:
+		case OpMul:
+		case OpDiv:
+		case OpMod:
+			p->ninst = lhs->ninst + rhs->ninst + 2;
+			break;
+		
+		case OpGe:
+		case OpGt:
+		case OpLe:
+		case OpLt:
+		case OpEq:
+		case OpNe:
+			p->ninst = lhs->ninst + rhs->ninst + 6;
+			break;
+	}
+	
 	p->tag_binary_op.op = binop;
 	p->tag_binary_op.lhs = lhs;
 	p->tag_binary_op.rhs = rhs;

@@ -1,7 +1,8 @@
 DÉBUT
-	VAR x;
-	VAR x;
-	VAR y;
-	
-	AFFICHER x + y;
+	AFFICHER 1 >= 1;
+	AFFICHER 1 >  1;
+	AFFICHER 1 <= 1;
+	AFFICHER 1 <  1;
+	AFFICHER 1 == 1;
+	AFFICHER 1 != 1;
 FIN

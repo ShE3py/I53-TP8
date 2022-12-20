@@ -38,6 +38,14 @@ void yyerror(const char *s) {
 "/"       { return Div; }
 "%"       { return Mod; }
 
+ /* Opérateurs de comparaison */
+">="      { return Ge; }
+">"       { return Gt; }
+"<="      { return Le; }
+"<"       { return Lt; }
+"="|"=="  { return Eq; }
+"!="      { return Ne; }
+
  /* Ponctuation */
 "("       { return LeftParenthesis; }
 ")"       { return RightParenthesis; }
