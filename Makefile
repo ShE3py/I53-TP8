@@ -1,23 +1,37 @@
+SHELL = /bin/bash
 CC = gcc
-CFLAGS = -Wall -Werror=switch -g
-OBJ = ts.o asa.o parser.o lexer.o
 
-all: arc
+SRC = src
+OUT = out
 
-arc: $(OBJ)
-	$(CC) $(OBJ) -o $@ $(CFLAGS) -lfl 
+OBJS = ts.o asa.o parser.o lexer.o
 
-*.o: *.c
-	$(CC) -c $< $(CFLAGS)
+CFLAGS = -Wall -Werror=switch -g -I$(SRC)
+LFLAGS = -lfl
 
-parser.h: parser.y
+mkdirs = $(OUT)/grass
 
-parser.c: parser.y
-	bison $< -o $@ -d
+all: $(mkdirs) arc
 
-lexer.c: lexer.lex parser.h
-	flex -o $@ $^
+$(mkdirs):
+	mkdir $(OUT)/
+	touch $@
+
+arc: $(addprefix $(OUT)/,$(OBJS))
+	$(CC) $^ -o $@ $(LFLAGS)
+
+$(OUT)/%.o: $(SRC)/%.c $(SRC)/%.h
+	$(CC) -c $< $(CFLAGS) -o $@
+
+$(OUT)/%.o: $(OUT)/%.c
+	$(CC) -c $< $(CFLAGS) -o $@
+
+$(OUT)/parser.c: $(SRC)/parser.y
+	bison $< -d -o $@
+
+$(OUT)/lexer.c: $(SRC)/lexer.lex $(OUT)/parser.h
+	flex -o $@ $<
 
 clean:
-	rm -f *~ *.o parser.c parser.h lexer.c a.out arc parser.output
-
+	rm -rf $(OUT)
+	rm -f arc
