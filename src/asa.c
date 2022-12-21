@@ -445,6 +445,10 @@ asa* create_assign_int_list_node(const char id[32], asa_list values) {
 		exit(1);
 	}
 	
+	if(values.len == 0) {
+		return NULL;
+	}
+	
 	asa *p = checked_malloc();
 	
 	p->tag = TagAssignIntList;
