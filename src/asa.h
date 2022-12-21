@@ -230,7 +230,7 @@ typedef struct asa {
 			/**
 			 * Les instructions à exécuter si le test a réussi.
 			 */
-			struct asa *therefore; // nonnull
+			struct asa *therefore; // nullable
 			
 			/**
 			 * Les instructions à exécuter si le test a échoué.

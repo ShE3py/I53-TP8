@@ -329,7 +329,7 @@ void codegen_nc(asa *p, int *sp, int *ip) {
 		case TagTest: {
 			codegen_nc(p->tag_test.expr, sp, ip);
 			
-			printf("JUMZ %i\n", *ip + p->tag_test.therefore->ninst + 2 + (p->tag_test.alternative ? 1 : 0));
+			printf("JUMZ %i\n", *ip + (p->tag_test.therefore ? p->tag_test.therefore->ninst : 0) + 2 + (p->tag_test.alternative ? 1 : 0));
 			printf("NOP ; ALORS\n");
 			
 			*ip += 2;
