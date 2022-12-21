@@ -71,6 +71,9 @@ void yyerror(const char *s) {
  /* Espaces et sauts de ligne */
 [\n\r \t]+ {}
 
+ /* Commentaires */
+#.+ {}
+
  /* Tout le reste */
 . { fprintf(stderr, "%1$s:%2$i: caractère inconnu: '%3$c' (%3$u)\n", input, yylineno, (unsigned char) yytext[0]); exit(1); }
 
