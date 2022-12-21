@@ -76,23 +76,23 @@ Statements:
 ;
 
 Statement:
-  Expr                                                                     { $$ = $1; }
-| Var Identifier                                                           { if(ts_retrouver_id($2)) yyerror("variable dupliquée"); ts_ajouter_scalaire($2); $$ = NULL; }
-| Var Identifier Assign Statement                                          { if(ts_retrouver_id($2)) yyerror("variable dupliquée"); ts_ajouter_scalaire($2); $$ = create_assign_node($2, $4); }
-| Var Identifier LeftSquareBracket Int RightSquareBracket                  { if(ts_retrouver_id($2)) yyerror("variable dupliquée"); ts_ajouter_tableau($2, $4); $$ = NULL; }
-| Var Identifier Assign IntArray                                           { if(ts_retrouver_id($2)) yyerror("variable dupliquée"); ts_ajouter_tableau($2, $4.len); $$ = create_assign_int_list_node($2, $4); }
+  Expr                                                                { $$ = $1; }
+| Var Identifier                                                      { if(ts_retrouver_id($2)) yyerror("variable dupliquée"); ts_ajouter_scalaire($2); $$ = NULL; }
+| Var Identifier Assign Expr                                          { if(ts_retrouver_id($2)) yyerror("variable dupliquée"); ts_ajouter_scalaire($2); $$ = create_assign_node($2, $4); }
+| Var Identifier LeftSquareBracket Int RightSquareBracket             { if(ts_retrouver_id($2)) yyerror("variable dupliquée"); ts_ajouter_tableau($2, $4); $$ = NULL; }
+| Var Identifier Assign IntArray                                      { if(ts_retrouver_id($2)) yyerror("variable dupliquée"); ts_ajouter_tableau($2, $4.len); $$ = create_assign_int_list_node($2, $4); }
 
-| Read Identifier                                                          { if(!ts_retrouver_id($2)) ts_ajouter_scalaire($2); $$ = create_read_node($2); }
-| Read Identifier LeftSquareBracket IntExpr RightSquareBracket             { if(!ts_retrouver_id($2)) yyerror("variable inconnue"); $$ = create_read_indexed_node($2, $4); }
-| Read LeftSquareBracket Int RightSquareBracket Identifier                 { if( ts_retrouver_id($5)) yyerror("variable dupliquée"); ts_ajouter_tableau($5, $3); $$ = create_read_array_node($5); }
-| Read LeftSquareBracket Identifier RightSquareBracket                     { if(!ts_retrouver_id($3)) yyerror("variable inconnue"); $$ = create_read_array_node($3); }
+| Read Identifier                                                     { if(!ts_retrouver_id($2)) ts_ajouter_scalaire($2); $$ = create_read_node($2); }
+| Read Identifier LeftSquareBracket IntExpr RightSquareBracket        { if(!ts_retrouver_id($2)) yyerror("variable inconnue"); $$ = create_read_indexed_node($2, $4); }
+| Read LeftSquareBracket Int RightSquareBracket Identifier            { if( ts_retrouver_id($5)) yyerror("variable dupliquée"); ts_ajouter_tableau($5, $3); $$ = create_read_array_node($5); }
+| Read LeftSquareBracket Identifier RightSquareBracket                { if(!ts_retrouver_id($3)) yyerror("variable inconnue"); $$ = create_read_array_node($3); }
 
-| Identifier Assign Statement                                              { $$ = create_assign_node($1, $3); }
-| Identifier Assign IntArray                                               { $$ = create_assign_int_list_node($1, $3); }
-| Identifier LeftSquareBracket IntExpr RightSquareBracket Assign Statement { $$ = create_assign_indexed_node($1, $3, $6); }
+| Identifier Assign Expr                                              { $$ = create_assign_node($1, $3); }
+| Identifier Assign IntArray                                          { $$ = create_assign_int_list_node($1, $3); }
+| Identifier LeftSquareBracket IntExpr RightSquareBracket Assign Expr { $$ = create_assign_indexed_node($1, $3, $6); }
 
-| Print Expr                                                               { $$ = create_print_node($2); }
-| Print LeftSquareBracket Identifier RightSquareBracket                    { $$ = create_print_array_node($3); }
+| Print Expr                                                          { $$ = create_print_node($2); }
+| Print LeftSquareBracket Identifier RightSquareBracket               { $$ = create_print_array_node($3); }
 ;
 
 IntArray:
