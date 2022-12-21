@@ -284,7 +284,7 @@ asa* create_index_node(const char id[32], asa *index) {
 	asa *p = checked_malloc();
 	
 	p->tag = TagIndex;
-	p->ninst = index->ninst + 2;
+	p->ninst = index->tag == TagInt ? 1 : index->ninst + 2;
 	strcpy(&p->tag_index.identifier[0], &id[0]);
 	p->tag_index.index = index;
 	
