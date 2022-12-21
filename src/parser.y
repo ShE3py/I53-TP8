@@ -21,6 +21,7 @@
 // Ponctuation
 %token LeftParenthesis RightParenthesis
 %token LeftSquareBracket RightSquareBracket
+%token Dot
 %token Semicolon
 
 // Littéraux et identifiants
@@ -111,10 +112,11 @@ IntExpr:
 ;
 
 IntValue:
-  LeftParenthesis IntExpr RightParenthesis                { $$ = $2; }
-| Int                                                     { $$ = create_int_leaf($1); }
-| Identifier                                              { $$ = create_var_leaf($1); }
-| Identifier LeftSquareBracket IntExpr RightSquareBracket { $$ = create_index_node($1, $3); }
+  LeftParenthesis IntExpr RightParenthesis                   { $$ = $2; }
+| Int                                                        { $$ = create_int_leaf($1); }
+| Identifier                                                 { $$ = create_var_leaf($1); }
+| Identifier LeftSquareBracket IntExpr RightSquareBracket    { $$ = create_index_node($1, $3); }
+| Identifier Dot Identifier LeftParenthesis RightParenthesis { $$ = create_fncall_node($1, $3); }
 ;
 
 CmpExpr:
