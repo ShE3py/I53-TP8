@@ -37,6 +37,11 @@ typedef enum {
 	TagAssign,
 	
 	/**
+	 * La fonction intrinsèque `LIRE`.
+	 */
+	TagRead,
+	
+	/**
 	 * La fonction intrinsèque `AFFICHER`.
 	 */
 	TagPrint,
@@ -204,6 +209,16 @@ typedef struct asa {
 		} tag_assign;
 		
 		/**
+		 * La valeur d'un noeud `TagRead`.
+		 */
+		struct {
+			/**
+			 * L'identifiant de la variable receveuse.
+			 */
+			char identifier[32];
+		} tag_read;
+		
+		/**
 		 * La valeur d'un noeud `TagPrint`.
 		 */
 		struct {
@@ -255,6 +270,11 @@ asa* create_unop_node(UnaryOp unop, asa *expr);
  * Créer un nouveau noeud `TagAssign` avec les valeurs spécifiées.
  */
 asa* create_assign_node(const char id[32], asa *expr);
+
+/**
+ * Créer un nouveau noeud `TagRead` avec l'identifiant spécifié.
+ */
+asa* create_read_node(const char id[32]);
 
 /**
  * Créer un nouveau noeud `TagPrint` avec l'expression spécifiée.

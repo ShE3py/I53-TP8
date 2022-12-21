@@ -14,7 +14,7 @@
 // Mots-clefs
 %token Start End
 %token Var
-%token Print
+%token Read Print
 
 // Ponctuation
 %token LeftParenthesis RightParenthesis
@@ -65,12 +65,13 @@ Statement:
   Expr                        { $$ = $1; }
 | Var Identifier              { if(ts_retrouver_id($2)) yyerror("variable dupliquée"); ts_ajouter_id($2, 1); $$ = NULL; }
 | Identifier Assign Statement { $$ = create_assign_node($1, $3); }
+| Read Identifier             { $$ = create_read_node($2); }
 | Print Expr                  { $$ = create_print_node($2); }
 ;
 
 Expr:
   IntExpr  { $$ = $1; }
-| CmpExpr  { $$ = $1; }
+//CmpExpr  { $$ = $1; }  accessible with BoolExpr
 | BoolExpr { $$ = $1; }
 ;
 

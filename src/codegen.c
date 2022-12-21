@@ -315,12 +315,26 @@ void codegen_nc(asa *p, int *sp, int *ip) {
 			
 			ts *var = ts_retrouver_id(p->tag_assign.identifier);
 			if(var == NULL) {
-				ts_ajouter_id(p->tag_assign.identifier, 1);
-				var = ts_retrouver_id(p->tag_assign.identifier);
+				fprintf(stderr, "illegal state: '%s' should exists at this stage but it does not\n", p->tag_assign.identifier);
+				exit(1);
 			}
 			
 			printf("STORE %i\n", var->adr);
 			++(*ip);
+			break;
+		}
+		
+		case TagRead: {
+			printf("READ\n");
+			
+			ts *var = ts_retrouver_id(p->tag_assign.identifier);
+			if(var == NULL) {
+				fprintf(stderr, "illegal state: '%s' should exists at this stage but it does not\n", p->tag_assign.identifier);
+				exit(1);
+			}
+			
+			printf("STORE %i\n", var->adr);
+			*ip += 2;
 			break;
 		}
 		
