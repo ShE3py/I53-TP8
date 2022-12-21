@@ -5,6 +5,9 @@ DÉBUT
 	LIRE x;
 	LIRE y;
 	
-	AFFICHER y;
-	AFFICHER x;
+	SI x >= y ALORS
+		AFFICHER x;
+	SINON
+		AFFICHER y;
+	FSI
 FIN

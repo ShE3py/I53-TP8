@@ -37,6 +37,11 @@ typedef enum {
 	TagAssign,
 	
 	/**
+	 * Une structure si-alors-sinon.
+	 */
+	TagTest,
+	
+	/**
 	 * La fonction intrinsèque `LIRE`.
 	 */
 	TagRead,
@@ -209,6 +214,26 @@ typedef struct asa {
 		} tag_assign;
 		
 		/**
+		 * La valeur d'un noeud `TagTest`.
+		 */
+		struct {
+			/**
+			 * L'expression à tester.
+			 */
+			struct asa *expr;
+			
+			/**
+			 * Les instructions à exécuter si le test a réussi.
+			 */
+			struct asa *therefore; // nonnull
+			
+			/**
+			 * Les instructions à exécuter si le test a échoué.
+			 */
+			struct asa *alternative;  // nullable
+		} tag_test;
+		
+		/**
 		 * La valeur d'un noeud `TagRead`.
 		 */
 		struct {
@@ -272,6 +297,11 @@ asa* create_unop_node(UnaryOp unop, asa *expr);
 asa* create_assign_node(const char id[32], asa *expr);
 
 /**
+ * Créer un nouveau noeud `TagTest` avec les valeurs spécifiées.
+ */
+asa* create_test_node(asa *expr, asa *therefore, asa *alternative);
+
+/**
  * Créer un nouveau noeud `TagRead` avec l'identifiant spécifié.
  */
 asa* create_read_node(const char id[32]);
@@ -296,6 +326,6 @@ void print_asa(asa *p);
  */
 void free_asa(asa *p);
 
-extern ts * tsymb;
+extern ts *tsymb;
 
 #endif
