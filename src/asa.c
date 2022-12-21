@@ -211,7 +211,7 @@ asa* create_index_node(const char id[32], asa *index) {
 	
 	p->tag = TagIndex;
 	p->ninst = index->ninst + 2;
-	strcat(&p->tag_index.identifier[0], &id[0]);
+	strcpy(&p->tag_index.identifier[0], &id[0]);
 	p->tag_index.index = index;
 	
 	return p;
