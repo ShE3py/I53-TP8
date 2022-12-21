@@ -42,6 +42,11 @@ typedef enum {
 	TagTest,
 	
 	/**
+	 * Une structure tant que-faire.
+	 */
+	TagWhile,
+	
+	/**
 	 * La fonction intrinsèque `LIRE`.
 	 */
 	TagRead,
@@ -234,6 +239,21 @@ typedef struct asa {
 		} tag_test;
 		
 		/**
+		 * La valeur d'un noeud `TagWhile`.
+		 */
+		struct {
+			/**
+			 * L'expression à tester.
+			 */
+			struct asa *expr;
+			
+			/**
+			 * Les instructions à exécuter dans le corps de la boucle.
+			 */
+			struct asa *body; // nonnull
+		} tag_while;
+		
+		/**
 		 * La valeur d'un noeud `TagRead`.
 		 */
 		struct {
@@ -300,6 +320,11 @@ asa* create_assign_node(const char id[32], asa *expr);
  * Créer un nouveau noeud `TagTest` avec les valeurs spécifiées.
  */
 asa* create_test_node(asa *expr, asa *therefore, asa *alternative);
+
+/**
+ * Créer un nouveau noeud `TagWhile` avec les valeurs spécifiées.
+ */
+asa* create_while_node(asa *expr, asa *body);
 
 /**
  * Créer un nouveau noeud `TagRead` avec l'identifiant spécifié.

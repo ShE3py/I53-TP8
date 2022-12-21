@@ -349,6 +349,20 @@ void codegen_nc(asa *p, int *sp, int *ip) {
 			break;
 		}
 		
+		case TagWhile: {
+			codegen_nc(p->tag_while.expr, sp, ip);
+			
+			printf("JUMZ %i\n", *ip + p->tag_while.body->ninst + 2);
+			++(*ip);
+			
+			codegen_nc(p->tag_while.body, sp, ip);
+			
+			printf("JUMP %i\n", before_codegen_ip);
+			++(*ip);
+			
+			break;
+		}
+		
 		case TagRead: {
 			printf("READ\n");
 			
