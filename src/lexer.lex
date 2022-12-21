@@ -22,6 +22,8 @@ void yyerror(const char *s) {
 "FIN"           { return End; }
 
 "VAR"           { return Var; }
+
+"LIRE"          { return Read; }
 "AFFICHER"      { return Print; }
 
  /* Opérateurs logiques */
