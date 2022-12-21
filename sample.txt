@@ -1,12 +1,5 @@
 DÉBUT
-	VAR x;
-	VAR y;
-	
-	x := 1;
-	y := 2;
-	
-	AFFICHER x > y OU y > x;
-	AFFICHER x > y OU EXCLUSIF y > x;
-	AFFICHER x < y ET y > x;
-	AFFICHER x < y OU EXCLUSIF y > x;
+	AFFICHER 1;
+	AFFICHER +1;
+	AFFICHER -1;
 FIN
