@@ -67,8 +67,8 @@ Statements:
 Statement:
   Expr                                    { $$ = $1; }
 | Var Identifier                          { if(ts_retrouver_id($2)) yyerror("variable dupliquée"); ts_ajouter_id($2, 1); $$ = NULL; }
+| Read Identifier                         { if(!ts_retrouver_id($2)) ts_ajouter_id($2, 1); $$ = create_read_node($2); }
 | Identifier Assign Statement             { $$ = create_assign_node($1, $3); }
-| Read Identifier                         { $$ = create_read_node($2); }
 | Print Expr                              { $$ = create_print_node($2); }
 ;
 

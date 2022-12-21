@@ -1,7 +1,4 @@
 DÉBUT
-	VAR x;
-	VAR y;
-	
 	LIRE x;
 	LIRE y;
 	
