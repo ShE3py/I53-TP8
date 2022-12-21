@@ -22,6 +22,11 @@ typedef enum {
 	TagVar,
 	
 	/**
+	 * Une opération d'indexation.
+	 */
+	TagIndex,
+	
+	/**
 	 * Une opération binaire.
 	 */
 	TagBinaryOp,
@@ -35,6 +40,11 @@ typedef enum {
 	 * Une affectation.
 	 */
 	TagAssign,
+	
+	/**
+	 * Une affectation à un élément d'un tableau.
+	 */
+	TagAssignIndexed,
 	
 	/**
 	 * Une structure si-alors-sinon.
@@ -52,9 +62,24 @@ typedef enum {
 	TagRead,
 	
 	/**
+	 * La fonction intrinsèque `LIRE` sur un élément d'un tableau.
+	 */
+	TagReadIndexed,
+	
+	/**
+	 * La fonction intrinsèque `LIRE` sur un tableau entier.
+	 */
+	TagReadArray,
+	
+	/**
 	 * La fonction intrinsèque `AFFICHER`.
 	 */
 	TagPrint,
+	
+	/**
+	 * La fonction intrinsèque `AFFICHER` sur un tableau.
+	 */
+	TagPrintArray,
 	
 	/**
 	 * Un bloc d'instructions.
@@ -169,6 +194,21 @@ typedef struct asa {
 		} tag_var;
 		
 		/**
+		 * La valeur d'un noeud `TagIndex`.
+		 */
+		struct {
+			/**
+			 * L'identifiant de la variable.
+			 */
+			char identifier[32];
+			
+			/**
+			 * L'indice.
+			 */
+			struct asa *index;
+		} tag_index;
+		
+		/**
 		 * La valeur d'un noeud `TagBinaryOp`.
 		 */
 		struct {
@@ -219,6 +259,26 @@ typedef struct asa {
 		} tag_assign;
 		
 		/**
+		 * La valeur d'un noeud `TagAssignIndexed`.
+		 */
+		struct {
+			/**
+			 * L'identifiant du tableau à modifier.
+			 */
+			char identifier[32];
+			
+			/**
+			 * L'indice de l'élément à modifier.
+			 */
+			struct asa *index;
+			
+			/**
+			 * L'expression à évaluer.
+			 */
+			struct asa *expr;
+		} tag_assign_indexed;
+		
+		/**
 		 * La valeur d'un noeud `TagTest`.
 		 */
 		struct {
@@ -264,6 +324,31 @@ typedef struct asa {
 		} tag_read;
 		
 		/**
+		 * La valeur d'un noeud `TagReadIndexed`.
+		 */
+		struct {
+			/**
+			 * L'identifiant du tableau à modifier.
+			 */
+			char identifier[32];
+			
+			/**
+			 * L'indice dans le tableau.
+			 */
+			struct asa *index;
+		} tag_read_indexed;
+		
+		/**
+		 * La valeur d'un noeud `TagReadArray`.
+		 */
+		struct {
+			/**
+			 * L'identifiant du tableau receveur.
+			 */
+			char identifier[32];
+		} tag_read_array;
+		
+		/**
 		 * La valeur d'un noeud `TagPrint`.
 		 */
 		struct {
@@ -272,6 +357,16 @@ typedef struct asa {
 			 */
 			struct asa *expr;
 		} tag_print;
+		
+		/**
+		 * La valeur d'un noeud `TagPrintArray`.
+		 */
+		struct {
+			/**
+			 * L'identifiant du tableau à afficher.
+			 */
+			char identifier[32];
+		} tag_print_array;
 		
 		/**
 		 * La valeur d'un noeud `TagBlock`.
@@ -302,6 +397,11 @@ asa* create_int_leaf(int value);
 asa* create_var_leaf(const char id[32]);
 
 /**
+ * Créer un nouveau noeud `TagIndex` avec les valeurs spécifiées.
+ */
+asa* create_index_node(const char id[32], asa *index);
+
+/**
  * Créer un nouveau noeud `TagBinaryOp` avec les valeurs spécifiées.
  */
 asa* create_binop_node(BinaryOp binop, asa *lhs, asa *rhs);
@@ -315,6 +415,11 @@ asa* create_unop_node(UnaryOp unop, asa *expr);
  * Créer un nouveau noeud `TagAssign` avec les valeurs spécifiées.
  */
 asa* create_assign_node(const char id[32], asa *expr);
+
+/**
+ * Créer un nouveau noeud `TagAssignIndexed` avec les valeurs spécifiées.
+ */
+asa* create_assign_indexed_node(const char id[32], asa *index, asa *expr);
 
 /**
  * Créer un nouveau noeud `TagTest` avec les valeurs spécifiées.
@@ -332,9 +437,24 @@ asa* create_while_node(asa *expr, asa *body);
 asa* create_read_node(const char id[32]);
 
 /**
+ * Créer un nouveau noeud `TagReadIndexed` avec les valeurs spécifiées.
+ */
+asa* create_read_indexed_node(const char id[32], asa *index);
+
+/**
+ * Créer un nouveau noeud `TagReadArray` avec l'identifiant spécifié.
+ */
+asa* create_read_array_node(const char id[32]);
+
+/**
  * Créer un nouveau noeud `TagPrint` avec l'expression spécifiée.
  */
 asa* create_print_node(asa *expr);
+
+/**
+ * Créer un nouveau noeud `TagPrintArray` avec l'identifiant spécifié.
+ */
+asa* create_print_array_node(const char id[32]);
 
 /**
  * Transforme deux noeuds en un noeud `TagBlock` équivalent.

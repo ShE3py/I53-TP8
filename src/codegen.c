@@ -72,6 +72,21 @@ void codegen_nc(asa *p, int *sp, int *ip) {
 			break;
 		}
 		
+		case TagIndex: {
+			ts *var = ts_retrouver_id(p->tag_index.identifier);
+			if(var == NULL) {
+				fprintf(stderr, "illegal state: '%s' should exists at this stage but it does not\n", p->tag_index.identifier);
+				exit(1);
+			}
+			
+			codegen_nc(p->tag_index.index, sp, ip);
+			printf("ADD #%i\n", var->adr);
+			printf("LOAD @0\n");
+			
+			*ip += 2;
+			break;
+		}
+		
 		case TagBinaryOp: {
 			switch(binop_kind(p->tag_binary_op.op)) {
 				case Arithmetic:
@@ -326,6 +341,26 @@ void codegen_nc(asa *p, int *sp, int *ip) {
 			break;
 		}
 		
+		case TagAssignIndexed: {
+			ts *var = ts_retrouver_id(p->tag_assign.identifier);
+			if(var == NULL) {
+				fprintf(stderr, "illegal state: '%s' should exists at this stage but it does not\n", p->tag_assign.identifier);
+				exit(1);
+			}
+			
+			codegen_nc(p->tag_assign_indexed.index, sp, ip);
+			printf("ADD #%i\n", var->adr);
+			printf("STORE %i\n", ++(*sp));
+			
+			*ip += 2;
+			codegen_nc(p->tag_assign_indexed.expr, sp, ip);
+			printf("STORE @%i\n", *sp);
+			
+			++(*ip);
+			--(*sp);
+			break;
+		}
+		
 		case TagTest: {
 			codegen_nc(p->tag_test.expr, sp, ip);
 			
@@ -366,9 +401,9 @@ void codegen_nc(asa *p, int *sp, int *ip) {
 		case TagRead: {
 			printf("READ\n");
 			
-			ts *var = ts_retrouver_id(p->tag_assign.identifier);
+			ts *var = ts_retrouver_id(p->tag_read.identifier);
 			if(var == NULL) {
-				fprintf(stderr, "illegal state: '%s' should exists at this stage but it does not\n", p->tag_assign.identifier);
+				fprintf(stderr, "illegal state: '%s' should exists at this stage but it does not\n", p->tag_read.identifier);
 				exit(1);
 			}
 			
@@ -377,10 +412,60 @@ void codegen_nc(asa *p, int *sp, int *ip) {
 			break;
 		}
 		
+		case TagReadIndexed: {
+			ts *var = ts_retrouver_id(p->tag_read_indexed.identifier);
+			if(var == NULL) {
+				fprintf(stderr, "illegal state: '%s' should exists at this stage but it does not\n", p->tag_read_indexed.identifier);
+				exit(1);
+			}
+			
+			codegen_nc(p->tag_read_indexed.index, sp, ip);
+			printf("ADD #%i\n", var->adr);
+			printf("STORE %i\n", ++(*sp));
+			printf("READ\n");
+			printf("STORE @%i\n", *sp);
+			
+			--(*sp);
+			*ip += 4;
+			break;
+		}
+		
+		case TagReadArray: {
+			ts *var = ts_retrouver_id(p->tag_read_indexed.identifier);
+			if(var == NULL) {
+				fprintf(stderr, "illegal state: '%s' should exists at this stage but it does not\n", p->tag_read_indexed.identifier);
+				exit(1);
+			}
+			
+			for(int i = 0; i < var->size; ++i) {
+				printf("READ\n");
+				printf("STORE %i\n", var->adr + i);
+			}
+			
+			*ip += var->size * 2;
+			break;
+		}
+		
 		case TagPrint: {
 			codegen_nc(p->tag_print.expr, sp, ip);
 			printf("WRITE\n");
 			++(*ip);
+			break;
+		}
+		
+		case TagPrintArray: {
+			ts *var = ts_retrouver_id(p->tag_read_indexed.identifier);
+			if(var == NULL) {
+				fprintf(stderr, "illegal state: '%s' should exists at this stage but it does not\n", p->tag_read_indexed.identifier);
+				exit(1);
+			}
+			
+			for(int i = 0; i < var->size; ++i) {
+				printf("LOAD %i\n", var->adr + i);
+				printf("WRITE\n");
+			}
+			
+			*ip += var->size * 2;
 			break;
 		}
 		

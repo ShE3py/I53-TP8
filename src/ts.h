@@ -10,14 +10,15 @@
 typedef struct ts{
   char *id; // la chaine de car de l'ID
   int adr;  // l'adresse mémoire de l'ID (dans la machine RAM)
-  int size; // le nombre de cases mémoires allouées à l'ID
+  int size; // le nombre de cases mémoires allouées à l'ID, -1 pour un sclaire.
   struct ts *next;
 } ts;   
 
 extern ts * tsymb;
 
-// ajoute l'identificateur <id> de taille <size> à la table des symboles
-void ts_ajouter_id(const char *id, int size);
+void ts_ajouter_scalaire(const char *id);
+void ts_ajouter_tableau(const char *id, int size);
+
 // retourne un pointeur vers le noeud contenant l'id <id>, 0 sinon
 ts * ts_retrouver_id(const char *id);
 // libere la mémoire de la table de symbole
