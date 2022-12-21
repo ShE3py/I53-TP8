@@ -245,10 +245,14 @@ asa* create_assign_node(const char id[32], asa *expr) {
  * Créer un nouveau noeud `TagTest` avec les valeurs spécifiées.
  */
 asa* create_test_node(asa *expr, asa *therefore, asa *alternative) {
+	if(!therefore && !alternative) {
+		return NULL;
+	}
+	
 	asa *p = checked_malloc();
 	
 	p->tag = TagTest;
-	p->ninst = expr->ninst + 1 + therefore->ninst + (alternative ? (4 + alternative->ninst) : 2);
+	p->ninst = expr->ninst + 1 + (therefore ? therefore->ninst : 0) + (alternative ? (4 + alternative->ninst) : 2);
 	p->tag_test.expr = expr;
 	p->tag_test.therefore = therefore;
 	p->tag_test.alternative = alternative;
@@ -260,6 +264,10 @@ asa* create_test_node(asa *expr, asa *therefore, asa *alternative) {
  * Créer un nouveau noeud `TagWhile` avec les valeurs spécifiées.
  */
 asa* create_while_node(asa *expr, asa *body) {
+	if(!body) {
+		return NULL;
+	}
+	
 	asa *p = checked_malloc();
 	
 	p->tag = TagWhile;
