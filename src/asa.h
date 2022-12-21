@@ -47,6 +47,11 @@ typedef enum {
 	TagAssignIndexed,
 	
 	/**
+	 * Une affectation d'un tableau à une liste d'entiers.
+	 */
+	TagAssignIntList,
+	
+	/**
 	 * Une structure si-alors-sinon.
 	 */
 	TagTest,
@@ -156,6 +161,35 @@ typedef enum {
  * Renvoie le symbole associé à un opérateur unaire.
  */
 const char* unop_symbol(UnaryOp unop);
+
+/**
+ * Un élément d'une liste chaînée d'expressions.
+ */
+typedef struct asa_list_node {
+	struct asa *value;
+	struct asa_list_node *next;
+} asa_list_node;
+
+/**
+ * Une liste d'expressions, utilisée par `TagAssignIntList`.
+ */
+typedef struct asa_list {
+	/**
+	 * La longueur de la liste.
+	 */
+	size_t len;
+	
+	/**
+	 * Le nombre d'instructions générés par tous
+	 * les éléments de cette liste.
+	 */
+	size_t ninst;
+	
+	/**
+	 * Le premier élément de la liste chaînée.
+	 */
+	asa_list_node *head;
+} asa_list;
 
 /**
  * Un noeud d'un arbre syntaxique abstrait.
@@ -279,6 +313,21 @@ typedef struct asa {
 		} tag_assign_indexed;
 		
 		/**
+		 * La valeur d'un noeud `TagAssignIntList`.
+		 */
+		struct {
+			/**
+			 * L'identifiant du tableau à modifier.
+			 */
+			char identifier[32];
+			
+			/**
+			 * La liste d'entiers.
+			 */
+			asa_list values;
+		} tag_assign_int_list;
+		
+		/**
 		 * La valeur d'un noeud `TagTest`.
 		 */
 		struct {
@@ -385,6 +434,25 @@ typedef struct asa {
 	};
 } asa;
 
+/**
+ * Créer une nouvelle liste à partir de son premier élément et des éléments suivants.
+ */
+asa_list asa_list_append(asa *head, asa_list next);
+
+/**
+ * Créer une nouvelle liste vide.
+ */
+asa_list asa_list_empty();
+
+/**
+ * Affiche une liste dans la sortie standard.
+ */
+void asa_list_print(asa_list l);
+
+/**
+ * Libère les ressources allouées à une liste.
+ */
+void asa_list_destroy(asa_list l);
 
 /**
  * Créer une nouvelle feuille `TagInt` avec la valeur spécifiée.
@@ -420,6 +488,11 @@ asa* create_assign_node(const char id[32], asa *expr);
  * Créer un nouveau noeud `TagAssignIndexed` avec les valeurs spécifiées.
  */
 asa* create_assign_indexed_node(const char id[32], asa *index, asa *expr);
+
+/**
+ * Créer un nouveau noeud `TagAssignIntList` avec les valeurs spécifiées.
+ */
+asa* create_assign_int_list_node(const char id[32], asa_list values);
 
 /**
  * Créer un nouveau noeud `TagTest` avec les valeurs spécifiées.

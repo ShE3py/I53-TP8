@@ -15,6 +15,7 @@ int is_leaf(NodeTag tag) {
 		case TagUnaryOp:
 		case TagAssign:
 		case TagAssignIndexed:
+		case TagAssignIntList:
 		case TagTest:
 		case TagWhile:
 		case TagRead:
@@ -136,6 +137,78 @@ asa* checked_malloc() {
 	}
 	
 	return p;
+}
+
+/**
+ * Créer une nouvelle liste à partir de son premier élément et des éléments suivants.
+ */
+asa_list asa_list_append(asa *head, asa_list next) {
+	if(!head) {
+		fprintf(stderr, "called asa_list_append() with null `head`\n");
+		exit(1);
+	}
+	
+	asa_list l;
+	l.len = 1 + next.len;
+	l.ninst = head->ninst + next.ninst;
+	
+	asa_list_node *n = malloc(sizeof(asa_list_node));
+	n->value = head;
+	n->next = next.head;
+	
+	l.head = n;
+	return l;
+}
+
+/**
+ * Créer une nouvelle liste vide.
+ */
+asa_list asa_list_empty() {
+	asa_list l;
+	l.len = 0;
+	l.ninst = 0;
+	l.head = NULL;
+	
+	return l;
+}
+
+/**
+ * Affiche une liste dans la sortie standard.
+ */
+void asa_list_print(asa_list l) {
+	if(l.len == 0) {
+		printf("{}");
+	}
+	else {
+		asa_list_node *n = l.head;
+		printf("{ ");
+		print_asa(n->value);
+		
+		while(n->next) {
+			n = n->next;
+			
+			printf(", ");
+			print_asa(n->value);
+		}
+		
+		printf(" }");
+	}
+}
+
+/**
+ * Libère les ressources allouées à une liste.
+ */
+void asa_list_destroy(asa_list l) {
+	asa_list_node *n = l.head;
+	while(n) {
+		asa_list_node *m = n;
+		n = n->next;
+		
+		free(m);
+	}
+	
+	l.len = 0;
+	l.head = NULL;
 }
 
 /**
@@ -325,6 +398,43 @@ asa* create_assign_indexed_node(const char id[32], asa *index, asa *expr) {
 	strcpy(&p->tag_assign_indexed.identifier[0], &id[0]);
 	p->tag_assign_indexed.index = index;
 	p->tag_assign_indexed.expr = expr;
+	
+	return p;
+}
+
+/**
+ * Créer un nouveau noeud `TagAssignIntList` avec les valeurs spécifiées.
+ */
+asa* create_assign_int_list_node(const char id[32], asa_list values) {
+	ts *var = ts_retrouver_id(id);
+	if(var == NULL) {
+		extern const char *input;
+		extern int yylineno;
+		
+		fprintf(stderr, "%s:%i: variable inconnue: '%s'\n", input, yylineno, id);
+		exit(1);
+	}
+	else if(var->size == -1) {
+		extern const char *input;
+		extern int yylineno;
+		
+		fprintf(stderr, "%s:%i: impossible d'affecter un tableau au scalaire '%s'\n", input, yylineno, id);
+		exit(1);
+	}
+	else if(var->size != values.len) {
+		extern const char *input;
+		extern int yylineno;
+		
+		fprintf(stderr, "%s:%i: affectation impossible: le tableau n'a pas la taille adéquate\n", input, yylineno);
+		exit(1);
+	}
+	
+	asa *p = checked_malloc();
+	
+	p->tag = TagAssignIntList;
+	p->ninst = values.ninst + values.len;
+	strcpy(&p->tag_assign_int_list.identifier[0], &id[0]);
+	p->tag_assign_int_list.values = values;
 	
 	return p;
 }
@@ -658,6 +768,11 @@ void print_asa(asa *p) {
 			print_asa(p->tag_assign_indexed.expr);
 			break;
 		
+		case TagAssignIntList:
+			printf("%s := ", p->tag_assign_int_list.identifier);
+			asa_list_print(p->tag_assign_int_list.values);
+			break;
+		
 		case TagTest:
 			printf("SI ");
 			print_asa(p->tag_test.expr);
@@ -735,6 +850,10 @@ void free_asa(asa *p) {
 		case TagAssignIndexed:
 			free_asa(p->tag_assign_indexed.index);
 			free_asa(p->tag_assign_indexed.expr);
+			break;
+		
+		case TagAssignIntList:
+			asa_list_destroy(p->tag_assign_int_list.values);
 			break;
 		
 		case TagTest:

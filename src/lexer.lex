@@ -68,7 +68,10 @@ void yyerror(const char *s) {
 ")"       { return RightParenthesis; }
 "["       { return LeftSquareBracket; }
 "]"       { return RightSquareBracket; }
+"{"       { return LeftBracket; }
+"}"       { return RightBracket; }
 "."       { return Dot; }
+","       { return Comma; }
 ";"       { return Semicolon; }
 
  /* Espaces et sauts de ligne */

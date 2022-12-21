@@ -3,7 +3,9 @@ DÉBUT
 	VAR y[5];
 	
 	LIRE [x];
-
+	
+	VAR z := { 1, 2 };
+	
 	VAR i := 0;
 	TQ i < x.len() FAIRE
 		y[x.len() - i - 1] := x[i];
