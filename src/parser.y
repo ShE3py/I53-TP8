@@ -88,6 +88,7 @@ Statement:
 | Read LeftSquareBracket Identifier RightSquareBracket                     { if(!ts_retrouver_id($3)) yyerror("variable inconnue"); $$ = create_read_array_node($3); }
 
 | Identifier Assign Statement                                              { $$ = create_assign_node($1, $3); }
+| Identifier Assign IntArray                                               { $$ = create_assign_int_list_node($1, $3); }
 | Identifier LeftSquareBracket IntExpr RightSquareBracket Assign Statement { $$ = create_assign_indexed_node($1, $3, $6); }
 
 | Print Expr                                                               { $$ = create_print_node($2); }

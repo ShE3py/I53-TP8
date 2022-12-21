@@ -5,6 +5,7 @@ DÉBUT
 	LIRE [x];
 	
 	VAR z := { 1, 2 };
+	z := { 3, 4 + z[0] };
 	
 	VAR i := 0;
 	TQ i < x.len() FAIRE
