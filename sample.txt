@@ -1,4 +1,5 @@
 DÉBUT
+	# Fibonacci itératif
 	LIRE n;
 	
 	SI n = 0 ALORS
