@@ -31,7 +31,7 @@ void yyerror(const char *s) {
 "NON"     { return Not; }
 
  /* Littéraux et identifiants */
-[0-9]+                 { yylval.ival = atoi(yytext); return Int; }
+[-+]?[0-9]+            { yylval.ival = atoi(yytext); return Int; }
 [A-Za-z_][A-Za-z0-9_]* { if(yyleng > 32) yyerror("identifier length exceeded"); strcpy(yylval.sval, yytext); return Identifier; }
 
  /* Opérateurs d'affectation */
