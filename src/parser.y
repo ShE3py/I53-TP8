@@ -15,6 +15,7 @@
 %token Start End
 %token Var
 %token If Then Else EndIf
+%token While Do EndWhile
 %token Read Print
 
 // Ponctuation
@@ -74,6 +75,7 @@ Statement:
 
 Block:
   If BoolExpr Then Statements ElseOrEndIf { $$ = create_test_node($2, $4, $5); }
+| While BoolExpr Do Statements EndWhile   { $$ = create_while_node($2, $4); }
 ;
 
 ElseOrEndIf:

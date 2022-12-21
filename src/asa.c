@@ -14,6 +14,7 @@ int is_leaf(NodeTag tag) {
 		case TagUnaryOp:
 		case TagAssign:
 		case TagTest:
+		case TagWhile:
 		case TagRead:
 		case TagPrint:
 		case TagBlock:
@@ -256,6 +257,20 @@ asa* create_test_node(asa *expr, asa *therefore, asa *alternative) {
 }
 
 /**
+ * Créer un nouveau noeud `TagWhile` avec les valeurs spécifiées.
+ */
+asa* create_while_node(asa *expr, asa *body) {
+	asa *p = checked_malloc();
+	
+	p->tag = TagWhile;
+	p->ninst = expr->ninst + body->ninst + 2;
+	p->tag_while.expr = expr;
+	p->tag_while.body = body;
+	
+	return p;
+}
+
+/**
  * Créer un nouveau noeud `TagRead` avec l'identifiant spécifié.
  */
 asa* create_read_node(const char id[32]) {
@@ -402,6 +417,11 @@ void print_asa(asa *p) {
 			print_asa(p->tag_test.expr);
 			break;
 		
+		case TagWhile:
+			printf("TQ ");
+			print_asa(p->tag_test.expr);
+			break;
+		
 		case TagRead:
 			printf("LIRE %s", p->tag_read.identifier);
 			break;
@@ -445,6 +465,11 @@ void free_asa(asa *p) {
 			free_asa(p->tag_test.expr);
 			free_asa(p->tag_test.therefore);
 			free_asa(p->tag_test.alternative);
+			break;
+		
+		case TagWhile:
+			free_asa(p->tag_while.expr);
+			free_asa(p->tag_while.body);
 			break;
 		
 		case TagPrint:
