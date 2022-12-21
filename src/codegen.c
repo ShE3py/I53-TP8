@@ -506,6 +506,10 @@ void codegen_nc(asa *p, int *sp, int *ip) {
 		fprintf(stderr, "generated %i instructions for current node, but ninst is %i\n", *ip - before_codegen_ip, p->ninst);
 		exit(1);
 	}
+	
+	if(p->ninst == 0) {
+		fprintf(stderr, "warning: generated no instruction for current node, no-ops should be `NULL`\n");
+	}
 }
 
 /**
