@@ -342,9 +342,9 @@ void codegen_nc(asa *p, int *sp, int *ip) {
 		}
 		
 		case TagAssignIndexed: {
-			ts *var = ts_retrouver_id(p->tag_assign.identifier);
+			ts *var = ts_retrouver_id(p->tag_assign_indexed.identifier);
 			if(var == NULL) {
-				fprintf(stderr, "illegal state: '%s' should exists at this stage but it does not\n", p->tag_assign.identifier);
+				fprintf(stderr, "illegal state: '%s' should exists at this stage but it does not\n", p->tag_assign_indexed.identifier);
 				exit(1);
 			}
 			
@@ -358,6 +358,26 @@ void codegen_nc(asa *p, int *sp, int *ip) {
 			
 			++(*ip);
 			--(*sp);
+			break;
+		}
+		
+		case TagAssignIntList: {
+			ts *var = ts_retrouver_id(p->tag_assign_int_list.identifier);
+			if(var == NULL) {
+				fprintf(stderr, "illegal state: '%s' should exists at this stage but it does not\n", p->tag_assign_int_list.identifier);
+				exit(1);
+			}
+			
+			asa_list_node *n = p->tag_assign_int_list.values.head;
+			
+			for(int i = 0; i < var->size; ++i) {
+				codegen_nc(n->value, sp, ip);
+				printf("STORE %i\n", var->adr + i);
+				++(*ip);
+				
+				n = n->next;
+			}
+			
 			break;
 		}
 		
