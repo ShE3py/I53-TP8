@@ -4,14 +4,11 @@ DÉBUT
 	
 	LIRE [x];
 	
-	VAR z := {};
-	z := {};
-	
 	VAR i := 0;
 	TQ i < x.len() FAIRE
 		y[x.len() - i - 1] := x[i];
 		i := i + 1;
 	FTQ
 	
-	AFFICHER [x];
+	AFFICHER [y];
 FIN
