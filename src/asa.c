@@ -13,6 +13,7 @@ int is_leaf(NodeTag tag) {
 		case TagBinaryOp:
 		case TagUnaryOp:
 		case TagAssign:
+		case TagRead:
 		case TagPrint:
 		case TagBlock:
 			return 0;
@@ -239,6 +240,19 @@ asa* create_assign_node(const char id[32], asa *expr) {
 }
 
 /**
+ * Créer un nouveau noeud `TagRead` avec l'identifiant spécifié.
+ */
+asa* create_read_node(const char id[32]) {
+	asa *p = checked_malloc();
+	
+	p->tag = TagRead;
+	p->ninst = 2;
+	strcpy(&p->tag_read.identifier[0], &id[0]);
+	
+	return p;
+}
+
+/**
  * Créer un nouveau noeud `TagPrint` avec l'expression spécifiée.
  */
 asa* create_print_node(asa *expr) {
@@ -360,6 +374,10 @@ void print_asa(asa *p) {
 			print_asa(p->tag_assign.expr);
 			break;
 		
+		case TagRead:
+			printf("LIRE %s", p->tag_read.identifier);
+			break;
+		
 		case TagPrint:
 			printf("AFFICHER ");
 			print_asa(p->tag_print.expr);
@@ -406,6 +424,7 @@ void free_asa(asa *p) {
 		
 		case TagInt:
 		case TagVar:
+		case TagRead:
 			break;
 	}
 	
