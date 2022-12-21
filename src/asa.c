@@ -13,7 +13,7 @@ int is_leaf(NodeTag tag) {
 		case TagIndex:
 		case TagBinaryOp:
 		case TagUnaryOp:
-		case TagAssign:
+		case TagAssignScalar:
 		case TagAssignIndexed:
 		case TagAssignIntList:
 		case TagAssignArray:
@@ -352,9 +352,9 @@ asa* create_unop_node(UnaryOp unop, asa *expr) {
 }
 
 /**
- * Créer un nouveau noeud `TagAssign` avec les valeurs spécifiées.
+ * Créer un nouveau noeud `TagAssignScalar` avec les valeurs spécifiées.
  */
-asa* create_assign_node(const char id[32], asa *expr) {
+asa* create_assign_scalar_node(const char id[32], asa *expr) {
 	ts *var = ts_retrouver_id(id);
 	if(var == NULL) {
 		extern const char *input;
@@ -373,10 +373,10 @@ asa* create_assign_node(const char id[32], asa *expr) {
 	
 	asa *p = checked_malloc();
 	
-	p->tag = TagAssign;
+	p->tag = TagAssignScalar;
 	p->ninst = expr->ninst + 1;
-	strcpy(&p->tag_assign.identifier[0], &id[0]);
-	p->tag_assign.expr = expr;
+	strcpy(&p->tag_assign_scalar.identifier[0], &id[0]);
+	p->tag_assign_scalar.expr = expr;
 	
 	return p;
 }
@@ -830,9 +830,9 @@ void print_asa(asa *p) {
 			
 			break;
 		
-		case TagAssign:
-			printf("%s := ", p->tag_assign.identifier);
-			print_asa(p->tag_assign.expr);
+		case TagAssignScalar:
+			printf("%s := ", p->tag_assign_scalar.identifier);
+			print_asa(p->tag_assign_scalar.expr);
 			break;
 		
 		case TagAssignIndexed:
@@ -921,8 +921,8 @@ void free_asa(asa *p) {
 			free_asa(p->tag_unary_op.expr);
 			break;
 		
-		case TagAssign:
-			free_asa(p->tag_assign.expr);
+		case TagAssignScalar:
+			free_asa(p->tag_assign_scalar.expr);
 			break;
 		
 		case TagAssignIndexed:
