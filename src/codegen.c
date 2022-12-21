@@ -74,6 +74,12 @@ void codegen_nc(asa *p, int *sp, int *ip) {
 			switch(binop_kind(p->tag_binary_op.op)) {
 				case Arithmetic:
 				case Comparative:
+					// pour les opérateurs arithmétiques, on peut calculer
+					// directement l'expression
+					
+					// pour les opérateurs comparatifs, on calcul en premier lieu
+					// x - y (binop_name(op comparatif) == 'SUB')
+					
 					codegen_nc(p->tag_binary_op.rhs, sp, ip);
 					printf("STORE %i\n", ++(*sp));
 					++(*ip);
@@ -82,6 +88,9 @@ void codegen_nc(asa *p, int *sp, int *ip) {
 					printf("%s %i\n", binop_name(p->tag_binary_op.op), *sp);
 					++(*ip);
 					--(*sp);
+					
+					// on génère ensuite le code de comparaison pour les opérateurs
+					// comparatifs
 					
 					switch(p->tag_binary_op.op) {
 						// remarque: il y a toujours une instruction après ce noeud,
@@ -158,19 +167,31 @@ void codegen_nc(asa *p, int *sp, int *ip) {
 						case OpMul:
 						case OpDiv:
 						case OpMod:
+							// pas de code de comparaison à générer pour les opérateurs
+							// arithmétiques
 							break;
 						
 						case OpAnd:
 						case OpOr:
 						case OpXor:
-							break;
+							fprintf(stderr, "entered unreachable code\n");
+							exit(1);
 					}
 					
 					break;
 				
 				case Logic:
+					// pour les opérateurs logiques,
+					// on short-circuit dès qu'on a évaluer l'opérande gauche
+					
 					switch(p->tag_binary_op.op) {
 						case OpAnd:
+							// si opérande gauche == zéro,
+							// short-circuit à la toute fin
+							// (ACC = 0)
+							
+							// sinon, ACC = opérande droite
+							
 							printf("NOP ; TEST (");
 							print_asa(p->tag_binary_op.lhs);
 							printf(")\n");
@@ -189,6 +210,12 @@ void codegen_nc(asa *p, int *sp, int *ip) {
 							break;
 						
 						case OpOr:
+							// si opérande gauche == 1,
+							// short-circuit à la toute fin
+							// (ACC = 1)
+							
+							// sinon, ACC = opérande droite
+							
 							printf("NOP ; TEST (");
 							print_asa(p->tag_binary_op.lhs);
 							printf(")\n");
@@ -210,6 +237,21 @@ void codegen_nc(asa *p, int *sp, int *ip) {
 							break;
 						
 						case OpXor:
+							// on doit obligatoirement évaluer les deux
+							// opérandes pour le OU EXCLUSIF
+							
+							// R[*sp] = opérande gauche,
+							// ACC = opérande droite
+							
+							// si ACC = 0,
+							// alors ACC = R[*sp]
+							//
+							// si ACC = 1,
+							// alors ACC = 1 - R[*sp]
+							//
+							// donc ACC = 1 si R[*sp] = 0,
+							// et ACC = 0 si R[*sp] = 1
+							
 							printf("NOP ; TEST (");
 							print_asa(p->tag_binary_op.lhs);
 							printf(")\n");
@@ -239,7 +281,8 @@ void codegen_nc(asa *p, int *sp, int *ip) {
 						case OpMul:
 						case OpDiv:
 						case OpMod:
-							break;
+							fprintf(stderr, "entered unreachable code\n");
+							exit(1);
 						
 						case OpGe:
 						case OpGt:
@@ -247,7 +290,8 @@ void codegen_nc(asa *p, int *sp, int *ip) {
 						case OpLt:
 						case OpEq:
 						case OpNe:
-							break;
+							fprintf(stderr, "entered unreachable code\n");
+							exit(1);
 					}
 					
 					break;
