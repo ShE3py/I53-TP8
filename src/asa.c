@@ -354,6 +354,22 @@ asa* create_unop_node(UnaryOp unop, asa *expr) {
  * Créer un nouveau noeud `TagAssign` avec les valeurs spécifiées.
  */
 asa* create_assign_node(const char id[32], asa *expr) {
+	ts *var = ts_retrouver_id(id);
+	if(var == NULL) {
+		extern const char *input;
+		extern int yylineno;
+		
+		fprintf(stderr, "%s:%i: variable inconnue: '%s'\n", input, yylineno, id);
+		exit(1);
+	}
+	else if(var->size != -1) {
+		extern const char *input;
+		extern int yylineno;
+		
+		fprintf(stderr, "%s:%i: impossible d'affecter un scalaire à un tableau\n", input, yylineno);
+		exit(1);
+	}
+	
 	asa *p = checked_malloc();
 	
 	p->tag = TagAssign;
