@@ -462,6 +462,11 @@ asa* create_print_array_node(const char id[32]);
 asa* make_block_node(asa *p, asa *q);
 
 /**
+ * Créer un nouveau noeud correspondant à la méthode spécifiée.
+ */
+asa* create_fncall_node(const char varname[32], const char methodname[32]);
+
+/**
  * Affiche le noeud dans la sortie standard.
  */
 void print_asa(asa *p);

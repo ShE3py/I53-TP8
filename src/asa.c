@@ -555,6 +555,38 @@ asa* make_block_node(asa *p, asa *q) {
 }
 
 /**
+ * Créer un nouveau noeud correspondant à la méthode spécifiée.
+ */
+asa* create_fncall_node(const char varname[32], const char methodname[32]) {
+	ts *var = ts_retrouver_id(varname);
+	if(var == NULL) {
+		extern const char *input;
+		extern int yylineno;
+		
+		fprintf(stderr, "%s:%i: variable inconnue: '%s'\n", input, yylineno, varname);
+		exit(1);
+	}
+	
+	if(strcmp(methodname, "len") != 0) {
+		extern const char *input;
+		extern int yylineno;
+		
+		fprintf(stderr, "%s:%i: seule la méthode intrinsèque 'len()' est actuellement acceptée\n", input, yylineno);
+		exit(1);
+	}
+	
+	if(var->size == -1) {
+		extern const char *input;
+		extern int yylineno;
+		
+		fprintf(stderr, "%s:%i: 'len()' n'est pas disponible sur les scalaires\n", input, yylineno);
+		exit(1);
+	}
+	
+	return create_int_leaf(var->size);
+}
+
+/**
  * Affiche le noeud dans la sortie standard.
  */
 void print_asa(asa *p) {
