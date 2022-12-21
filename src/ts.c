@@ -12,10 +12,25 @@ void ts_ajouter_id(const char *id, int size)
   strcpy(new->id, id);
   new->adr = mem_offset;
   new->size = size;
-  mem_offset += size;
+  mem_offset += size != -1 ? size : 1;
   new->next = tsymb;
   tsymb = new;
-  
+}
+
+void ts_ajouter_scalaire(const char *id) {
+	ts_ajouter_id(id, -1);
+}
+
+void ts_ajouter_tableau(const char *id, int size) {
+	if(size < 0) {
+		extern const char *input;
+		extern int yylineno;
+		
+		fprintf(stderr, "%s:%i: '%s' doit avoir une taille positive\n", input, yylineno, id);
+		exit(1);
+	}
+	
+	ts_ajouter_id(id, size);
 }
 
 ts* ts_retrouver_id(const char *id)
