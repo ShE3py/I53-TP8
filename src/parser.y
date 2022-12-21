@@ -70,6 +70,7 @@ Statements:
 Statement:
   Expr                                                                     { $$ = $1; }
 | Var Identifier                                                           { if(ts_retrouver_id($2)) yyerror("variable dupliquée"); ts_ajouter_scalaire($2); $$ = NULL; }
+| Var Identifier Assign Statement                                          { if(ts_retrouver_id($2)) yyerror("variable dupliquée"); ts_ajouter_scalaire($2); $$ = create_assign_node($2, $4); }
 | Var Identifier LeftSquareBracket Int RightSquareBracket                  { if(ts_retrouver_id($2)) yyerror("variable dupliquée"); ts_ajouter_tableau($2, $4); $$ = NULL; }
 
 | Read Identifier                                                          { if(!ts_retrouver_id($2)) ts_ajouter_scalaire($2); $$ = create_read_node($2); }

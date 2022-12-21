@@ -3,13 +3,12 @@ DÉBUT
 	VAR y[5];
 	
 	LIRE [x];
-	VAR i;
-	
-	i := 0;
+
+	VAR i := 0;
 	TQ i < x.len() FAIRE
-		y[x.len() - i] := x[i];
+		y[x.len() - i - 1] := x[i];
 		i := i + 1;
 	FTQ
 	
-	AFFICHER [y];
+	AFFICHER [x];
 FIN

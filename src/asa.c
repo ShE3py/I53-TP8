@@ -167,7 +167,7 @@ asa* create_var_leaf(const char id[32]) {
 		extern const char *input;
 		extern int yylineno;
 		
-		fprintf(stderr, "%s:%i: indexation requise: '%s' est un tableau\n", input, yylineno, id);
+		fprintf(stderr, "%s:%i: indexation requise: '%s' est un tableau, un scalaire était attendu\n", input, yylineno, id);
 		exit(1);
 	}
 	
