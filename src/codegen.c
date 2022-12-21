@@ -49,6 +49,8 @@ void codegen_nc(asa *p, int *sp, int *ip) {
 		return;
 	}
 	
+	const int before_codegen_ip = *ip;
+	
 	switch(p->tag) {
 		case TagInt: {
 			printf("LOAD #%i\n", p->tag_int.value);
@@ -324,6 +326,29 @@ void codegen_nc(asa *p, int *sp, int *ip) {
 			break;
 		}
 		
+		case TagTest: {
+			codegen_nc(p->tag_test.expr, sp, ip);
+			
+			printf("JUMZ %i\n", *ip + p->tag_test.therefore->ninst + 2 + (p->tag_test.alternative ? 1 : 0));
+			printf("NOP ; ALORS\n");
+			
+			*ip += 2;
+			codegen_nc(p->tag_test.therefore, sp, ip);
+			
+			if(p->tag_test.alternative) {
+				printf("JUMP %i\n", *ip + p->tag_test.alternative->ninst + 2);
+				printf("NOP ; SINON\n");
+				
+				*ip += 2;
+				codegen_nc(p->tag_test.alternative, sp, ip);
+			}
+			
+			printf("NOP ; FSI\n");
+			
+			++(*ip);
+			break;
+		}
+		
 		case TagRead: {
 			printf("READ\n");
 			
@@ -356,6 +381,11 @@ void codegen_nc(asa *p, int *sp, int *ip) {
 			codegen_nc(p->tag_block.next, sp, ip);
 			break;
 		}
+	}
+	
+	if((before_codegen_ip + p->ninst) != *ip) {
+		fprintf(stderr, "generated %i instructions for current node, but ninst is %i\n", *ip - before_codegen_ip, p->ninst);
+		exit(1);
 	}
 }
 

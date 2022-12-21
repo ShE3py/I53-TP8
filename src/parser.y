@@ -14,6 +14,7 @@
 // Mots-clefs
 %token Start End
 %token Var
+%token If Then Else EndIf
 %token Read Print
 
 // Ponctuation
@@ -26,7 +27,8 @@
 
 // Non-terminaux
 %start Program
-%type <nval> Statements Statement
+%type <nval> Statements Statement Block
+%type <nval> ElseOrEndIf
 %type <nval> Expr
 %type <nval> IntExpr IntValue
 %type <nval> CmpExpr
@@ -58,15 +60,25 @@ Program: Start Statements End { codegen($2); free_asa($2); return 0; };
 
 Statements:
   Statement Semicolon Statements { $$ = make_block_node($1, $3); }
+| Block Statements               { $$ = make_block_node($1, $2); }
 | %empty                         { $$ = NULL; }
 ;
 
 Statement:
-  Expr                        { $$ = $1; }
-| Var Identifier              { if(ts_retrouver_id($2)) yyerror("variable dupliquée"); ts_ajouter_id($2, 1); $$ = NULL; }
-| Identifier Assign Statement { $$ = create_assign_node($1, $3); }
-| Read Identifier             { $$ = create_read_node($2); }
-| Print Expr                  { $$ = create_print_node($2); }
+  Expr                                    { $$ = $1; }
+| Var Identifier                          { if(ts_retrouver_id($2)) yyerror("variable dupliquée"); ts_ajouter_id($2, 1); $$ = NULL; }
+| Identifier Assign Statement             { $$ = create_assign_node($1, $3); }
+| Read Identifier                         { $$ = create_read_node($2); }
+| Print Expr                              { $$ = create_print_node($2); }
+;
+
+Block:
+  If BoolExpr Then Statements ElseOrEndIf { $$ = create_test_node($2, $4, $5); }
+;
+
+ElseOrEndIf:
+  Else Statements EndIf { $$ = $2; }
+| EndIf                 { $$ = NULL; }
 ;
 
 Expr:

@@ -13,6 +13,7 @@ int is_leaf(NodeTag tag) {
 		case TagBinaryOp:
 		case TagUnaryOp:
 		case TagAssign:
+		case TagTest:
 		case TagRead:
 		case TagPrint:
 		case TagBlock:
@@ -240,6 +241,21 @@ asa* create_assign_node(const char id[32], asa *expr) {
 }
 
 /**
+ * Créer un nouveau noeud `TagTest` avec les valeurs spécifiées.
+ */
+asa* create_test_node(asa *expr, asa *therefore, asa *alternative) {
+	asa *p = checked_malloc();
+	
+	p->tag = TagTest;
+	p->ninst = expr->ninst + 1 + therefore->ninst + (alternative ? (4 + alternative->ninst) : 2);
+	p->tag_test.expr = expr;
+	p->tag_test.therefore = therefore;
+	p->tag_test.alternative = alternative;
+	
+	return p;
+}
+
+/**
  * Créer un nouveau noeud `TagRead` avec l'identifiant spécifié.
  */
 asa* create_read_node(const char id[32]) {
@@ -290,6 +306,7 @@ asa* make_block_node(asa *p, asa *q) {
 			qBlock = checked_malloc();
 			
 			qBlock->tag = TagBlock;
+			qBlock->ninst = q->ninst + 1;
 			qBlock->tag_block.stmt = q;
 			qBlock->tag_block.next = NULL;
 		}
@@ -299,18 +316,24 @@ asa* make_block_node(asa *p, asa *q) {
 		asa *r = checked_malloc();
 		
 		r->tag = TagBlock;
+		r->ninst = p->ninst + (qBlock ? qBlock->ninst : 0) + 1;
 		r->tag_block.stmt = p;
 		r->tag_block.next = qBlock;
 		
 		return r;
 	}
 	else {
-		asa *r = p;
-		while(r->tag_block.next) {
-			r = r->tag_block.next;
+		if(qBlock) {
+			p->ninst += qBlock->ninst;
+			
+			asa *r = p;
+			while(r->tag_block.next) {
+				r = r->tag_block.next;
+			}
+			
+			r->tag_block.next = qBlock;
 		}
 		
-		r->tag_block.next = qBlock;
 		return p;
 	}
 }
@@ -374,6 +397,11 @@ void print_asa(asa *p) {
 			print_asa(p->tag_assign.expr);
 			break;
 		
+		case TagTest:
+			printf("SI ");
+			print_asa(p->tag_test.expr);
+			break;
+		
 		case TagRead:
 			printf("LIRE %s", p->tag_read.identifier);
 			break;
@@ -411,6 +439,12 @@ void free_asa(asa *p) {
 		
 		case TagAssign:
 			free_asa(p->tag_assign.expr);
+			break;
+		
+		case TagTest:
+			free_asa(p->tag_test.expr);
+			free_asa(p->tag_test.therefore);
+			free_asa(p->tag_test.alternative);
 			break;
 		
 		case TagPrint:

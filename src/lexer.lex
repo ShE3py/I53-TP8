@@ -23,14 +23,19 @@ void yyerror(const char *s) {
 
 "VAR"           { return Var; }
 
+"SI"            { return If; }
+"ALORS"         { return Then; }
+"SINON"         { return Else; }
+"FSI"           { return EndIf; }
+
 "LIRE"          { return Read; }
 "AFFICHER"      { return Print; }
 
  /* Opérateurs logiques */
-"ET"      { return And; }
-"OU"      { return Or; }
-"OU EXCLUSIF"     { return Xor; }
-"NON"     { return Not; }
+"ET"          { return And; }
+"OU"          { return Or; }
+"OU EXCLUSIF" { return Xor; }
+"NON"         { return Not; }
 
  /* Littéraux et identifiants */
 [-+]?[0-9]+            { yylval.ival = atoi(yytext); return Int; }
