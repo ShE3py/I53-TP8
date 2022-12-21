@@ -327,12 +327,12 @@ void codegen_nc(asa *p, int *sp, int *ip) {
 			break;
 		}
 		
-		case TagAssign: {
-			codegen_nc(p->tag_assign.expr, sp, ip);
+		case TagAssignScalar: {
+			codegen_nc(p->tag_assign_scalar.expr, sp, ip);
 			
-			ts *var = ts_retrouver_id(p->tag_assign.identifier);
+			ts *var = ts_retrouver_id(p->tag_assign_scalar.identifier);
 			if(var == NULL) {
-				fprintf(stderr, "illegal state: '%s' should exists at this stage but it does not\n", p->tag_assign.identifier);
+				fprintf(stderr, "illegal state: '%s' should exists at this stage but it does not\n", p->tag_assign_scalar.identifier);
 				exit(1);
 			}
 			

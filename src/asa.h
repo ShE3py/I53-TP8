@@ -39,7 +39,7 @@ typedef enum {
 	/**
 	 * Une affectation d'un scalaire à un scalaire.
 	 */
-	TagAssign,
+	TagAssignScalar,
 	
 	/**
 	 * Une affectation à un élément d'un tableau.
@@ -283,7 +283,7 @@ typedef struct asa {
 		} tag_unary_op;
 		
 		/**
-		 * La valeur d'un noeud `TagAssign`
+		 * La valeur d'un noeud `TagAssignScalar`
 		 */
 		struct {
 			/**
@@ -295,7 +295,7 @@ typedef struct asa {
 			 * L'expression à évaluer.
 			 */
 			struct asa *expr;
-		} tag_assign;
+		} tag_assign_scalar;
 		
 		/**
 		 * La valeur d'un noeud `TagAssignIndexed`.
@@ -500,9 +500,9 @@ asa* create_binop_node(BinaryOp binop, asa *lhs, asa *rhs);
 asa* create_unop_node(UnaryOp unop, asa *expr);
 
 /**
- * Créer un nouveau noeud `TagAssign` avec les valeurs spécifiées.
+ * Créer un nouveau noeud `TagAssignScalar` avec les valeurs spécifiées.
  */
-asa* create_assign_node(const char id[32], asa *expr);
+asa* create_assign_scalar_node(const char id[32], asa *expr);
 
 /**
  * Créer un nouveau noeud `TagAssignIndexed` avec les valeurs spécifiées.

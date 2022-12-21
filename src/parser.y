@@ -78,7 +78,7 @@ Statements:
 Statement:
   Expr                                                                  { $$ = $1; }
 | Var Identifier                                                        { if(ts_retrouver_id($2)) yyerror("variable dupliquée"); ts_ajouter_scalaire($2); $$ = NULL; }
-| Var Identifier Assign Expr                                            { if(ts_retrouver_id($2)) yyerror("variable dupliquée"); ts_ajouter_scalaire($2); $$ = create_assign_node($2, $4); }
+| Var Identifier Assign Expr                                            { if(ts_retrouver_id($2)) yyerror("variable dupliquée"); ts_ajouter_scalaire($2); $$ = create_assign_scalar_node($2, $4); }
 | Var Identifier LeftSquareBracket Int RightSquareBracket               { if(ts_retrouver_id($2)) yyerror("variable dupliquée"); ts_ajouter_tableau($2, $4); $$ = NULL; }
 | Var Identifier Assign IntArray                                        { if(ts_retrouver_id($2)) yyerror("variable dupliquée"); ts_ajouter_tableau($2, $4.len); $$ = create_assign_int_list_node($2, $4); }
 | Var Identifier Assign LeftSquareBracket Identifier RightSquareBracket { if(ts_retrouver_id($2)) yyerror("variable dupliquée"); ts *dst = ts_retrouver_id($5); if(!dst) yyerror("variable inconnue"); ts_ajouter_tableau($2, dst->size); $$ = create_assign_array_node($2, $5); }
@@ -88,7 +88,7 @@ Statement:
 | Read LeftSquareBracket Int RightSquareBracket Identifier              { if( ts_retrouver_id($5)) yyerror("variable dupliquée"); ts_ajouter_tableau($5, $3); $$ = create_read_array_node($5); }
 | Read LeftSquareBracket Identifier RightSquareBracket                  { if(!ts_retrouver_id($3)) yyerror("variable inconnue"); $$ = create_read_array_node($3); }
 
-| Identifier Assign Expr                                                { $$ = create_assign_node($1, $3); }
+| Identifier Assign Expr                                                { $$ = create_assign_scalar_node($1, $3); }
 | Identifier Assign IntArray                                            { $$ = create_assign_int_list_node($1, $3); }
 | Identifier Assign LeftSquareBracket Identifier RightSquareBracket     { $$ = create_assign_array_node($1, $4); }
 | Identifier LeftSquareBracket IntExpr RightSquareBracket Assign Expr   { $$ = create_assign_indexed_node($1, $3, $6); }
