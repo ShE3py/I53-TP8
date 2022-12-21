@@ -381,6 +381,28 @@ void codegen_nc(asa *p, int *sp, int *ip) {
 			break;
 		}
 		
+		case TagAssignArray: {
+			ts *dst = ts_retrouver_id(p->tag_assign_array.dst);
+			if(dst == NULL) {
+				fprintf(stderr, "illegal state: '%s' should exists at this stage but it does not\n", p->tag_assign_array.dst);
+				exit(1);
+			}
+			
+			ts *src = ts_retrouver_id(p->tag_assign_array.src);
+			if(src == NULL) {
+				fprintf(stderr, "illegal state: '%s' should exists at this stage but it does not\n", p->tag_assign_array.src);
+				exit(1);
+			}
+			
+			for(int i = 0; i < dst->size; ++i) {
+				printf("LOAD %i\n", src->adr + i);
+				printf("STORE %i\n", dst->adr + i);
+			}
+			
+			*ip += dst->size * 2;
+			break;
+		}
+		
 		case TagTest: {
 			codegen_nc(p->tag_test.expr, sp, ip);
 			
