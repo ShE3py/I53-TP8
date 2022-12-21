@@ -6,8 +6,8 @@ DÉBUT
 	VAR i;
 	
 	i := 0;
-	TQ i < 5 FAIRE
-		y[4 - i] := x[i];
+	TQ i < x.len() FAIRE
+		y[x.len() - i] := x[i];
 		i := i + 1;
 	FTQ
 	
