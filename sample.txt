@@ -1,9 +1,29 @@
 DÉBUT
-	LIRE x;
-	LIRE y;
+	LIRE n;
 	
-	SI x >= y ALORS
+	SI n = 0 ALORS
+		AFFICHER 0;
+	FSI
+	
+	SI n = 1 ALORS
+		AFFICHER 1;
 	SINON
-		x := y;
+		VAR a;
+		VAR b;
+		VAR c;
+		VAR i;
+		
+		a := 1;
+		b := 1;
+		i := 2;
+		
+		TQ i < n FAIRE
+			c := a + b;
+			a := b;
+			b := c;
+			i := i + 1;
+		FTQ
+		
+		AFFICHER c;
 	FSI
 FIN

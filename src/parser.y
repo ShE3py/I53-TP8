@@ -57,7 +57,7 @@
 
 %%
 
-Program: Start Statements End { codegen($2); free_asa($2); return 0; };
+Program: Start Statements End { codegen($2); free_asa($2); ts_free_table(); return 0; };
 
 Statements:
   Statement Semicolon Statements { $$ = make_block_node($1, $3); }
@@ -128,7 +128,8 @@ BoolExpr:
 
 int main(int argc, char *argv[]) {
 	extern FILE *yyin;
-  
+	extern int yylex_destroy(void);
+	
 	if(argc == 1) {
 		fprintf(stderr, "%s <input>\n", argv[0]);
 		return 1;
@@ -136,7 +137,11 @@ int main(int argc, char *argv[]) {
 	
 	input = argv[1];
 	
-	yyin = fopen(input, "r");
+	FILE *f = fopen(input, "r");
+	
+	yyin = f;
 	yyparse();
+	yylex_destroy();
+	fclose(f);
 	return 0;
 }
