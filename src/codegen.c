@@ -79,11 +79,18 @@ void codegen_nc(asa *p, int *sp, int *ip) {
 				exit(1);
 			}
 			
-			codegen_nc(p->tag_index.index, sp, ip);
-			printf("ADD #%i\n", var->adr);
-			printf("LOAD @0\n");
-			
-			*ip += 2;
+			if(p->tag_index.index->tag == TagInt) {
+				printf("LOAD %i\n", var->adr + p->tag_index.index->tag_int.value);
+				
+				++(*ip);
+			}
+			else {
+				codegen_nc(p->tag_index.index, sp, ip);
+				printf("ADD #%i\n", var->adr);
+				printf("LOAD @0\n");
+				
+				*ip += 2;
+			}
 			break;
 		}
 		

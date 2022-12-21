@@ -1,17 +1,16 @@
 DÉBUT
-	VAR x[5];
-	VAR y[5];
+	LIRE[5] x;
 	
-	LIRE [x];
+	VAR max := x[0];
 	
-	VAR i := 0;
+	VAR i := 1;
 	TQ i < x.len() FAIRE
-		y[x.len() - i - 1] := x[i];
+		SI x[i] > max ALORS
+			max := x[i];
+		FSI
+		
 		i := i + 1;
 	FTQ
 	
-	x := [y];
-	VAR z := [x];
-	
-	AFFICHER [z];
+	AFFICHER max;
 FIN
