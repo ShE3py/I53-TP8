@@ -3,8 +3,7 @@ DÉBUT
 	LIRE y;
 	
 	SI x >= y ALORS
-		AFFICHER x;
 	SINON
-		AFFICHER y;
+		x := y;
 	FSI
 FIN
