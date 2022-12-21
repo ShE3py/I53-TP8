@@ -10,5 +10,8 @@ DÉBUT
 		i := i + 1;
 	FTQ
 	
-	AFFICHER [y];
+	x := [y];
+	VAR z := [x];
+	
+	AFFICHER [z];
 FIN

@@ -16,6 +16,7 @@ int is_leaf(NodeTag tag) {
 		case TagAssign:
 		case TagAssignIndexed:
 		case TagAssignIntList:
+		case TagAssignArray:
 		case TagTest:
 		case TagWhile:
 		case TagRead:
@@ -460,6 +461,59 @@ asa* create_assign_int_list_node(const char id[32], asa_list values) {
 }
 
 /**
+ * Créer un nouveau noeud `TagAssignArray` avec les valeurs spécifiées.
+ */
+asa* create_assign_array_node(const char dst[32], const char src[32]) {
+	ts *dst_var = ts_retrouver_id(dst);
+	if(dst_var == NULL) {
+		extern const char *input;
+		extern int yylineno;
+		
+		fprintf(stderr, "%s:%i: variable inconnue: '%s'\n", input, yylineno, dst);
+		exit(1);
+	}
+	
+	ts *src_var = ts_retrouver_id(src);
+	if(src_var == NULL) {
+		extern const char *input;
+		extern int yylineno;
+		
+		fprintf(stderr, "%s:%i: variable inconnue: '%s'\n", input, yylineno, src);
+		exit(1);
+	}
+	else if(src_var->size == -1) {
+		extern const char *input;
+		extern int yylineno;
+		
+		fprintf(stderr, "%s:%i: '%s' doit être un tableau\n", input, yylineno, src);
+		exit(1);
+	}
+	else if(dst_var->size == -1) {
+		extern const char *input;
+		extern int yylineno;
+		
+		fprintf(stderr, "%s:%i: impossible d'affecter un tableau à un scalaire\n", input, yylineno);
+		exit(1);
+	}
+	else if(src_var->size != dst_var->size) {
+		extern const char *input;
+		extern int yylineno;
+		
+		fprintf(stderr, "%s:%i: affectation impossible: les deux tableaux doivent avoir la même taille\n", input, yylineno);
+		exit(1);
+	}
+	
+	asa *p = checked_malloc();
+	
+	p->tag = TagAssignArray;
+	p->ninst = dst_var->size * 2;
+	strcpy(&p->tag_assign_array.dst[0], &dst[0]);
+	strcpy(&p->tag_assign_array.src[0], &src[0]);
+	
+	return p;
+}
+
+/**
  * Créer un nouveau noeud `TagTest` avec les valeurs spécifiées.
  */
 asa* create_test_node(asa *expr, asa *therefore, asa *alternative) {
@@ -793,6 +847,10 @@ void print_asa(asa *p) {
 			asa_list_print(p->tag_assign_int_list.values);
 			break;
 		
+		case TagAssignArray:
+			printf("%s := [%s]", p->tag_assign_array.dst, p->tag_assign_array.src);
+			break;
+		
 		case TagTest:
 			printf("SI ");
 			print_asa(p->tag_test.expr);
@@ -902,6 +960,7 @@ void free_asa(asa *p) {
 		
 		case TagInt:
 		case TagVar:
+		case TagAssignArray:
 		case TagRead:
 		case TagReadArray:
 		case TagPrintArray:
