@@ -37,7 +37,7 @@ typedef enum {
 	TagUnaryOp,
 	
 	/**
-	 * Une affectation.
+	 * Une affectation d'un scalaire à un scalaire.
 	 */
 	TagAssign,
 	
@@ -50,6 +50,11 @@ typedef enum {
 	 * Une affectation d'un tableau à une liste d'entiers.
 	 */
 	TagAssignIntList,
+	
+	/**
+	 * Une affectation d'un tableau à un autre tableau.
+	 */
+	TagAssignArray,
 	
 	/**
 	 * Une structure si-alors-sinon.
@@ -328,6 +333,21 @@ typedef struct asa {
 		} tag_assign_int_list;
 		
 		/**
+		 * La valeur d'un noeud `TagAssignArray`.
+		 */
+		struct {
+			/**
+			 * L'identifiant du tableau à modifier.
+			 */
+			char dst[32];
+			
+			/**
+			 * L'identifiant du tableau source;
+			 */
+			char src[32];
+		} tag_assign_array;
+		
+		/**
 		 * La valeur d'un noeud `TagTest`.
 		 */
 		struct {
@@ -493,6 +513,11 @@ asa* create_assign_indexed_node(const char id[32], asa *index, asa *expr);
  * Créer un nouveau noeud `TagAssignIntList` avec les valeurs spécifiées.
  */
 asa* create_assign_int_list_node(const char id[32], asa_list values);
+
+/**
+ * Créer un nouveau noeud `TagAssignArray` avec les valeurs spécifiées.
+ */
+asa* create_assign_array_node(const char dst[32], const char src[32]);
 
 /**
  * Créer un nouveau noeud `TagTest` avec les valeurs spécifiées.
