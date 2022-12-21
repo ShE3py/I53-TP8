@@ -27,7 +27,7 @@ $(OUT)/%.o: $(OUT)/%.c
 	$(CC) -c $< $(CFLAGS) -o $@
 
 $(OUT)/parser.c: $(SRC)/parser.y
-	bison $< -d -v -o $@
+	bison $< -d -o $@
 
 $(OUT)/lexer.c: $(SRC)/lexer.lex $(OUT)/parser.h
 	flex -o $@ $<

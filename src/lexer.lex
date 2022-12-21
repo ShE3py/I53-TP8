@@ -28,6 +28,10 @@ void yyerror(const char *s) {
 "SINON"         { return Else; }
 "FSI"           { return EndIf; }
 
+"TQ"            { return While; }
+"FAIRE"         { return Do; }
+"FTQ"           { return EndWhile; }
+
 "LIRE"          { return Read; }
 "AFFICHER"      { return Print; }
 
