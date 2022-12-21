@@ -1,6 +1,5 @@
 %{
   #include "ts.h"
-  #include "asa.h"
   #include "codegen.h"
 
   extern int yylex();
@@ -21,7 +20,9 @@
 // Ponctuation
 %token LeftParenthesis RightParenthesis
 %token LeftSquareBracket RightSquareBracket
+%token LeftBracket RightBracket
 %token Dot
+%token Comma
 %token Semicolon
 
 // Littéraux et identifiants
@@ -37,6 +38,8 @@
 %type <nval> CmpExpr
 %type <nval> BoolExpr
 
+%type <lval> IntArray IntList
+
 // Opérateurs
 %right Assign
 
@@ -50,11 +53,16 @@
 %left Mul Div Mod
 %left UnaryPlus UnaryMinus
 
+%code requires {
+	#include "asa.h"
+}
+
 // yylval
 %union {
 	int ival;
 	char sval[32];
 	struct asa *nval;
+	asa_list lval;
 }
 
 %%
@@ -72,6 +80,7 @@ Statement:
 | Var Identifier                                                           { if(ts_retrouver_id($2)) yyerror("variable dupliquée"); ts_ajouter_scalaire($2); $$ = NULL; }
 | Var Identifier Assign Statement                                          { if(ts_retrouver_id($2)) yyerror("variable dupliquée"); ts_ajouter_scalaire($2); $$ = create_assign_node($2, $4); }
 | Var Identifier LeftSquareBracket Int RightSquareBracket                  { if(ts_retrouver_id($2)) yyerror("variable dupliquée"); ts_ajouter_tableau($2, $4); $$ = NULL; }
+| Var Identifier Assign IntArray                                           { if(ts_retrouver_id($2)) yyerror("variable dupliquée"); ts_ajouter_tableau($2, $4.len); $$ = create_assign_int_list_node($2, $4); }
 
 | Read Identifier                                                          { if(!ts_retrouver_id($2)) ts_ajouter_scalaire($2); $$ = create_read_node($2); }
 | Read Identifier LeftSquareBracket IntExpr RightSquareBracket             { if(!ts_retrouver_id($2)) yyerror("variable inconnue"); $$ = create_read_indexed_node($2, $4); }
@@ -83,6 +92,16 @@ Statement:
 
 | Print Expr                                                               { $$ = create_print_node($2); }
 | Print LeftSquareBracket Identifier RightSquareBracket                    { $$ = create_print_array_node($3); }
+;
+
+IntArray:
+  LeftBracket RightBracket                 { $$ = asa_list_empty(); }
+| LeftBracket IntExpr IntList RightBracket { $$ = asa_list_append($2, $3); }
+;
+
+IntList:
+  Comma IntExpr IntList { $$ = asa_list_append($2, $3); }
+| %empty                { $$ = asa_list_empty(); }
 ;
 
 Block:
