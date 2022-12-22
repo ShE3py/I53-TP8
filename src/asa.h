@@ -94,7 +94,12 @@ typedef enum {
 	/**
 	 * Un bloc d'instructions.
 	 */
-	TagBlock
+	TagBlock,
+	
+	/**
+	 * Une fonction.
+	 */
+	TagFn
 } NodeTag;
 
 /**
@@ -178,7 +183,7 @@ typedef struct asa_list_node {
 /**
  * Une liste d'expressions, utilisée par `TagAssignIntList`.
  */
-typedef struct asa_list {
+typedef struct {
 	/**
 	 * La longueur de la liste.
 	 */
@@ -200,6 +205,29 @@ typedef struct asa_list {
 	 */
 	int is_nop;
 } asa_list;
+
+/**
+ * Un élément d'une liste chaînée d'identifiants.
+ */
+typedef struct id_list_node {
+	char value[32];
+	struct id_list_node *next;
+} id_list_node;
+
+/**
+ * Une liste d'identifiants, utilisée par `TagFn`.
+ */
+typedef struct {
+	/**
+	 * La longueur de la liste.
+	 */
+	size_t len;
+	
+	/**
+	 * Le premier élément de la liste chaînée.
+	 */
+	id_list_node *head;
+} id_list;
 
 /**
  * Un noeud d'un arbre syntaxique abstrait.
@@ -456,6 +484,26 @@ typedef struct asa {
 			 */
 			struct asa *next; // nullable, tag == TagBlock
 		} tag_block;
+		
+		/**
+		 * La valeur d'un noeud `TagFn`.
+		 */
+		struct {
+			/**
+			 * Le nom de la fonction.
+			 */
+			char identifier[32];
+			
+			/**
+			 * Les paramètres de la fonction.
+			 */
+			id_list params;
+			
+			/**
+			 * Le corps de la fonction.
+			 */
+			struct asa *body;
+		} tag_fn;
 	};
 } asa;
 
@@ -485,6 +533,26 @@ void asa_list_print(asa_list l);
  * Libère les ressources allouées à une liste.
  */
 void asa_list_destroy(asa_list l);
+
+/**
+ * Créer une nouvelle liste à partir de son premier élément et de ses éléments suivants.
+ */
+id_list id_list_append(const char id[32], id_list next);
+
+/**
+ * Créer une nouvelle liste vide.
+ */
+id_list id_list_empty();
+
+/**
+ * Affiche une liste dans la sortie standard.
+ */
+void id_list_print(id_list l);
+
+/**
+ * Libère les ressources allouées à une liste.
+ */
+void id_list_destroy(id_list l);
 
 /**
  * Créer une nouvelle feuille `TagInt` avec la valeur spécifiée.
@@ -575,6 +643,11 @@ asa* make_block_node(asa *p, asa *q);
  * Créer un nouveau noeud correspondant à la méthode spécifiée.
  */
 asa* create_fncall_node(const char varname[32], const char methodname[32]);
+
+/**
+ * Créer un nouveau noeud `TagFn` avec les valeurs spécifiées.
+ */
+asa* create_fn_node(const char id[32], id_list params, asa *body);
 
 /**
  * Affiche le noeud dans la sortie standard.

@@ -48,7 +48,7 @@ const char* binop_name(BinaryOp binop) {
  * Paramètres :
  * - `p`: le noeud à générer
  * - `sp`: stack pointer, le numéro de la dernière cellule utilisée pour une variable intermédiaire.
- * - `ip`: instruction pointer, le numéro de l'instruction suivante
+ * - `ip`: instruction pointer, le numéro de l'instruction actuelle
  *
  * Aucune idée de pourquoi j'avais utilisé `nc` comme suffixe.
  */
@@ -541,6 +541,18 @@ void codegen_nc(asa *p, int *sp, int *ip) {
 			codegen_nc(p->tag_block.next, sp, ip);
 			break;
 		}
+		
+		case TagFn: {
+			printf("NOP ; ");
+			print_asa(p);
+			printf("\nNOP ; DEBUT\n");
+			*ip += 2;
+			
+			codegen_nc(p->tag_fn.body, sp, ip);
+			printf("STOP ; FIN\n");
+			++(*ip);
+			break;
+		}
 	}
 	
 	if((before_codegen_ip + p->ninst) != *ip) {
@@ -554,14 +566,16 @@ void codegen_nc(asa *p, int *sp, int *ip) {
 }
 
 /**
- * Génère le code pour la machine RAM correspondant à l'arbre syntaxique abstrait spécifié.
+ * Génère le code pour la machine RAM correspondant au programme spécifié.
  */
-void codegen(asa *p) {
-	printf("NOP ; DEBUT\n");
-	
+void codegen(asa_list fns) {
   	int sp = 1;
-	int ip = 1;
-	codegen_nc(p, &sp, &ip);
+	int ip = 0;
 	
-	printf("STOP ; FIN\n");
+	asa_list_node *n = fns.head;
+	while(n) {
+		codegen_nc(n->value, &sp, &ip);
+		
+		n = n->next;
+	}
 }

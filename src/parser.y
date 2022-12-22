@@ -11,6 +11,7 @@
 %define parse.error verbose
 
 // Mots-clefs
+%token Fn
 %token Start End
 %token Var
 %token If Then Else EndIf
@@ -31,6 +32,8 @@
 
 // Non-terminaux
 %start Program
+%type <nlval> Fns
+%type <idlval> IdList CommaIdList
 %type <nval> Statements Statement Block
 %type <nval> ElseOrEndIf
 %type <nval> Expr
@@ -38,7 +41,7 @@
 %type <nval> CmpExpr
 %type <nval> BoolExpr
 
-%type <lval> IntArray IntList
+%type <nlval> IntArray IntList
 
 // Opérateurs
 %right Assign
@@ -62,12 +65,28 @@
 	int ival;
 	char sval[32];
 	struct asa *nval;
-	asa_list lval;
+	asa_list nlval;
+	id_list idlval;
 }
 
 %%
 
-Program: Start Statements End { codegen($2); free_asa($2); ts_free_table(); return 0; };
+Program: Fns { codegen($1); asa_list_destroy($1); ts_free_table(); };
+
+Fns:
+  Fn Identifier LeftParenthesis IdList RightParenthesis Start Statements End Fns { $$ = asa_list_append(create_fn_node($2, $4, $7), $9); }
+| %empty                                                                         { $$ = asa_list_empty(); }
+;
+
+IdList:
+  Identifier CommaIdList { $$ = id_list_append($1, $2); }
+| %empty                 { $$ = id_list_empty(); }
+;
+
+CommaIdList:
+  Comma Identifier CommaIdList { $$ = id_list_append($2, $3); }
+| %empty                       { $$ = id_list_empty(); }
+;
 
 Statements:
   Statement Semicolon Statements { $$ = make_block_node($1, $3); }
