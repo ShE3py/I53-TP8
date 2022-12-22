@@ -130,28 +130,32 @@ const char* unop_symbol(UnaryOp unop) {
 	exit(1);
 }
 
-asa* checked_malloc() {
-	asa *p = malloc(sizeof(asa));
-	if(!p) {
-		fprintf(stderr, "échec d'allocation mémoire");
-		exit(1);
-	}
-	
-	return p;
-}
-
 /**
  * Créer une nouvelle liste à partir de son premier élément et des éléments suivants.
  */
 asa_list asa_list_append(asa *head, asa_list next) {
+	if(next.is_nop) {
+		free_asa(head);
+		
+		return next;
+	}
+	else if(head == NOP) {
+		asa_list_destroy(next);
+		
+		// `asa_list_destroy()` met `is_nop` sur `1`,
+		// et tous les autres champs sur `0` après désallocation
+		return next;
+	}
+	
 	if(!head) {
-		fprintf(stderr, "called asa_list_append() with null `head`\n");
+		fprintf(stderr, "called `asa_list_append()` with null `head`\n");
 		exit(1);
 	}
 	
 	asa_list l;
 	l.len = 1 + next.len;
 	l.ninst = head->ninst + next.ninst;
+	l.is_nop = 0;
 	
 	asa_list_node *n = malloc(sizeof(asa_list_node));
 	n->value = head;
@@ -169,6 +173,7 @@ asa_list asa_list_empty() {
 	l.len = 0;
 	l.ninst = 0;
 	l.head = NULL;
+	l.is_nop = 0;
 	
 	return l;
 }
@@ -177,7 +182,10 @@ asa_list asa_list_empty() {
  * Affiche une liste dans la sortie standard.
  */
 void asa_list_print(asa_list l) {
-	if(l.len == 0) {
+	if(l.is_nop) {
+		printf("NoOp");
+	}
+	else if(l.len == 0) {
 		printf("{}");
 	}
 	else {
@@ -205,11 +213,29 @@ void asa_list_destroy(asa_list l) {
 		asa_list_node *m = n;
 		n = n->next;
 		
+		free_asa(m->value);
 		free(m);
 	}
 	
 	l.len = 0;
+	l.ninst = 0;
 	l.head = NULL;
+	l.is_nop = 1;
+}
+
+asa* checked_malloc() {
+	asa *p = malloc(sizeof(asa));
+	if(!p) {
+		fprintf(stderr, "échec d'allocation mémoire\n");
+		exit(1);
+	}
+	
+	if(p == NOP) {
+		fprintf(stderr, "`malloc()` returned `NOP`\n");
+		exit(1);
+	}
+	
+	return p;
 }
 
 /**
@@ -274,11 +300,12 @@ asa* create_index_node(const char id[32], asa *index) {
 		exit(1);
 	}
 	else if(var->size == 0) {
-		extern const char *input;
-		extern int yylineno;
+		free_asa(index);
 		
-		fprintf(stderr, "%s:%i: indexation impossible: '%s' n'occupe pas d'espace\n", input, yylineno, id);
-		exit(1);
+		return NOP;
+	}
+	else if(index == NOP) {
+		return NOP;
 	}
 	
 	asa *p = checked_malloc();
@@ -295,6 +322,13 @@ asa* create_index_node(const char id[32], asa *index) {
  * Créer un nouveau noeud `TagBinaryOp` avec les valeurs spécifiées.
  */
 asa* create_binop_node(BinaryOp binop, asa *lhs, asa *rhs) {
+	if(lhs == NOP || rhs == NOP) {
+		free_asa(lhs);
+		free_asa(rhs);
+		
+		return NOP;
+	}
+	
 	asa *p = checked_malloc();
 	
 	p->tag = TagBinaryOp;
@@ -341,6 +375,10 @@ asa* create_binop_node(BinaryOp binop, asa *lhs, asa *rhs) {
  * Créer un nouveau noeud `TagUnaryOp` avec les valeurs spécifiées.
  */
 asa* create_unop_node(UnaryOp unop, asa *expr) {
+	if(expr == NOP) {
+		return NOP;
+	}
+	
 	asa *p = checked_malloc();
 	
 	p->tag = TagUnaryOp;
@@ -369,6 +407,9 @@ asa* create_assign_scalar_node(const char id[32], asa *expr) {
 		
 		fprintf(stderr, "%s:%i: impossible d'affecter un scalaire à un tableau\n", input, yylineno);
 		exit(1);
+	}
+	else if(expr == NOP) {
+		return NOP;
 	}
 	
 	asa *p = checked_malloc();
@@ -401,11 +442,13 @@ asa* create_assign_indexed_node(const char id[32], asa *index, asa *expr) {
 		exit(1);
 	}
 	else if(var->size == 0) {
-		extern const char *input;
-		extern int yylineno;
+		return NOP;
+	}
+	else if(index == NOP || expr == NOP) {
+		free_asa(index);
+		free_asa(expr);
 		
-		fprintf(stderr, "%s:%i: indexation impossible: '%s' n'occupe pas d'espace\n", input, yylineno, id);
-		exit(1);
+		return NOP;
 	}
 	
 	asa *p = checked_malloc();
@@ -446,8 +489,8 @@ asa* create_assign_int_list_node(const char id[32], asa_list values) {
 		exit(1);
 	}
 	
-	if(values.len == 0) {
-		return NULL;
+	if(values.len == 0 || values.is_nop) {
+		return NOP;
 	}
 	
 	asa *p = checked_malloc();
@@ -518,7 +561,15 @@ asa* create_assign_array_node(const char dst[32], const char src[32]) {
  */
 asa* create_test_node(asa *expr, asa *therefore, asa *alternative) {
 	if(!therefore && !alternative) {
-		return NULL;
+		free_asa(expr);
+		
+		return NOP;
+	}
+	else if(expr == NOP) {
+		free_asa(therefore);
+		free_asa(alternative);
+		
+		return NOP;
 	}
 	
 	asa *p = checked_malloc();
@@ -537,7 +588,14 @@ asa* create_test_node(asa *expr, asa *therefore, asa *alternative) {
  */
 asa* create_while_node(asa *expr, asa *body) {
 	if(!body) {
-		return NULL;
+		free_asa(expr);
+		
+		return NOP;
+	}
+	else if(expr == NOP) {
+		free_asa(body);
+		
+		return NOP;
 	}
 	
 	asa *p = checked_malloc();
@@ -593,11 +651,10 @@ asa* create_read_indexed_node(const char id[32], asa *index) {
 		exit(1);
 	}
 	else if(var->size == 0) {
-		extern const char *input;
-		extern int yylineno;
-		
-		fprintf(stderr, "%s:%i: indexation impossible: '%s' n'occupe pas d'espace\n", input, yylineno, id);
-		exit(1);
+		return NOP;
+	}
+	else if(index == NOP) {
+		return NOP;
 	}
 	
 	asa *p = checked_malloc();
@@ -627,7 +684,7 @@ asa* create_read_array_node(const char id[32]) {
 		exit(1);
 	}
 	else if(var->size == 0) {
-		return NULL;
+		return NOP;
 	}
 	
 	asa *p = checked_malloc();
@@ -643,6 +700,10 @@ asa* create_read_array_node(const char id[32]) {
  * Créer un nouveau noeud `TagPrint` avec l'expression spécifiée.
  */
 asa* create_print_node(asa *expr) {
+	if(expr == NOP) {
+		return NOP;
+	}
+	
 	asa *p = checked_malloc();
 	
 	p->tag = TagPrint;
@@ -669,7 +730,7 @@ asa* create_print_array_node(const char id[32]) {
 		exit(1);
 	}
 	else if(var->size == 0) {
-		return NULL;
+		return NOP;
 	}
 	
 	asa *p = checked_malloc();
@@ -685,6 +746,14 @@ asa* create_print_array_node(const char id[32]) {
  * Transforme deux noeuds en un noeud `TagBlock` équivalent.
  */
 asa* make_block_node(asa *p, asa *q) {
+	if(p == NOP) {
+		p = NULL;
+	}
+	
+	if(q == NOP) {
+		q = NULL;
+	}
+	
 	if(!p && !q) {
 		return NULL;
 	}
@@ -775,6 +844,11 @@ asa* create_fncall_node(const char varname[32], const char methodname[32]) {
  */
 void print_asa(asa *p) {
 	if(!p) {
+		return;
+	}
+	
+	if(p == NOP) {
+		printf("NoOp");
 		return;
 	}
 	
@@ -904,6 +978,10 @@ void print_asa(asa *p) {
  */
 void free_asa(asa *p) {
 	if(!p) {
+		return;
+	}
+	
+	if(p == NOP) {
 		return;
 	}
 	

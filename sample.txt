@@ -1,16 +1,13 @@
 DÉBUT
-	LIRE[5] x;
+	LIRE[0] x;
 	
-	VAR max := x[0];
+	VAR sum := 0;
 	
-	VAR i := 1;
+	VAR i := 0;
 	TQ i < x.len() FAIRE
-		SI x[i] > max ALORS
-			max := x[i];
-		FSI
-		
+		sum := sum + x[i];
 		i := i + 1;
 	FTQ
 	
-	AFFICHER max;
+	AFFICHER sum;
 FIN
