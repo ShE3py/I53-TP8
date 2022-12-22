@@ -77,9 +77,9 @@ Statements:
 
 Statement:
   Expr                                                                  { $$ = $1; }
-| Var Identifier                                                        { if(ts_retrouver_id($2)) yyerror("variable dupliquée"); ts_ajouter_scalaire($2); $$ = NULL; }
+| Var Identifier                                                        { if(ts_retrouver_id($2)) yyerror("variable dupliquée"); ts_ajouter_scalaire($2); $$ = NOP; }
 | Var Identifier Assign Expr                                            { if(ts_retrouver_id($2)) yyerror("variable dupliquée"); ts_ajouter_scalaire($2); $$ = create_assign_scalar_node($2, $4); }
-| Var Identifier LeftSquareBracket Int RightSquareBracket               { if(ts_retrouver_id($2)) yyerror("variable dupliquée"); ts_ajouter_tableau($2, $4); $$ = NULL; }
+| Var Identifier LeftSquareBracket Int RightSquareBracket               { if(ts_retrouver_id($2)) yyerror("variable dupliquée"); ts_ajouter_tableau($2, $4); $$ = NOP; }
 | Var Identifier Assign IntArray                                        { if(ts_retrouver_id($2)) yyerror("variable dupliquée"); ts_ajouter_tableau($2, $4.len); $$ = create_assign_int_list_node($2, $4); }
 | Var Identifier Assign LeftSquareBracket Identifier RightSquareBracket { if(ts_retrouver_id($2)) yyerror("variable dupliquée"); ts *dst = ts_retrouver_id($5); if(!dst) yyerror("variable inconnue"); ts_ajouter_tableau($2, dst->size); $$ = create_assign_array_node($2, $5); }
 

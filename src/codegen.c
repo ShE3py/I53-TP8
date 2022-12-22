@@ -42,10 +42,22 @@ const char* binop_name(BinaryOp binop) {
 }
 
 /**
+ * Génère le code pour la machine RAM correspondant à l'arbre syntaxique abstrait spécifié.
+ * Cette fonction est récursive.
  *
+ * Paramètres :
+ * - `p`: le noeud à générer
+ * - `sp`: stack pointer, le numéro de la dernière cellule utilisée pour une variable intermédiaire.
+ * - `ip`: instruction pointer, le numéro de l'instruction suivante
+ *
+ * Aucune idée de pourquoi j'avais utilisé `nc` comme suffixe.
  */
 void codegen_nc(asa *p, int *sp, int *ip) {
 	if(!p) {
+		return;
+	}
+	
+	if(p == NOP) {
 		return;
 	}
 	
@@ -545,8 +557,6 @@ void codegen_nc(asa *p, int *sp, int *ip) {
  * Génère le code pour la machine RAM correspondant à l'arbre syntaxique abstrait spécifié.
  */
 void codegen(asa *p) {
-	if(!p) return;
-	
 	printf("NOP ; DEBUT\n");
 	
   	int sp = 1;

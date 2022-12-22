@@ -194,6 +194,11 @@ typedef struct asa_list {
 	 * Le premier élément de la liste chaînée.
 	 */
 	asa_list_node *head;
+	
+	/**
+	 * L'ajout d'un élément NoOp transforme toute cette liste en NoOp.
+	 */
+	int is_nop;
 } asa_list;
 
 /**
@@ -453,6 +458,13 @@ typedef struct asa {
 		} tag_block;
 	};
 } asa;
+
+
+/**
+ * Un noeud qui ne génèrera aucune instruction.
+ * `NOP` est contagieux ; `x + NOP` produira un `NOP`.
+ */
+static asa *const NOP = (asa *const) 1;  // le code vérifie que `malloc()` ne renvoit pas `NOP` pour un noeud
 
 /**
  * Créer une nouvelle liste à partir de son premier élément et des éléments suivants.
