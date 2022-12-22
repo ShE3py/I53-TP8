@@ -25,6 +25,7 @@ int is_leaf(NodeTag tag) {
 		case TagPrint:
 		case TagPrintArray:
 		case TagBlock:
+		case TagFn:
 			return 0;
 	}
 	
@@ -221,6 +222,69 @@ void asa_list_destroy(asa_list l) {
 	l.ninst = 0;
 	l.head = NULL;
 	l.is_nop = 1;
+}
+
+/**
+ * Créer une nouvelle liste à partir de son premier élément et de ses éléments suivants.
+ */
+id_list id_list_append(const char id[32], id_list next) {
+	id_list l;
+	l.len = 1 + next.len;
+	
+	id_list_node *n = malloc(sizeof(id_list_node));
+	strcpy(&n->value[0], &id[0]);
+	n->next = next.head;
+	
+	l.head = n;
+	return l;
+}
+
+/**
+ * Créer une nouvelle liste vide.
+ */
+id_list id_list_empty() {
+	id_list l;
+	l.len = 0;
+	l.head = NULL;
+	
+	return l;
+}
+
+/**
+ * Affiche une liste dans la sortie standard.
+ */
+void id_list_print(id_list l) {
+	if(l.len == 0) {
+		printf("()");
+	}
+	else {
+		id_list_node *n = l.head;
+		printf("(%s", n->value);
+		
+		while(n->next) {
+			n = n->next;
+			
+			printf(", %s", n->value);
+		}
+		
+		printf(")");
+	}
+}
+
+/**
+ * Libère les ressources allouées à une liste.
+ */
+void id_list_destroy(id_list l) {
+	id_list_node *n = l.head;
+	while(n) {
+		id_list_node *m = n;
+		n = n->next;
+		
+		free(m);
+	}
+	
+	l.len = 0;
+	l.head = NULL;
 }
 
 asa* checked_malloc() {
@@ -840,6 +904,21 @@ asa* create_fncall_node(const char varname[32], const char methodname[32]) {
 }
 
 /**
+ * Créer un nouveau noeud `TagFn` avec les valeurs spécifiées.
+ */
+asa* create_fn_node(const char id[32], id_list params, asa *body) {
+	asa *p = checked_malloc();
+	
+	p->tag = TagFn;
+	p->ninst = (body && body != NOP) ? (body->ninst + 3) : 0;
+	strcpy(&p->tag_fn.identifier[0], &id[0]);
+	p->tag_fn.params = params;
+	p->tag_fn.body = body;
+	
+	return p;
+}
+
+/**
  * Affiche le noeud dans la sortie standard.
  */
 void print_asa(asa *p) {
@@ -970,6 +1049,11 @@ void print_asa(asa *p) {
 			printf("\n");
 			print_asa(p->tag_block.next);
 			break;
+		
+		case TagFn:
+			printf("FONCTION %s", p->tag_fn.identifier);
+			id_list_print(p->tag_fn.params);
+			break;
 	}
 }
 
@@ -1034,6 +1118,11 @@ void free_asa(asa *p) {
 		case TagBlock:
 			free_asa(p->tag_block.stmt);
 			free_asa(p->tag_block.next);
+			break;
+		
+		case TagFn:
+			id_list_destroy(p->tag_fn.params);
+			free_asa(p->tag_fn.body);
 			break;
 		
 		case TagInt:
