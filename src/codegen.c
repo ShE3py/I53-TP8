@@ -1,5 +1,8 @@
 #include "codegen.h"
 
+#pragma GCC diagnostic ignored "-Wmain"
+#pragma GCC diagnostic ignored "-Wunused-function"
+
 /**
  * Renvoie l'instruction de la machine RAM associée à un opérateur binaire.
  */
@@ -40,6 +43,22 @@ const char* binop_name(BinaryOp binop) {
 	fprintf(stderr, "entered unreachable code\n");
 	exit(1);
 }
+
+/**
+ * Renvoie l'adresse dans le segment de données de la fonction spécifiée,
+ * ou écrit un message d'erreur et ferme le programme si jamais la fonction n'existe pas.
+ */
+int get_fn_loc(const char id[32]);
+
+/**
+ * L'adresse de la fonction de saut dynamique.
+ */
+static int dyn_jump_adr;
+
+/**
+ * Ajoute le point de retour à la fonction de saut dynamique.
+ */
+static void add_dyn_jump_adr(int adr);
 
 /**
  * Génère le code pour la machine RAM correspondant à l'arbre syntaxique abstrait spécifié.
@@ -579,6 +598,38 @@ void codegen_nc(asa *p, int *ip) {
 			++(*ip);
 			break;
 		}
+		
+		case TagFnCall: {
+			printf("LOAD 1\n");
+			printf("STORE @2\n");
+			printf("INC 2\n");
+			
+			add_dyn_jump_adr(*ip + 9);
+			printf("LOAD #%i\n", *ip + 9);
+			printf("STORE @2\n");
+			printf("INC 2\n");
+			
+			printf("LOAD 2\n");
+			printf("STORE 1\n");
+			
+			printf("JUMP %i\n", get_fn_loc(p->tag_fn_call.identifier));
+			
+			printf("DEC 2\n");
+			printf("LOAD @2\n");
+			printf("STORE 1\n");
+			
+			*ip += 12;
+			break;
+		}
+		
+		case TagReturn: {
+			printf("DEC 2\n");
+			printf("LOAD @2\n");
+			printf("JUMP %i\n", dyn_jump_adr);
+			
+			*ip += 3;
+			break;
+		}
 	}
 	
 	if((before_codegen_ip + p->ninst) != *ip) {
@@ -592,13 +643,226 @@ void codegen_nc(asa *p, int *ip) {
 }
 
 /**
+ * Un noeud d'un liste chaînée d'adresses de fonctions.
+ */
+typedef struct fn_location_node {
+	/**
+	 * La fonction.
+	 */
+	asa *value;
+	
+	/**
+	 * L'adresse de la fonction dans le segment de code.
+	 */
+	int adr;
+	
+	/**
+	 * La fonction suivante.
+	 */
+	struct fn_location_node *next;
+} fn_location_node;
+
+/**
+ * La tête de la liste chaînée contenant les adresses des fonctions.
+ */
+static fn_location_node fn_locations;
+
+/**
+ * Détermine l'emplacement des fonctions dans le segment de code.
+ */
+static void allocate_fn_space(asa_list fns, int base_ip) {
+	asa_list_node *main = NULL;
+	
+	asa_list_node *n = fns.head;
+	while(n) {
+		if(strcmp(n->value->tag_fn.identifier, "main") == 0) {
+			main = n;
+			break;
+		}
+		
+		n = n->next;
+	}
+	
+	if(!main) {
+		fprintf(stderr, "erreur: pas de fonction principale définie\n");
+		exit(1);
+	}
+	
+	int ip = base_ip;
+	fn_locations.value = main->value;
+	fn_locations.adr = ip;
+	fn_locations.next = NULL;
+	
+	ip += main->value->ninst;
+	
+	n = fns.head->next;
+	while(n) {
+		fn_location_node *m = &fn_locations;
+		while(1) {
+			if(m->value != n->value && strcmp(n->value->tag_fn.identifier, m->value->tag_fn.identifier) == 0) {
+				fprintf(stderr, "fonction dupliquée: '%s'\n", n->value->tag_fn.identifier);
+				exit(1);
+			}
+			
+			if(!m->next) {
+				break;
+			}
+			
+			m = m->next;
+		}
+		
+		fn_location_node *o = malloc(sizeof(fn_location_node));
+		o->value = n->value;
+		o->adr = ip;
+		o->next = NULL;
+		
+		m->next = o;
+		ip += o->value->ninst;
+		
+		n = n->next;
+	}
+	
+	dyn_jump_adr = ip;
+}
+
+/**
+ * Renvoie l'adresse dans le segment de données de la fonction spécifiée,
+ * ou écrit un message d'erreur et ferme le programme si jamais la fonction n'existe pas.
+ */
+int get_fn_loc(const char id[32]) {
+	fn_location_node *n = &fn_locations;
+	do {
+		if(strcmp(n->value->tag_fn.identifier, id) == 0) {
+			return n->adr;
+		}
+		
+		n = n->next;
+	}
+	while(n);
+	
+	fprintf(stderr, "fonction inconnue: '%s'\n", id);
+	exit(1);
+}
+
+/**
+ * Un élément d'une liste chaînée de nombre entiers.
+ */
+typedef struct int_list_node {
+	int value;
+	struct int_list_node *next;
+} int_list_node;
+
+/**
+ * Les adresses dans le segment de données dont il est possible
+ * d'accéder dynamiquement.
+ */
+static int_list_node *dyn_jumps;
+
+/**
+ * Ajoute le point de retour à la fonction de saut dynamique.
+ */
+static void add_dyn_jump_adr(int adr) {
+	int_list_node *n = malloc(sizeof(int_list_node));
+	n->value = adr;
+	n->next = NULL;
+	
+	if(!dyn_jumps) {
+		dyn_jumps = n;
+	}
+	else {
+		// sorted insertion
+		int_list_node *m = dyn_jumps;
+		while(m->next) {
+			int_list_node *o = m->next;
+			if(o->value > adr) {
+//				m->next = n;  en sortie de boucle
+				n->next = o;
+				break;
+			}
+			
+			m = o;
+		}
+		
+		m->next = n;
+	}
+}
+
+/**
+ * Génère le code pour la fonction de sauts dynamiques.
+ */
+static void codegen_dyn_jump() {
+	printf("NOP ; JUMP @0\n");
+	
+	int_list_node *n = dyn_jumps;
+	int sum = 0;
+	
+	while(n) {
+		printf("SUB #%i\n", n->value - sum);
+		printf("JUMZ %i\n", n->value);
+		
+		sum += n->value;
+		n = n->next;
+	}
+	
+	printf("STOP\n");
+}
+
+static void print_fn_locations() {
+	printf("{\n");
+	
+	fn_location_node *n = &fn_locations;
+	do {
+		printf("\t%s: %i\n", n->value->tag_fn.identifier, n->adr);
+		n = n->next;
+	}
+	while(n);
+	
+	printf("}\n");
+}
+
+static void print_int_list(int_list_node *head) {
+	if(!head) {
+		printf("{}\n");
+	}
+	else {
+		printf("{%i", head->value);
+		
+		int_list_node *n = head->next;
+		while(n) {
+			printf(", %i", n->value);
+			n = n->next;
+		}
+		
+		printf("}\n");
+	}
+}
+
+static void destroy_fn_space() {
+	fn_location_node *n = fn_locations.next;
+	while(n) {
+		fn_location_node *m = n->next;
+		free(n);
+		
+		n = m;
+	}
+}
+
+/**
  * Génère le code pour la machine RAM correspondant au programme spécifié.
  */
 void codegen(asa_list fns) {
+	if(fns.len == 0) {
+		printf("STOP\n");
+		fprintf(stderr, "avertissement: le fichier source est vide\n");
+		exit(1);
+	}
+	
 	printf("LOAD #4\n");
 	printf("STORE 1\n");
 	
 	int ip = 2;
+	
+	allocate_fn_space(fns, ip);
 	
 	asa_list_node *n = fns.head;
 	while(n) {
@@ -606,4 +870,7 @@ void codegen(asa_list fns) {
 		
 		n = n->next;
 	}
+	
+	codegen_dyn_jump();
+	destroy_fn_space();
 }

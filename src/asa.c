@@ -26,6 +26,8 @@ int is_leaf(NodeTag tag) {
 		case TagPrintArray:
 		case TagBlock:
 		case TagFn:
+		case TagFnCall:
+		case TagReturn:
 			return 0;
 	}
 	
@@ -802,7 +804,7 @@ asa* make_block_node(asa *p, asa *q) {
 /**
  * Créer un nouveau noeud correspondant à la méthode spécifiée.
  */
-asa* create_fncall_node(const char varname[32], const char methodname[32]) {
+asa* create_methodcall_node(const char varname[32], const char methodname[32]) {
 	symbol var = st_find_or_yyerror(varname);
 	
 	if(strcmp(methodname, "len") != 0) {
@@ -831,11 +833,39 @@ asa* create_fn_node(const char id[32], id_list params, asa *body, symbol_table *
 	asa *p = checked_malloc();
 	
 	p->tag = TagFn;
-	p->ninst = (body && body != NOP) ? (body->ninst + 6) : 0;
+	p->ninst = 6 + ((body && body != NOP) ? body->ninst : 0);
 	strcpy(&p->tag_fn.identifier[0], &id[0]);
 	p->tag_fn.params = params;
 	p->tag_fn.body = body;
 	p->tag_fn.st = st;
+	
+	return p;
+}
+
+/**
+ * Créer un nouveau noeud `TagFnCall` avec la valeur spécifiée.
+ */
+asa* create_fncall_node(const char id[32]) {
+	// l'existence de la fonction sera vérifiée pendant
+	// la génération de code
+	
+	asa *p = checked_malloc();
+	
+	p->tag = TagFnCall;
+	p->ninst = 12;
+	strcpy(&p->tag_fn_call.identifier[0], &id[0]);
+	
+	return p;
+}
+
+/**
+ * Créer un nouveau noeud `TagReturn`.
+ */
+asa* create_return_node() {
+	asa *p = checked_malloc();
+	
+	p->tag = TagReturn;
+	p->ninst = 3;
 	
 	return p;
 }
@@ -972,6 +1002,14 @@ void print_asa(asa *p) {
 			printf("FONCTION %s", p->tag_fn.identifier);
 			id_list_print(p->tag_fn.params);
 			break;
+		
+		case TagFnCall:
+			printf("%s()", p->tag_fn_call.identifier);
+			break;
+		
+		case TagReturn:
+			printf("RENVOYER");
+			break;
 	}
 }
 
@@ -1050,6 +1088,8 @@ void free_asa(asa *p) {
 		case TagRead:
 		case TagReadArray:
 		case TagPrintArray:
+		case TagFnCall:
+		case TagReturn:
 			break;
 	}
 	

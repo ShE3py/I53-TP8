@@ -19,6 +19,7 @@ void yyerror(const char *s) {
 
  /* Mots-clefs */
 "FONCTION"      { return Fn; }
+"RENVOYER"      { return Return; }
 
 "DEBUT"|"DÉBUT" { return Start; }
 "FIN"           { return End; }

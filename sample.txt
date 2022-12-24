@@ -1,13 +1,12 @@
 FONCTION main()
 DÉBUT
-	LIRE[5] x;
-	VAR sum := 0;
+	f();
+	f();
+FIN
+
+FONCTION f()
+DÉBUT
+	AFFICHER 4;
 	
-	VAR i := 0;
-	TQ i < x.len() FAIRE
-		sum := sum + x[i];
-		i := i + 1;
-	FTQ
-	
-	AFFICHER sum;
+	RENVOYER;
 FIN
