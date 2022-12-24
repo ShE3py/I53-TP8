@@ -15,7 +15,7 @@ static symbol_table *cst = NULL;
 symbol_table* st_empty() {
 	symbol_table *st = malloc(sizeof(symbol_table));
 	st->head = NULL;
-	st->mem_offset = 2;
+	st->mem_offset = 0;
 	
 	return st;
 }
@@ -205,6 +205,18 @@ symbol st_find_or_internal_error(const char id[32]) {
 	}
 	
 	return *s;
+}
+
+/**
+ * Renvoie l'adresse en mémoire de la première variable intermédiaire.
+ */
+int st_temp_offset() {
+	if(!cst) {
+		fprintf(stderr, "no current st\n");
+		exit(1);
+	}
+	
+	return cst->mem_offset;
 }
 
 /**

@@ -1,13 +1,13 @@
-FONCTION f()
-DEBUT
-	VAR x := 1;
-FIN
-
 FONCTION main()
 DÉBUT
-	VAR x := 1;
+	LIRE[5] x;
+	VAR sum := 0;
 	
-	SI x >= 0 ALORS
-		VAR z := 1;
-	FSI
+	VAR i := 0;
+	TQ i < x.len() FAIRE
+		sum := sum + x[i];
+		i := i + 1;
+	FTQ
+	
+	AFFICHER sum;
 FIN
