@@ -99,7 +99,17 @@ typedef enum {
 	/**
 	 * Une fonction.
 	 */
-	TagFn
+	TagFn,
+	
+	/**
+	 * Un appel de fonction.
+	 */
+	TagFnCall,
+	
+	/**
+	 * Un retour de fonction.
+	 */
+	TagReturn
 } NodeTag;
 
 /**
@@ -509,6 +519,23 @@ typedef struct asa {
 			 */
 			symbol_table *st;
 		} tag_fn;
+		
+		/**
+		 * La valeur d'un noeud `TagFnCall`.
+		 */
+		struct {
+			/**
+			 * Le nom de la fonction.
+			 */
+			char identifier[32];
+		} tag_fn_call;
+		
+		/**
+		 * La valeur d'un noeud `TagReturn`.
+		 */
+		struct {
+			
+		} tag_return;
 	};
 } asa;
 
@@ -647,12 +674,22 @@ asa* make_block_node(asa *p, asa *q);
 /**
  * Créer un nouveau noeud correspondant à la méthode spécifiée.
  */
-asa* create_fncall_node(const char varname[32], const char methodname[32]);
+asa* create_methodcall_node(const char varname[32], const char methodname[32]);
 
 /**
  * Créer un nouveau noeud `TagFn` avec les valeurs spécifiées.
  */
 asa* create_fn_node(const char id[32], id_list params, asa *body, symbol_table *st);
+
+/**
+ * Créer un nouveau noeud `TagFnCall` avec la valeur spécifiée.
+ */
+asa* create_fncall_node(const char id[32]);
+
+/**
+ * Créer un nouveau noeud `TagReturn`.
+ */
+asa* create_return_node();
 
 /**
  * Affiche le noeud dans la sortie standard.

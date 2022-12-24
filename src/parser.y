@@ -11,7 +11,7 @@
 %define parse.error verbose
 
 // Mots-clefs
-%token Fn
+%token Fn Return
 %token Start End
 %token Var
 %token If Then Else EndIf
@@ -117,6 +117,8 @@ Statement:
 
 | Print Expr                                                            { $$ = create_print_node($2); }
 | Print LeftSquareBracket Identifier RightSquareBracket                 { $$ = create_print_array_node($3); }
+
+| Return                                                                { $$ = create_return_node(); }
 ;
 
 IntArray:
@@ -161,7 +163,8 @@ IntValue:
 | Int                                                        { $$ = create_int_leaf($1); }
 | Identifier                                                 { $$ = create_var_leaf($1); }
 | Identifier LeftSquareBracket IntExpr RightSquareBracket    { $$ = create_index_node($1, $3); }
-| Identifier Dot Identifier LeftParenthesis RightParenthesis { $$ = create_fncall_node($1, $3); }
+| Identifier Dot Identifier LeftParenthesis RightParenthesis { $$ = create_methodcall_node($1, $3); }
+| Identifier LeftParenthesis RightParenthesis                { $$ = create_fncall_node($1); }
 ;
 
 CmpExpr:
