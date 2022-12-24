@@ -47,12 +47,11 @@ const char* binop_name(BinaryOp binop) {
  *
  * Paramètres :
  * - `p`: le noeud à générer
- * - `sp`: stack pointer, le numéro de la dernière cellule utilisée pour une variable intermédiaire.
  * - `ip`: instruction pointer, le numéro de l'instruction actuelle
  *
  * Aucune idée de pourquoi j'avais utilisé `nc` comme suffixe.
  */
-void codegen_nc(asa *p, int *sp, int *ip) {
+void codegen_nc(asa *p, int *ip) {
 	if(!p) {
 		return;
 	}
@@ -74,8 +73,10 @@ void codegen_nc(asa *p, int *sp, int *ip) {
 		case TagVar: {
 			symbol var = st_find_or_internal_error(p->tag_var.identifier);
 			
-			printf("LOAD %i\n", var.base_adr);
-			++(*ip);
+			printf("LOAD 1\n");
+			printf("ADD #%i\n", var.base_adr);
+			printf("LOAD @0\n");
+			*ip += 3;
 			
 			break;
 		}
@@ -84,17 +85,23 @@ void codegen_nc(asa *p, int *sp, int *ip) {
 			symbol var = st_find_or_internal_error(p->tag_index.identifier);
 			
 			if(p->tag_index.index->tag == TagInt) {
-				printf("LOAD %i\n", var.base_adr + p->tag_index.index->tag_int.value);
+				printf("LOAD 1\n");
+				printf("ADD #%i\n", var.base_adr + p->tag_index.index->tag_int.value);
+				printf("LOAD @0\n");
 				
-				++(*ip);
+				*ip += 3;
 			}
 			else {
-				codegen_nc(p->tag_index.index, sp, ip);
+				codegen_nc(p->tag_index.index, ip);
+				printf("STORE @2\n");
+				printf("LOAD 1\n");
+				printf("ADD @2\n");
 				printf("ADD #%i\n", var.base_adr);
 				printf("LOAD @0\n");
 				
-				*ip += 2;
+				*ip += 5;
 			}
+			
 			break;
 		}
 		
@@ -108,14 +115,16 @@ void codegen_nc(asa *p, int *sp, int *ip) {
 					// pour les opérateurs comparatifs, on calcul en premier lieu
 					// x - y (binop_name(op comparatif) == 'SUB')
 					
-					codegen_nc(p->tag_binary_op.rhs, sp, ip);
-					printf("STORE %i\n", ++(*sp));
-					++(*ip);
 					
-					codegen_nc(p->tag_binary_op.lhs, sp, ip);
-					printf("%s %i\n", binop_name(p->tag_binary_op.op), *sp);
-					++(*ip);
-					--(*sp);
+					codegen_nc(p->tag_binary_op.rhs, ip);
+					printf("STORE @2\n");
+					printf("INC 2\n");
+					*ip += 2;
+					
+					codegen_nc(p->tag_binary_op.lhs, ip);
+					printf("DEC 2\n");
+					printf("%s @2\n", binop_name(p->tag_binary_op.op));
+					*ip += 2;
 					
 					// on génère ensuite le code de comparaison pour les opérateurs
 					// comparatifs
@@ -225,7 +234,7 @@ void codegen_nc(asa *p, int *sp, int *ip) {
 							printf(")\n");
 							++(*ip);
 							
-							codegen_nc(p->tag_binary_op.lhs, sp, ip);
+							codegen_nc(p->tag_binary_op.lhs, ip);
 							printf("JUMZ %i\n", *ip + p->tag_binary_op.rhs->ninst + 2);
 							++(*ip);
 							
@@ -234,7 +243,7 @@ void codegen_nc(asa *p, int *sp, int *ip) {
 							printf(")\n");
 							++(*ip);
 							
-							codegen_nc(p->tag_binary_op.rhs, sp, ip);
+							codegen_nc(p->tag_binary_op.rhs, ip);
 							break;
 						
 						case OpOr:
@@ -249,7 +258,7 @@ void codegen_nc(asa *p, int *sp, int *ip) {
 							printf(")\n");
 							++(*ip);
 							
-							codegen_nc(p->tag_binary_op.lhs, sp, ip);
+							codegen_nc(p->tag_binary_op.lhs, ip);
 							printf("JUMZ %i\n", *ip + 2);
 							++(*ip);
 							
@@ -261,7 +270,7 @@ void codegen_nc(asa *p, int *sp, int *ip) {
 							printf(")\n");
 							++(*ip);
 							
-							codegen_nc(p->tag_binary_op.rhs, sp, ip);
+							codegen_nc(p->tag_binary_op.rhs, ip);
 							break;
 						
 						case OpXor:
@@ -285,23 +294,25 @@ void codegen_nc(asa *p, int *sp, int *ip) {
 							printf(")\n");
 							++(*ip);
 							
-							codegen_nc(p->tag_binary_op.lhs, sp, ip);
-							printf("STORE %i\n", ++(*sp));
-							++(*ip);
+							codegen_nc(p->tag_binary_op.lhs, ip);
+							printf("STORE @2\n");
+							printf("INC 2\n");
+							*ip += 2;
 							
 							printf("NOP ; TEST (");
 							print_asa(p->tag_binary_op.rhs);
 							printf(")\n");
 							++(*ip);
 							
-							codegen_nc(p->tag_binary_op.rhs, sp, ip);
-							printf("JUMZ %i\n", *ip + 3);
-							printf("SUB %i\n", *sp);
-							printf("JUMP %i\n", *ip + 4);
-							printf("LOAD %i\n", *sp);
-							--(*sp);
+							codegen_nc(p->tag_binary_op.rhs, ip);
+							printf("NOP ; OU EXCLUSIF\n");
+							printf("DEC 2\n");
+							printf("JUMZ %i\n", *ip + 5);
+							printf("SUB @2\n");
+							printf("JUMP %i\n", *ip + 6);
+							printf("LOAD @2\n");
 							
-							*ip += 4;
+							*ip += 6;
 							break;
 						
 						case OpAdd:
@@ -329,38 +340,60 @@ void codegen_nc(asa *p, int *sp, int *ip) {
 		}
 		
 		case TagUnaryOp: {
-			codegen_nc(p->tag_unary_op.expr, sp, ip);
-			printf("STORE %i\n", *sp + 1);
+			codegen_nc(p->tag_unary_op.expr, ip);
+			
+			printf("STORE @2\n");
 			printf("LOAD #0\n");
-			printf("SUB %i\n", *sp + 1);
+			printf("SUB @2\n");
 			
 			*ip += 3;
 			break;
 		}
 		
 		case TagAssignScalar: {
-			codegen_nc(p->tag_assign_scalar.expr, sp, ip);
-			
 			symbol var = st_find_or_internal_error(p->tag_assign_scalar.identifier);
 			
-			printf("STORE %i\n", var.base_adr);
-			++(*ip);
+			printf("LOAD 1\n");
+			printf("ADD #%i\n", var.base_adr);
+			printf("STORE @2\n");
+			printf("INC 2\n");
+			*ip += 4;
+			
+			codegen_nc(p->tag_assign_scalar.expr, ip);
+			
+			printf("STORE @2\n");
+			printf("DEC 2\n");
+			printf("LOAD @2\n");
+			printf("STORE 3\n");
+			printf("INC 2\n");
+			printf("LOAD @2\n");
+			printf("STORE @3\n");
+			printf("DEC 2\n");
+			*ip += 8;
 			break;
 		}
 		
 		case TagAssignIndexed: {
 			symbol var = st_find_or_internal_error(p->tag_assign_indexed.identifier);
 			
-			codegen_nc(p->tag_assign_indexed.index, sp, ip);
+			codegen_nc(p->tag_assign_indexed.index, ip);
+			printf("ADD 1\n");
 			printf("ADD #%i\n", var.base_adr);
-			printf("STORE %i\n", ++(*sp));
+			printf("STORE @2\n");
+			printf("INC 2\n");
 			
-			*ip += 2;
-			codegen_nc(p->tag_assign_indexed.expr, sp, ip);
-			printf("STORE @%i\n", *sp);
+			*ip += 4;
+			codegen_nc(p->tag_assign_indexed.expr, ip);
+			printf("STORE @2\n");
+			printf("DEC 2\n");
+			printf("LOAD @2\n");
+			printf("STORE 3\n");
+			printf("INC 2\n");
+			printf("LOAD @2\n");
+			printf("STORE @3\n");
+			printf("DEC 2\n");
 			
-			++(*ip);
-			--(*sp);
+			*ip += 8;
 			break;
 		}
 		
@@ -370,10 +403,15 @@ void codegen_nc(asa *p, int *sp, int *ip) {
 			asa_list_node *n = p->tag_assign_int_list.values.head;
 			
 			for(int i = 0; i < var.size; ++i) {
-				codegen_nc(n->value, sp, ip);
-				printf("STORE %i\n", var.base_adr + i);
-				++(*ip);
+				codegen_nc(n->value, ip);
+				printf("STORE @2\n");
+				printf("LOAD 1\n");
+				printf("ADD #%i\n", var.base_adr + i);
+				printf("STORE 3\n");
+				printf("LOAD @2\n");
+				printf("STORE @3\n");
 				
+				*ip += 6;
 				n = n->next;
 			}
 			
@@ -384,30 +422,38 @@ void codegen_nc(asa *p, int *sp, int *ip) {
 			symbol dst = st_find_or_internal_error(p->tag_assign_array.dst);
 			symbol src = st_find_or_internal_error(p->tag_assign_array.src);
 			
+			printf("LOAD 1\n");
+			printf("ADD #%i\n", dst.base_adr);
+			printf("STORE 3\n");
+			
 			for(int i = 0; i < dst.size; ++i) {
-				printf("LOAD %i\n", src.base_adr + i);
-				printf("STORE %i\n", dst.base_adr + i);
+				printf("LOAD 1\n");
+				printf("ADD #%i\n", src.base_adr + i);
+				printf("LOAD @0\n");
+				
+				printf("STORE @3\n");
+				printf("INC 3\n");
 			}
 			
-			*ip += dst.size * 2;
+			*ip += 3 + dst.size * 5;
 			break;
 		}
 		
 		case TagTest: {
-			codegen_nc(p->tag_test.expr, sp, ip);
+			codegen_nc(p->tag_test.expr, ip);
 			
 			printf("JUMZ %i\n", *ip + (p->tag_test.therefore ? p->tag_test.therefore->ninst : 0) + 2 + (p->tag_test.alternative ? 1 : 0));
 			printf("NOP ; ALORS\n");
 			
 			*ip += 2;
-			codegen_nc(p->tag_test.therefore, sp, ip);
+			codegen_nc(p->tag_test.therefore, ip);
 			
 			if(p->tag_test.alternative) {
 				printf("JUMP %i\n", *ip + p->tag_test.alternative->ninst + 2);
 				printf("NOP ; SINON\n");
 				
 				*ip += 2;
-				codegen_nc(p->tag_test.alternative, sp, ip);
+				codegen_nc(p->tag_test.alternative, ip);
 			}
 			
 			printf("NOP ; FSI\n");
@@ -417,12 +463,12 @@ void codegen_nc(asa *p, int *sp, int *ip) {
 		}
 		
 		case TagWhile: {
-			codegen_nc(p->tag_while.expr, sp, ip);
+			codegen_nc(p->tag_while.expr, ip);
 			
 			printf("JUMZ %i\n", *ip + p->tag_while.body->ninst + 2);
 			++(*ip);
 			
-			codegen_nc(p->tag_while.body, sp, ip);
+			codegen_nc(p->tag_while.body, ip);
 			
 			printf("JUMP %i\n", before_codegen_ip);
 			++(*ip);
@@ -431,43 +477,56 @@ void codegen_nc(asa *p, int *sp, int *ip) {
 		}
 		
 		case TagRead: {
-			printf("READ\n");
-			
 			symbol var = st_find_or_internal_error(p->tag_read.identifier);
 			
-			printf("STORE %i\n", var.base_adr);
-			*ip += 2;
+			printf("LOAD 1\n");
+			printf("ADD #%i\n", var.base_adr);
+			printf("STORE 3\n");
+			
+			printf("READ\n");
+			printf("STORE @3\n");
+			
+			*ip += 5;
 			break;
 		}
 		
 		case TagReadIndexed: {
 			symbol var = st_find_or_internal_error(p->tag_read_indexed.identifier);
 			
-			codegen_nc(p->tag_read_indexed.index, sp, ip);
-			printf("ADD #%i\n", var.base_adr);
-			printf("STORE %i\n", ++(*sp));
-			printf("READ\n");
-			printf("STORE @%i\n", *sp);
+			codegen_nc(p->tag_read_indexed.index, ip);
 			
-			--(*sp);
-			*ip += 4;
+			printf("STORE @2\n");
+			printf("LOAD 1\n");
+			printf("ADD #%i\n", var.base_adr);
+			printf("ADD @2\n");
+			printf("STORE 3\n");
+			
+			printf("READ\n");
+			printf("STORE @3\n");
+			
+			*ip += 7;
 			break;
 		}
 		
 		case TagReadArray: {
 			symbol var = st_find_or_internal_error(p->tag_read_array.identifier);
 			
+			printf("LOAD 1\n");
+			printf("ADD #%i\n", var.base_adr);
+			printf("STORE 3\n");
+			
 			for(int i = 0; i < var.size; ++i) {
 				printf("READ\n");
-				printf("STORE %i\n", var.base_adr + i);
+				printf("STORE @3\n");
+				printf("INC 3\n");
 			}
 			
-			*ip += var.size * 2;
+			*ip += 3 + var.size * 3;
 			break;
 		}
 		
 		case TagPrint: {
-			codegen_nc(p->tag_print.expr, sp, ip);
+			codegen_nc(p->tag_print.expr, ip);
 			printf("WRITE\n");
 			++(*ip);
 			break;
@@ -476,12 +535,17 @@ void codegen_nc(asa *p, int *sp, int *ip) {
 		case TagPrintArray: {
 			symbol var = st_find_or_internal_error(p->tag_print_array.identifier);
 			
+			printf("LOAD 1\n");
+			printf("ADD #%i\n", var.base_adr);
+			printf("STORE 3\n");
+			
 			for(int i = 0; i < var.size; ++i) {
-				printf("LOAD %i\n", var.base_adr + i);
+				printf("LOAD @3\n");
 				printf("WRITE\n");
+				printf("INC 3\n");
 			}
 			
-			*ip += var.size * 2;
+			*ip += 3 + var.size * 3;
 			break;
 		}
 		
@@ -492,20 +556,25 @@ void codegen_nc(asa *p, int *sp, int *ip) {
 			
 			++(*ip);
 			
-			codegen_nc(p->tag_block.stmt, sp, ip);
-			codegen_nc(p->tag_block.next, sp, ip);
+			codegen_nc(p->tag_block.stmt, ip);
+			codegen_nc(p->tag_block.next, ip);
 			break;
 		}
 		
 		case TagFn: {
-			printf("NOP ; ");
-			print_asa(p);
-			printf("\nNOP ; DEBUT\n");
-			*ip += 2;
-			
 			st_make_current(p->tag_fn.st);
 			
-			codegen_nc(p->tag_fn.body, sp, ip);
+			printf("NOP ; ");
+			print_asa(p);
+			
+			printf("\nLOAD 1\n");
+			printf("ADD #%i\n", st_temp_offset());
+			printf("STORE 2\n");
+			
+			printf("NOP ; DEBUT\n");
+			*ip += 5;
+			
+			codegen_nc(p->tag_fn.body, ip);
 			printf("STOP ; FIN\n");
 			++(*ip);
 			break;
@@ -526,12 +595,14 @@ void codegen_nc(asa *p, int *sp, int *ip) {
  * Génère le code pour la machine RAM correspondant au programme spécifié.
  */
 void codegen(asa_list fns) {
-  	int sp = 1;
-	int ip = 0;
+	printf("LOAD #4\n");
+	printf("STORE 1\n");
+	
+	int ip = 2;
 	
 	asa_list_node *n = fns.head;
 	while(n) {
-		codegen_nc(n->value, &sp, &ip);
+		codegen_nc(n->value, &ip);
 		
 		n = n->next;
 	}

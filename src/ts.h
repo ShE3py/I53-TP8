@@ -105,6 +105,11 @@ symbol st_find_or_yyerror(const char id[32]);
 symbol st_find_or_internal_error(const char id[32]);
 
 /**
+ * Renvoie l'adresse en mémoire de la première variable intermédiaire.
+ */
+int st_temp_offset();
+
+/**
  * Affiche la table de symboles actuelle.
  */
 void st_print_current();

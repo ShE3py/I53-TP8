@@ -331,7 +331,7 @@ asa* create_var_leaf(const char id[32]) {
 	asa *p = checked_malloc();
 	
 	p->tag = TagVar;
-	p->ninst = 1;
+	p->ninst = 3;
 	strcpy(&p->tag_var.identifier[0], &id[0]);
 	
 	return p;
@@ -361,7 +361,7 @@ asa* create_index_node(const char id[32], asa *index) {
 	asa *p = checked_malloc();
 	
 	p->tag = TagIndex;
-	p->ninst = index->tag == TagInt ? 1 : index->ninst + 2;
+	p->ninst = index->tag == TagInt ? 3 : index->ninst + 5;
 	strcpy(&p->tag_index.identifier[0], &id[0]);
 	p->tag_index.index = index;
 	
@@ -389,7 +389,7 @@ asa* create_binop_node(BinaryOp binop, asa *lhs, asa *rhs) {
 		case OpMul:
 		case OpDiv:
 		case OpMod:
-			p->ninst = lhs->ninst + rhs->ninst + 2;
+			p->ninst = lhs->ninst + rhs->ninst + 4;
 			break;
 		
 		case OpGe:
@@ -398,7 +398,7 @@ asa* create_binop_node(BinaryOp binop, asa *lhs, asa *rhs) {
 		case OpLt:
 		case OpEq:
 		case OpNe:
-			p->ninst = lhs->ninst + rhs->ninst + 6;
+			p->ninst = lhs->ninst + rhs->ninst + 8;
 			break;
 		
 		case OpAnd:
@@ -410,7 +410,7 @@ asa* create_binop_node(BinaryOp binop, asa *lhs, asa *rhs) {
 			break;
 		
 		case OpXor:
-			p->ninst = lhs->ninst + rhs->ninst + 7;
+			p->ninst = lhs->ninst + rhs->ninst + 10;
 			break;
 	}
 	
@@ -458,7 +458,7 @@ asa* create_assign_scalar_node(const char id[32], asa *expr) {
 	asa *p = checked_malloc();
 	
 	p->tag = TagAssignScalar;
-	p->ninst = expr->ninst + 1;
+	p->ninst = expr->ninst + 12;
 	strcpy(&p->tag_assign_scalar.identifier[0], &id[0]);
 	p->tag_assign_scalar.expr = expr;
 	
@@ -490,7 +490,7 @@ asa* create_assign_indexed_node(const char id[32], asa *index, asa *expr) {
 	asa *p = checked_malloc();
 	
 	p->tag = TagAssignIndexed;
-	p->ninst = index->ninst + expr->ninst + 3;
+	p->ninst = index->ninst + expr->ninst + 12;
 	strcpy(&p->tag_assign_indexed.identifier[0], &id[0]);
 	p->tag_assign_indexed.index = index;
 	p->tag_assign_indexed.expr = expr;
@@ -525,7 +525,7 @@ asa* create_assign_int_list_node(const char id[32], asa_list values) {
 	asa *p = checked_malloc();
 	
 	p->tag = TagAssignIntList;
-	p->ninst = values.ninst + values.len;
+	p->ninst = values.ninst + values.len * 6;
 	strcpy(&p->tag_assign_int_list.identifier[0], &id[0]);
 	p->tag_assign_int_list.values = values;
 	
@@ -564,7 +564,7 @@ asa* create_assign_array_node(const char dst[32], const char src[32]) {
 	asa *p = checked_malloc();
 	
 	p->tag = TagAssignArray;
-	p->ninst = dst_var.size * 2;
+	p->ninst = 3 + dst_var.size * 5;
 	strcpy(&p->tag_assign_array.dst[0], &dst[0]);
 	strcpy(&p->tag_assign_array.src[0], &src[0]);
 	
@@ -632,7 +632,7 @@ asa* create_read_node(const char id[32]) {
 	asa *p = checked_malloc();
 	
 	p->tag = TagRead;
-	p->ninst = 2;
+	p->ninst = 5;
 	strcpy(&p->tag_read.identifier[0], &id[0]);
 	
 	return p;
@@ -660,7 +660,7 @@ asa* create_read_indexed_node(const char id[32], asa *index) {
 	asa *p = checked_malloc();
 	
 	p->tag = TagReadIndexed;
-	p->ninst = index->ninst + 4;
+	p->ninst = index->ninst + 7;
 	strcpy(&p->tag_read_indexed.identifier[0], &id[0]);
 	p->tag_read_indexed.index = index;
 	
@@ -686,7 +686,7 @@ asa* create_read_array_node(const char id[32]) {
 	asa *p = checked_malloc();
 	
 	p->tag = TagReadArray;
-	p->ninst = 2 * var.size;
+	p->ninst = 3 + 3 * var.size;
 	strcpy(&p->tag_read_array.identifier[0], &id[0]);
 	
 	return p;
@@ -728,7 +728,7 @@ asa* create_print_array_node(const char id[32]) {
 	asa *p = checked_malloc();
 	
 	p->tag = TagPrintArray;
-	p->ninst = 2 * var.size;
+	p->ninst = 3 + 3 * var.size;
 	strcpy(&p->tag_print_array.identifier[0], &id[0]);
 	
 	return p;
@@ -831,7 +831,7 @@ asa* create_fn_node(const char id[32], id_list params, asa *body, symbol_table *
 	asa *p = checked_malloc();
 	
 	p->tag = TagFn;
-	p->ninst = (body && body != NOP) ? (body->ninst + 3) : 0;
+	p->ninst = (body && body != NOP) ? (body->ninst + 6) : 0;
 	strcpy(&p->tag_fn.identifier[0], &id[0]);
 	p->tag_fn.params = params;
 	p->tag_fn.body = body;
