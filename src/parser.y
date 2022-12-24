@@ -33,6 +33,7 @@
 // Non-terminaux
 %start Program
 %type <nlval> Fns
+%type <nval> FnScope
 %type <idlval> IdList CommaIdList
 %type <nval> Statements Statement Block
 %type <nval> ElseOrEndIf
@@ -71,12 +72,14 @@
 
 %%
 
-Program: Fns { codegen($1); asa_list_destroy($1); ts_free_table(); };
+Program: Fns { codegen($1); asa_list_destroy($1); };
 
 Fns:
-  Fn Identifier LeftParenthesis IdList RightParenthesis Start Statements End Fns { $$ = asa_list_append(create_fn_node($2, $4, $7), $9); }
-| %empty                                                                         { $$ = asa_list_empty(); }
+  FnScope Fns { $$ = asa_list_append($1, $2); }
+| %empty      { $$ = asa_list_empty(); st_destroy_current(); }
 ;
+
+FnScope: Fn Identifier LeftParenthesis IdList RightParenthesis Start Statements End { $$ = create_fn_node($2, $4, $7, st_pop_push_empty()); }
 
 IdList:
   Identifier CommaIdList { $$ = id_list_append($1, $2); }
@@ -96,16 +99,16 @@ Statements:
 
 Statement:
   Expr                                                                  { $$ = $1; }
-| Var Identifier                                                        { if(ts_retrouver_id($2)) yyerror("variable dupliquée"); ts_ajouter_scalaire($2); $$ = NOP; }
-| Var Identifier Assign Expr                                            { if(ts_retrouver_id($2)) yyerror("variable dupliquée"); ts_ajouter_scalaire($2); $$ = create_assign_scalar_node($2, $4); }
-| Var Identifier LeftSquareBracket Int RightSquareBracket               { if(ts_retrouver_id($2)) yyerror("variable dupliquée"); ts_ajouter_tableau($2, $4); $$ = NOP; }
-| Var Identifier Assign IntArray                                        { if(ts_retrouver_id($2)) yyerror("variable dupliquée"); ts_ajouter_tableau($2, $4.len); $$ = create_assign_int_list_node($2, $4); }
-| Var Identifier Assign LeftSquareBracket Identifier RightSquareBracket { if(ts_retrouver_id($2)) yyerror("variable dupliquée"); ts *dst = ts_retrouver_id($5); if(!dst) yyerror("variable inconnue"); ts_ajouter_tableau($2, dst->size); $$ = create_assign_array_node($2, $5); }
+| Var Identifier                                                        { st_create_scalar($2); $$ = NOP; }
+| Var Identifier Assign Expr                                            { st_create_scalar($2); $$ = create_assign_scalar_node($2, $4); }
+| Var Identifier LeftSquareBracket Int RightSquareBracket               { st_create_array($2, $4); $$ = NOP; }
+| Var Identifier Assign IntArray                                        { st_create_array($2, $4.len); $$ = create_assign_int_list_node($2, $4); }
+| Var Identifier Assign LeftSquareBracket Identifier RightSquareBracket { symbol dst = st_find_or_yyerror($5); st_create_array($2, dst.size); $$ = create_assign_array_node($2, $5); }
 
-| Read Identifier                                                       { if(!ts_retrouver_id($2)) ts_ajouter_scalaire($2); $$ = create_read_node($2); }
-| Read Identifier LeftSquareBracket IntExpr RightSquareBracket          { if(!ts_retrouver_id($2)) yyerror("variable inconnue"); $$ = create_read_indexed_node($2, $4); }
-| Read LeftSquareBracket Int RightSquareBracket Identifier              { if( ts_retrouver_id($5)) yyerror("variable dupliquée"); ts_ajouter_tableau($5, $3); $$ = create_read_array_node($5); }
-| Read LeftSquareBracket Identifier RightSquareBracket                  { if(!ts_retrouver_id($3)) yyerror("variable inconnue"); $$ = create_read_array_node($3); }
+| Read Identifier                                                       { $$ = create_read_node($2); }
+| Read Identifier LeftSquareBracket IntExpr RightSquareBracket          { $$ = create_read_indexed_node($2, $4); }
+| Read LeftSquareBracket Int RightSquareBracket Identifier              { st_create_array($5, $3); $$ = create_read_array_node($5); }
+| Read LeftSquareBracket Identifier RightSquareBracket                  { $$ = create_read_array_node($3); }
 
 | Identifier Assign Expr                                                { $$ = create_assign_scalar_node($1, $3); }
 | Identifier Assign IntArray                                            { $$ = create_assign_int_list_node($1, $3); }
@@ -193,6 +196,7 @@ int main(int argc, char *argv[]) {
 	input = argv[1];
 	
 	FILE *f = fopen(input, "r");
+	st_pop_push_empty();
 	
 	yyin = f;
 	yyparse();
