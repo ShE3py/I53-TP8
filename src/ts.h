@@ -1,30 +1,127 @@
 #ifndef TS_H
 #define TS_H
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#define SCALAR_SIZE -1
 
-#define PILE_MAX 32
+/**
+ * L'enregistrement d'une variable.
+ */
+typedef struct {
+	/**
+	 * L'identifiant du symbole.
+	 */
+	char identifier[32];
+	
+	/**
+	 * L'adresse mémoire du symbole.
+	 */
+	int base_adr;
+	
+	/**
+	 * Le nombre de cellules allouées au symbole dans le cas d'un tableau.
+	 * `SCALAR_SIZE` pour un scalaire.
+	 */
+	int size;
+} symbol;
 
-typedef struct ts{
-  char *id; // la chaine de car de l'ID
-  int adr;  // l'adresse mémoire de l'ID (dans la machine RAM)
-  int size; // le nombre de cases mémoires allouées à l'ID, -1 pour un sclaire.
-  struct ts *next;
-} ts;   
+/**
+ * Un élément d'une liste chaînée de symboles.
+ */
+typedef struct symbol_table_node {
+	symbol value;
+	struct symbol_table_node *next;
+} symbol_table_node;
 
-extern ts * tsymb;
+/**
+ * Une table de symboles.
+ */
+typedef struct {
+	/**
+	 * Le premier élément de la liste chaînée.
+	 */
+	symbol_table_node *head;
+	
+	/**
+	 * L'adresse de base en mémoire de la prochaine variable.
+	 */
+	int mem_offset;
+} symbol_table;
 
-void ts_ajouter_scalaire(const char *id);
-void ts_ajouter_tableau(const char *id, int size);
+/**
+ * Créer une nouvelle table vide de symboles.
+ */
+symbol_table* st_empty();
 
-// retourne un pointeur vers le noeud contenant l'id <id>, 0 sinon
-ts * ts_retrouver_id(const char *id);
-// libere la mémoire de la table de symbole
-void ts_free_table();
-// affiche la table dans la sortie standard
-void ts_print();
+/**
+ * Définie une table de symboles comme étant celle courante.
+ */
+void st_make_current(symbol_table *st);
 
+/**
+ * Créer et active une nouvelle table vide de symboles, et renvoie la table de symboles précédemment courante.
+ */
+symbol_table* st_pop_push_empty();
+
+/**
+ * Enregistre un nouveau scalaire dans la table de symboles courante.
+ */
+symbol st_create_scalar(const char id[32]);
+
+/**
+ * Enregistre un nouveau tableau statique dans la table de symboles courante.
+ */
+symbol st_create_array(const char id[32], int size);
+
+/**
+ * Renvoie le symbole avec l'identifiant spécifié présumé dans la table de symboles courante, ou
+ * `NULL` si le symbole n'existe pas.
+ */
+symbol* st_find(const char id[32]);
+
+/**
+ * Créer ou renvoie un nouveau scalaire dans la table de symboles courante.
+ */
+symbol st_find_or_create_scalar(const char id[32]);
+
+/**
+ * Créer ou renvoie un nouveau tableau dans la table de symboles courantes.
+ * Écrit un message d'erreur puis quitte le programme si jamais le tableau existe déjà
+ * et que la taille ne correspond pas au paramètre de cette fonction.
+ */
+symbol st_find_or_create_array(const char id[32], int size);
+
+/**
+ * Renvoie le symbole avec l'identifiant spécifié présumé dans la table de symboles courante, ou
+ * écrit un message d'erreur puis quitte le programme si le symbole n'existe pas.
+ *
+ * Cette fonction doit être appelée pendant la création de l'asa.
+ */
+symbol st_find_or_yyerror(const char id[32]);
+
+/**
+ * Renvoie le symbole avec l'identifiant spécifié présumé dans la table de symboles courante, ou
+ * écrit un message d'erreur puis quitte le programme si le symbole n'existe pas.
+ */
+symbol st_find_or_internal_error(const char id[32]);
+
+/**
+ * Affiche la table de symboles actuelle.
+ */
+void st_print_current();
+
+/**
+ * Affiche une table de symboles.
+ */
+void st_print(symbol_table *st);
+
+/**
+ * Libère la mémoire allouée à la table de symboles courante.
+ */
+void st_destroy_current();
+
+/**
+ * Libère la mémoire allouée à une table de symboles.
+ */
+void st_destroy(symbol_table *st);
 
 #endif

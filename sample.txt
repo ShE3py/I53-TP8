@@ -1,4 +1,9 @@
-FONCTION main(x)
+FONCTION f()
+DEBUT
+	VAR x := 1;
+FIN
+
+FONCTION main()
 DÉBUT
 	VAR x := 1;
 	

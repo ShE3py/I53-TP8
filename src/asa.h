@@ -503,6 +503,11 @@ typedef struct asa {
 			 * Le corps de la fonction.
 			 */
 			struct asa *body;
+			
+			/**
+			 * La table de symboles de la fonction.
+			 */
+			symbol_table *st;
 		} tag_fn;
 	};
 } asa;
@@ -647,7 +652,7 @@ asa* create_fncall_node(const char varname[32], const char methodname[32]);
 /**
  * Créer un nouveau noeud `TagFn` avec les valeurs spécifiées.
  */
-asa* create_fn_node(const char id[32], id_list params, asa *body);
+asa* create_fn_node(const char id[32], id_list params, asa *body, symbol_table *st);
 
 /**
  * Affiche le noeud dans la sortie standard.
@@ -658,7 +663,5 @@ void print_asa(asa *p);
  * Libère les ressources allouées à un noeud.
  */
 void free_asa(asa *p);
-
-extern ts *tsymb;
 
 #endif

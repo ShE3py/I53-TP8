@@ -72,33 +72,25 @@ void codegen_nc(asa *p, int *sp, int *ip) {
 		}
 		
 		case TagVar: {
-			ts *var = ts_retrouver_id(p->tag_var.identifier);
-			if(var == NULL) {
-				fprintf(stderr, "illegal state: '%s' should exists at this stage but it does not\n", p->tag_var.identifier);
-				exit(1);
-			}
+			symbol var = st_find_or_internal_error(p->tag_var.identifier);
 			
-			printf("LOAD %i\n", var->adr);
+			printf("LOAD %i\n", var.base_adr);
 			++(*ip);
 			
 			break;
 		}
 		
 		case TagIndex: {
-			ts *var = ts_retrouver_id(p->tag_index.identifier);
-			if(var == NULL) {
-				fprintf(stderr, "illegal state: '%s' should exists at this stage but it does not\n", p->tag_index.identifier);
-				exit(1);
-			}
+			symbol var = st_find_or_internal_error(p->tag_index.identifier);
 			
 			if(p->tag_index.index->tag == TagInt) {
-				printf("LOAD %i\n", var->adr + p->tag_index.index->tag_int.value);
+				printf("LOAD %i\n", var.base_adr + p->tag_index.index->tag_int.value);
 				
 				++(*ip);
 			}
 			else {
 				codegen_nc(p->tag_index.index, sp, ip);
-				printf("ADD #%i\n", var->adr);
+				printf("ADD #%i\n", var.base_adr);
 				printf("LOAD @0\n");
 				
 				*ip += 2;
@@ -349,26 +341,18 @@ void codegen_nc(asa *p, int *sp, int *ip) {
 		case TagAssignScalar: {
 			codegen_nc(p->tag_assign_scalar.expr, sp, ip);
 			
-			ts *var = ts_retrouver_id(p->tag_assign_scalar.identifier);
-			if(var == NULL) {
-				fprintf(stderr, "illegal state: '%s' should exists at this stage but it does not\n", p->tag_assign_scalar.identifier);
-				exit(1);
-			}
+			symbol var = st_find_or_internal_error(p->tag_assign_scalar.identifier);
 			
-			printf("STORE %i\n", var->adr);
+			printf("STORE %i\n", var.base_adr);
 			++(*ip);
 			break;
 		}
 		
 		case TagAssignIndexed: {
-			ts *var = ts_retrouver_id(p->tag_assign_indexed.identifier);
-			if(var == NULL) {
-				fprintf(stderr, "illegal state: '%s' should exists at this stage but it does not\n", p->tag_assign_indexed.identifier);
-				exit(1);
-			}
+			symbol var = st_find_or_internal_error(p->tag_assign_indexed.identifier);
 			
 			codegen_nc(p->tag_assign_indexed.index, sp, ip);
-			printf("ADD #%i\n", var->adr);
+			printf("ADD #%i\n", var.base_adr);
 			printf("STORE %i\n", ++(*sp));
 			
 			*ip += 2;
@@ -381,17 +365,13 @@ void codegen_nc(asa *p, int *sp, int *ip) {
 		}
 		
 		case TagAssignIntList: {
-			ts *var = ts_retrouver_id(p->tag_assign_int_list.identifier);
-			if(var == NULL) {
-				fprintf(stderr, "illegal state: '%s' should exists at this stage but it does not\n", p->tag_assign_int_list.identifier);
-				exit(1);
-			}
+			symbol var = st_find_or_internal_error(p->tag_assign_int_list.identifier);
 			
 			asa_list_node *n = p->tag_assign_int_list.values.head;
 			
-			for(int i = 0; i < var->size; ++i) {
+			for(int i = 0; i < var.size; ++i) {
 				codegen_nc(n->value, sp, ip);
-				printf("STORE %i\n", var->adr + i);
+				printf("STORE %i\n", var.base_adr + i);
 				++(*ip);
 				
 				n = n->next;
@@ -401,24 +381,15 @@ void codegen_nc(asa *p, int *sp, int *ip) {
 		}
 		
 		case TagAssignArray: {
-			ts *dst = ts_retrouver_id(p->tag_assign_array.dst);
-			if(dst == NULL) {
-				fprintf(stderr, "illegal state: '%s' should exists at this stage but it does not\n", p->tag_assign_array.dst);
-				exit(1);
+			symbol dst = st_find_or_internal_error(p->tag_assign_array.dst);
+			symbol src = st_find_or_internal_error(p->tag_assign_array.src);
+			
+			for(int i = 0; i < dst.size; ++i) {
+				printf("LOAD %i\n", src.base_adr + i);
+				printf("STORE %i\n", dst.base_adr + i);
 			}
 			
-			ts *src = ts_retrouver_id(p->tag_assign_array.src);
-			if(src == NULL) {
-				fprintf(stderr, "illegal state: '%s' should exists at this stage but it does not\n", p->tag_assign_array.src);
-				exit(1);
-			}
-			
-			for(int i = 0; i < dst->size; ++i) {
-				printf("LOAD %i\n", src->adr + i);
-				printf("STORE %i\n", dst->adr + i);
-			}
-			
-			*ip += dst->size * 2;
+			*ip += dst.size * 2;
 			break;
 		}
 		
@@ -462,26 +433,18 @@ void codegen_nc(asa *p, int *sp, int *ip) {
 		case TagRead: {
 			printf("READ\n");
 			
-			ts *var = ts_retrouver_id(p->tag_read.identifier);
-			if(var == NULL) {
-				fprintf(stderr, "illegal state: '%s' should exists at this stage but it does not\n", p->tag_read.identifier);
-				exit(1);
-			}
+			symbol var = st_find_or_internal_error(p->tag_read.identifier);
 			
-			printf("STORE %i\n", var->adr);
+			printf("STORE %i\n", var.base_adr);
 			*ip += 2;
 			break;
 		}
 		
 		case TagReadIndexed: {
-			ts *var = ts_retrouver_id(p->tag_read_indexed.identifier);
-			if(var == NULL) {
-				fprintf(stderr, "illegal state: '%s' should exists at this stage but it does not\n", p->tag_read_indexed.identifier);
-				exit(1);
-			}
+			symbol var = st_find_or_internal_error(p->tag_read_indexed.identifier);
 			
 			codegen_nc(p->tag_read_indexed.index, sp, ip);
-			printf("ADD #%i\n", var->adr);
+			printf("ADD #%i\n", var.base_adr);
 			printf("STORE %i\n", ++(*sp));
 			printf("READ\n");
 			printf("STORE @%i\n", *sp);
@@ -492,18 +455,14 @@ void codegen_nc(asa *p, int *sp, int *ip) {
 		}
 		
 		case TagReadArray: {
-			ts *var = ts_retrouver_id(p->tag_read_indexed.identifier);
-			if(var == NULL) {
-				fprintf(stderr, "illegal state: '%s' should exists at this stage but it does not\n", p->tag_read_indexed.identifier);
-				exit(1);
-			}
+			symbol var = st_find_or_internal_error(p->tag_read_array.identifier);
 			
-			for(int i = 0; i < var->size; ++i) {
+			for(int i = 0; i < var.size; ++i) {
 				printf("READ\n");
-				printf("STORE %i\n", var->adr + i);
+				printf("STORE %i\n", var.base_adr + i);
 			}
 			
-			*ip += var->size * 2;
+			*ip += var.size * 2;
 			break;
 		}
 		
@@ -515,18 +474,14 @@ void codegen_nc(asa *p, int *sp, int *ip) {
 		}
 		
 		case TagPrintArray: {
-			ts *var = ts_retrouver_id(p->tag_read_indexed.identifier);
-			if(var == NULL) {
-				fprintf(stderr, "illegal state: '%s' should exists at this stage but it does not\n", p->tag_read_indexed.identifier);
-				exit(1);
-			}
+			symbol var = st_find_or_internal_error(p->tag_print_array.identifier);
 			
-			for(int i = 0; i < var->size; ++i) {
-				printf("LOAD %i\n", var->adr + i);
+			for(int i = 0; i < var.size; ++i) {
+				printf("LOAD %i\n", var.base_adr + i);
 				printf("WRITE\n");
 			}
 			
-			*ip += var->size * 2;
+			*ip += var.size * 2;
 			break;
 		}
 		
@@ -547,6 +502,8 @@ void codegen_nc(asa *p, int *sp, int *ip) {
 			print_asa(p);
 			printf("\nNOP ; DEBUT\n");
 			*ip += 2;
+			
+			st_make_current(p->tag_fn.st);
 			
 			codegen_nc(p->tag_fn.body, sp, ip);
 			printf("STOP ; FIN\n");

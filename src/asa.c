@@ -319,15 +319,8 @@ asa* create_int_leaf(int value) {
  * Créer une nouvelle feuille `TagVar` avec l'identifiant spécifié.
  */
 asa* create_var_leaf(const char id[32]) {
-	ts *var = ts_retrouver_id(id);
-	if(var == NULL) {
-		extern const char *input;
-		extern int yylineno;
-		
-		fprintf(stderr, "%s:%i: variable inconnue: '%s'\n", input, yylineno, id);
-		exit(1);
-	}
-	else if(var->size != -1) {
+	symbol var = st_find_or_yyerror(id);
+	if(var.size != SCALAR_SIZE) {
 		extern const char *input;
 		extern int yylineno;
 		
@@ -348,22 +341,15 @@ asa* create_var_leaf(const char id[32]) {
  * Créer un nouveau noeud `TagIndex` avec les valeurs spécifiées.
  */
 asa* create_index_node(const char id[32], asa *index) {
-	ts *var = ts_retrouver_id(id);
-	if(var == NULL) {
-		extern const char *input;
-		extern int yylineno;
-		
-		fprintf(stderr, "%s:%i: variable inconnue: '%s'\n", input, yylineno, id);
-		exit(1);
-	}
-	else if(var->size == -1) {
+	symbol var = st_find_or_yyerror(id);
+	if(var.size == SCALAR_SIZE) {
 		extern const char *input;
 		extern int yylineno;
 		
 		fprintf(stderr, "%s:%i: indexation impossible: '%s' est un scalaire\n", input, yylineno, id);
 		exit(1);
 	}
-	else if(var->size == 0) {
+	else if(var.size == 0) {
 		free_asa(index);
 		
 		return NOP;
@@ -457,15 +443,8 @@ asa* create_unop_node(UnaryOp unop, asa *expr) {
  * Créer un nouveau noeud `TagAssignScalar` avec les valeurs spécifiées.
  */
 asa* create_assign_scalar_node(const char id[32], asa *expr) {
-	ts *var = ts_retrouver_id(id);
-	if(var == NULL) {
-		extern const char *input;
-		extern int yylineno;
-		
-		fprintf(stderr, "%s:%i: variable inconnue: '%s'\n", input, yylineno, id);
-		exit(1);
-	}
-	else if(var->size != -1) {
+	symbol var = st_find_or_yyerror(id);
+	if(var.size != SCALAR_SIZE) {
 		extern const char *input;
 		extern int yylineno;
 		
@@ -490,22 +469,15 @@ asa* create_assign_scalar_node(const char id[32], asa *expr) {
  * Créer un nouveau noeud `TagAssignIndexed` avec les valeurs spécifiées.
  */
 asa* create_assign_indexed_node(const char id[32], asa *index, asa *expr) {
-	ts *var = ts_retrouver_id(id);
-	if(var == NULL) {
-		extern const char *input;
-		extern int yylineno;
-		
-		fprintf(stderr, "%s:%i: variable inconnue: '%s'\n", input, yylineno, id);
-		exit(1);
-	}
-	else if(var->size == -1) {
+	symbol var = st_find_or_yyerror(id);
+	if(var.size == SCALAR_SIZE) {
 		extern const char *input;
 		extern int yylineno;
 		
 		fprintf(stderr, "%s:%i: indexation impossible: '%s' est un scalaire\n", input, yylineno, id);
 		exit(1);
 	}
-	else if(var->size == 0) {
+	else if(var.size == 0) {
 		return NOP;
 	}
 	else if(index == NOP || expr == NOP) {
@@ -530,22 +502,15 @@ asa* create_assign_indexed_node(const char id[32], asa *index, asa *expr) {
  * Créer un nouveau noeud `TagAssignIntList` avec les valeurs spécifiées.
  */
 asa* create_assign_int_list_node(const char id[32], asa_list values) {
-	ts *var = ts_retrouver_id(id);
-	if(var == NULL) {
-		extern const char *input;
-		extern int yylineno;
-		
-		fprintf(stderr, "%s:%i: variable inconnue: '%s'\n", input, yylineno, id);
-		exit(1);
-	}
-	else if(var->size == -1) {
+	symbol var = st_find_or_yyerror(id);
+	if(var.size == SCALAR_SIZE) {
 		extern const char *input;
 		extern int yylineno;
 		
 		fprintf(stderr, "%s:%i: impossible d'affecter un tableau au scalaire '%s'\n", input, yylineno, id);
 		exit(1);
 	}
-	else if(var->size != values.len) {
+	else if(var.size != values.len) {
 		extern const char *input;
 		extern int yylineno;
 		
@@ -571,38 +536,24 @@ asa* create_assign_int_list_node(const char id[32], asa_list values) {
  * Créer un nouveau noeud `TagAssignArray` avec les valeurs spécifiées.
  */
 asa* create_assign_array_node(const char dst[32], const char src[32]) {
-	ts *dst_var = ts_retrouver_id(dst);
-	if(dst_var == NULL) {
-		extern const char *input;
-		extern int yylineno;
-		
-		fprintf(stderr, "%s:%i: variable inconnue: '%s'\n", input, yylineno, dst);
-		exit(1);
-	}
+	symbol dst_var = st_find_or_yyerror(dst);
+	symbol src_var = st_find_or_yyerror(src);
 	
-	ts *src_var = ts_retrouver_id(src);
-	if(src_var == NULL) {
-		extern const char *input;
-		extern int yylineno;
-		
-		fprintf(stderr, "%s:%i: variable inconnue: '%s'\n", input, yylineno, src);
-		exit(1);
-	}
-	else if(src_var->size == -1) {
+	if(src_var.size == SCALAR_SIZE) {
 		extern const char *input;
 		extern int yylineno;
 		
 		fprintf(stderr, "%s:%i: '%s' doit être un tableau\n", input, yylineno, src);
 		exit(1);
 	}
-	else if(dst_var->size == -1) {
+	else if(dst_var.size == SCALAR_SIZE) {
 		extern const char *input;
 		extern int yylineno;
 		
 		fprintf(stderr, "%s:%i: impossible d'affecter un tableau à un scalaire\n", input, yylineno);
 		exit(1);
 	}
-	else if(src_var->size != dst_var->size) {
+	else if(src_var.size != dst_var.size) {
 		extern const char *input;
 		extern int yylineno;
 		
@@ -613,7 +564,7 @@ asa* create_assign_array_node(const char dst[32], const char src[32]) {
 	asa *p = checked_malloc();
 	
 	p->tag = TagAssignArray;
-	p->ninst = dst_var->size * 2;
+	p->ninst = dst_var.size * 2;
 	strcpy(&p->tag_assign_array.dst[0], &dst[0]);
 	strcpy(&p->tag_assign_array.src[0], &src[0]);
 	
@@ -675,19 +626,8 @@ asa* create_while_node(asa *expr, asa *body) {
 /**
  * Créer un nouveau noeud `TagRead` avec l'identifiant spécifié.
  */
-asa* create_read_node(const char id[32]) {
-	ts *var = ts_retrouver_id(id);
-	if(var == NULL) {
-		fprintf(stderr, "illegal state: '%s' should exists at this stage but it does not\n", id);
-		exit(1);
-	}
-	else if(var->size != -1) {
-		extern const char *input;
-		extern int yylineno;
-		
-		fprintf(stderr, "%s:%i: indexation requise: '%s' est un tableau\n", input, yylineno, id);
-		exit(1);
-	}
+asa* create_read_node(const char id[32]) {	
+	st_find_or_create_scalar(id);
 	
 	asa *p = checked_malloc();
 	
@@ -702,19 +642,15 @@ asa* create_read_node(const char id[32]) {
  * Créer un nouveau noeud `TagReadIndexed` avec les valeurs spécifiées.
  */
 asa* create_read_indexed_node(const char id[32], asa *index) {
-	ts *var = ts_retrouver_id(id);
-	if(var == NULL) {
-		fprintf(stderr, "illegal state: '%s' should exists at this stage but it does not\n", id);
-		exit(1);
-	}
-	else if(var->size == -1) {
+	symbol var = st_find_or_yyerror(id);
+	if(var.size == SCALAR_SIZE) {
 		extern const char *input;
 		extern int yylineno;
 		
 		fprintf(stderr, "%s:%i: indexation impossible: '%s' est un scalaire\n", input, yylineno, id);
 		exit(1);
 	}
-	else if(var->size == 0) {
+	else if(var.size == 0) {
 		return NOP;
 	}
 	else if(index == NOP) {
@@ -735,26 +671,22 @@ asa* create_read_indexed_node(const char id[32], asa *index) {
  * Créer un nouveau noeud `TagReadArray` avec l'identifiant spécifié.
  */
 asa* create_read_array_node(const char id[32]) {
-	ts *var = ts_retrouver_id(id);
-	if(var == NULL) {
-		fprintf(stderr, "illegal state: '%s' should exists at this stage but it does not\n", id);
-		exit(1);
-	}
-	else if(var->size == -1) {
+	symbol var = st_find_or_yyerror(id);
+	if(var.size == -1) {
 		extern const char *input;
 		extern int yylineno;
 		
 		fprintf(stderr, "%s:%i: indexation impossible: '%s' est un scalaire\n", input, yylineno, id);
 		exit(1);
 	}
-	else if(var->size == 0) {
+	else if(var.size == 0) {
 		return NOP;
 	}
 	
 	asa *p = checked_malloc();
 	
 	p->tag = TagReadArray;
-	p->ninst = 2 * var->size;
+	p->ninst = 2 * var.size;
 	strcpy(&p->tag_read_array.identifier[0], &id[0]);
 	
 	return p;
@@ -781,26 +713,22 @@ asa* create_print_node(asa *expr) {
  * Créer un nouveau noeud `TagPrintArray` avec l'identifiant spécifié.
  */
 asa* create_print_array_node(const char id[32]) {
-	ts *var = ts_retrouver_id(id);
-	if(var == NULL) {
-		fprintf(stderr, "illegal state: '%s' should exists at this stage but it does not\n", id);
-		exit(1);
-	}
-	else if(var->size == -1) {
+	symbol var = st_find_or_internal_error(id);
+	if(var.size == -1) {
 		extern const char *input;
 		extern int yylineno;
 		
 		fprintf(stderr, "%s:%i: indexation impossible: '%s' est un scalaire\n", input, yylineno, id);
 		exit(1);
 	}
-	else if(var->size == 0) {
+	else if(var.size == 0) {
 		return NOP;
 	}
 	
 	asa *p = checked_malloc();
 	
 	p->tag = TagPrintArray;
-	p->ninst = 2 * var->size;
+	p->ninst = 2 * var.size;
 	strcpy(&p->tag_print_array.identifier[0], &id[0]);
 	
 	return p;
@@ -875,14 +803,7 @@ asa* make_block_node(asa *p, asa *q) {
  * Créer un nouveau noeud correspondant à la méthode spécifiée.
  */
 asa* create_fncall_node(const char varname[32], const char methodname[32]) {
-	ts *var = ts_retrouver_id(varname);
-	if(var == NULL) {
-		extern const char *input;
-		extern int yylineno;
-		
-		fprintf(stderr, "%s:%i: variable inconnue: '%s'\n", input, yylineno, varname);
-		exit(1);
-	}
+	symbol var = st_find_or_yyerror(varname);
 	
 	if(strcmp(methodname, "len") != 0) {
 		extern const char *input;
@@ -892,7 +813,7 @@ asa* create_fncall_node(const char varname[32], const char methodname[32]) {
 		exit(1);
 	}
 	
-	if(var->size == -1) {
+	if(var.size == SCALAR_SIZE) {
 		extern const char *input;
 		extern int yylineno;
 		
@@ -900,13 +821,13 @@ asa* create_fncall_node(const char varname[32], const char methodname[32]) {
 		exit(1);
 	}
 	
-	return create_int_leaf(var->size);
+	return create_int_leaf(var.size);
 }
 
 /**
  * Créer un nouveau noeud `TagFn` avec les valeurs spécifiées.
  */
-asa* create_fn_node(const char id[32], id_list params, asa *body) {
+asa* create_fn_node(const char id[32], id_list params, asa *body, symbol_table *st) {
 	asa *p = checked_malloc();
 	
 	p->tag = TagFn;
@@ -914,6 +835,7 @@ asa* create_fn_node(const char id[32], id_list params, asa *body) {
 	strcpy(&p->tag_fn.identifier[0], &id[0]);
 	p->tag_fn.params = params;
 	p->tag_fn.body = body;
+	p->tag_fn.st = st;
 	
 	return p;
 }
@@ -1025,13 +947,9 @@ void print_asa(asa *p) {
 			break;
 		
 		case TagReadArray: {
-			ts *var = ts_retrouver_id(p->tag_read_array.identifier);
-			if(var == NULL) {
-				fprintf(stderr, "illegal state: '%s' should exists at this stage but it does not\n", p->tag_read_array.identifier);
-				exit(1);
-			}
+			symbol var = st_find_or_internal_error(p->tag_read_array.identifier);
 			
-			printf("LIRE[%i] %s", var->size, var->id);
+			printf("LIRE[%i] %s", var.size, var.identifier);
 			break;
 		}
 		
@@ -1123,6 +1041,7 @@ void free_asa(asa *p) {
 		case TagFn:
 			id_list_destroy(p->tag_fn.params);
 			free_asa(p->tag_fn.body);
+			st_destroy(p->tag_fn.st);
 			break;
 		
 		case TagInt:

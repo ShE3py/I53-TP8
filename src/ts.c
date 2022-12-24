@@ -1,27 +1,96 @@
 #include "ts.h"
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-ts * tsymb = NULL;
-static int mem_offset = 33;
+/**
+ * La table de symboles courante.
+ */
+static symbol_table *cst = NULL;
 
-
-void ts_ajouter_id(const char *id, int size)
-{
-  ts *new = malloc(sizeof(ts));
-  new->id = malloc(strlen(id)+1);
-  strcpy(new->id, id);
-  new->adr = mem_offset;
-  new->size = size;
-  mem_offset += size != -1 ? size : 1;
-  new->next = tsymb;
-  tsymb = new;
+/**
+ * Créer une nouvelle table vide de symboles.
+ */
+symbol_table* st_empty() {
+	symbol_table *st = malloc(sizeof(symbol_table));
+	st->head = NULL;
+	st->mem_offset = 2;
+	
+	return st;
 }
 
-void ts_ajouter_scalaire(const char *id) {
-	ts_ajouter_id(id, -1);
+/**
+ * Définie une table de symboles comme étant celle courante.
+ */
+void st_make_current(symbol_table *st) {
+	cst = st;
 }
 
-void ts_ajouter_tableau(const char *id, int size) {
+/**
+ * Créer et active une nouvelle table vide de symboles, et renvoie la table de symboles précédemment courante.
+ */
+symbol_table* st_pop_push_empty() {
+	symbol_table *old = cst;
+	
+	cst = st_empty();
+	return old;
+}
+
+/**
+ * Enregistre un nouveau symbole dans une table de symboles.
+ */
+static symbol st_create_symbol(symbol_table *st, const char id[32], int size) {
+	if(!st) {
+		fprintf(stderr, "called `st_create_symbol()` with `st == NULL`\n");
+		exit(1);
+	}
+	
+	symbol_table_node *n = malloc(sizeof(symbol_table_node));
+	strcpy(n->value.identifier, id);
+	n->value.base_adr = st->mem_offset;
+	n->value.size = size;
+	n->next = NULL;
+	
+	symbol_table_node *m = st->head;
+	if(!m) {
+		st->head = n;
+	}
+	else {
+		while(1) {
+			if(strcmp(m->value.identifier, id) == 0) {
+				extern const char *input;
+				extern int yylineno;
+				
+				fprintf(stderr, "%s:%i: variable dupliquée: '%s'\n", input, yylineno, id);
+				free(n);
+				exit(1);
+			}
+			
+			if(!m->next) {
+				m->next = n;
+				break;
+			}
+			
+			m = m->next;
+		}
+	}
+	
+	st->mem_offset += (size == SCALAR_SIZE) ? 1 : size;
+	return n->value;
+}
+
+/**
+ * Enregistre un nouveau scalaire dans la table de symboles courante.
+ */
+symbol st_create_scalar(const char id[32]) {
+	return st_create_symbol(cst, id, SCALAR_SIZE);
+}
+
+/**
+ * Enregistre un nouveau tableau statique dans la table de symboles courante.
+ */
+symbol st_create_array(const char id[32], int size) {
 	if(size < 0) {
 		extern const char *input;
 		extern int yylineno;
@@ -30,43 +99,171 @@ void ts_ajouter_tableau(const char *id, int size) {
 		exit(1);
 	}
 	
-	ts_ajouter_id(id, size);
+	return st_create_symbol(cst, id, size);
 }
 
-ts* ts_retrouver_id(const char *id)
-{
-  ts *t = tsymb;
-  while (t!=NULL){
-    if (strcmp(t->id, id)==0){
-      return t;
-    }
-    t = t->next;
-  }
-  return (ts*)0;
+/**
+ * Renvoie le symbole avec l'identifiant spécifié présumé dans la table de symboles courante, ou
+ * `NULL` si le symbole n'existe pas.
+ */
+symbol* st_find(const char id[32]) {
+	if(!cst) {
+		fprintf(stderr, "no current st\n");
+		exit(1);
+	}
+	
+	symbol_table_node *n = cst->head;
+	while(n) {
+		if(strcmp(n->value.identifier, id) == 0) {
+			return &n->value;
+		}
+		
+		n = n->next;
+	}
+	
+	return NULL;
 }
 
-void ts_free_table()
-{
-  ts *next, *t = tsymb;
-
-  while (t!=NULL){
-    next = t->next;
-    free(t->id);
-    free(t);
-    t = next;
-  }
+/**
+ * Créer ou renvoie un nouveau scalaire dans la table de symboles courante.
+ */
+symbol st_find_or_create_scalar(const char id[32]) {
+	symbol *s = st_find(id);
+	if(s) {
+		if(s->size != SCALAR_SIZE) {
+			extern const char *input;
+			extern int yylineno;
+			
+			fprintf(stderr, "%s:%i: '%s' doit être un scalaire\n", input, yylineno, id);
+			exit(1);
+		}
+		
+		return *s;
+	}
+	else {
+		return st_create_scalar(id);
+	}
 }
 
-void ts_print()
-{
-  ts *t = tsymb;
-  if (t!=NULL){
-    printf("{%s : %d}", t->id, t->adr);
-    t = t->next;
-  }
-  while (t!=NULL){
-    printf("-->{%s : %d}", t->id, t->adr);
-    t = t->next;
-  }
+/**
+ * Créer ou renvoie un nouveau tableau dans la table de symboles courantes.
+ * Écrit un message d'erreur puis quitte le programme si jamais le tableau existe déjà
+ * et que la taille ne correspond pas au paramètre de cette fonction.
+ */
+symbol st_find_or_create_array(const char id[32], int size) {
+	symbol *s = st_find(id);
+	if(s) {
+		if(s->size != size) {
+			extern const char *input;
+			extern int yylineno;
+			
+			if(size < 0) {
+				fprintf(stderr, "%s:%i: '%s' doit avoir une taille positive\n", input, yylineno, id);
+			}
+			else {
+				fprintf(stderr, "%s:%i: '%s' doit être un tableau de taille %i, taille actuelle: %i\n", input, yylineno, id, size, s->size);
+			}
+			
+			exit(1);
+		}
+		
+		return *s;
+	}
+	else {
+		return st_create_array(id, size);
+	}
+}
 
+/**
+ * Renvoie le symbole avec l'identifiant spécifié présumé dans la table de symboles courante, ou
+ * écrit un message d'erreur puis quitte le programme si le symbole n'existe pas.
+ *
+ * Cette fonction doit être appelée pendant la création de l'asa.
+ */
+symbol st_find_or_yyerror(const char id[32]) {
+	symbol *s = st_find(id);
+	if(!s) {
+		extern const char *input;
+		extern int yylineno;
+		
+		fprintf(stderr, "%s:%i: variable inconnue: '%s'\n", input, yylineno, id);
+		exit(1);
+	}
+	
+	return *s;
+}
+
+/**
+ * Renvoie le symbole avec l'identifiant spécifié présumé dans la table de symboles courante, ou
+ * écrit un message d'erreur puis quitte le programme si le symbole n'existe pas.
+ */
+symbol st_find_or_internal_error(const char id[32]) {
+	symbol *s = st_find(id);
+	if(!s) {
+		fprintf(stderr, "illegal state: '%s' should exists at this stage but it does not\n", id);
+		exit(1);
+	}
+	
+	return *s;
+}
+
+/**
+ * Affiche la table de symboles actuelle.
+ */
+void st_print_current() {
+	st_print(cst);
+}
+
+/**
+ * Affiche une table de symboles.
+ */
+void st_print(symbol_table *st) {
+	if(!st) {
+		printf("NULL\n");
+	}
+	else {
+		symbol_table_node *n = st->head;
+		if(!n) {
+			printf("{ }\n");
+		}
+		else {
+			printf("{ %s", n->value.identifier);
+			
+			while(n->next) {
+				n = n->next;
+				
+				printf(", %s", n->value.identifier);
+			}
+			
+			printf(" }\n");
+		}
+	}
+}
+
+/**
+ * Libère la mémoire allouée à la table de symboles courante.
+ */
+void st_destroy_current() {
+	st_destroy(cst);
+}
+
+/**
+ * Libère la mémoire allouée à une table de symboles.
+ */
+void st_destroy(symbol_table *st) {
+	if(!st) {
+		return;
+	}
+	else if(st == cst) {
+		cst = NULL;
+	}
+	
+	symbol_table_node *n = st->head;
+	while(n) {
+		symbol_table_node *m = n->next;
+		free(n);
+		n = m;
+	}
+	
+	free(st);
 }
