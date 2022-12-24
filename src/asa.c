@@ -843,29 +843,31 @@ asa* create_fn_node(const char id[32], id_list params, asa *body, symbol_table *
 }
 
 /**
- * Créer un nouveau noeud `TagFnCall` avec la valeur spécifiée.
+ * Créer un nouveau noeud `TagFnCall` avec les paramètres spécifiés.
  */
-asa* create_fncall_node(const char id[32]) {
+asa* create_fncall_node(const char id[32], asa_list args) {
 	// l'existence de la fonction sera vérifiée pendant
 	// la génération de code
 	
 	asa *p = checked_malloc();
 	
 	p->tag = TagFnCall;
-	p->ninst = 12;
+	p->ninst = 15;
 	strcpy(&p->tag_fn_call.identifier[0], &id[0]);
+	p->tag_fn_call.args = args;
 	
 	return p;
 }
 
 /**
- * Créer un nouveau noeud `TagReturn`.
+ * Créer un nouveau noeud `TagReturn` avec l'expression spécifiée.
  */
-asa* create_return_node() {
+asa* create_return_node(asa *expr) {
 	asa *p = checked_malloc();
 	
 	p->tag = TagReturn;
-	p->ninst = 3;
+	p->ninst = 4 + ((expr && expr != NOP) ? expr->ninst : 1);
+	p->tag_return.expr = expr;
 	
 	return p;
 }
@@ -1004,11 +1006,13 @@ void print_asa(asa *p) {
 			break;
 		
 		case TagFnCall:
-			printf("%s()", p->tag_fn_call.identifier);
+			printf("%s", p->tag_fn_call.identifier);
+			asa_list_print(p->tag_fn_call.args);
 			break;
 		
 		case TagReturn:
-			printf("RENVOYER");
+			printf("RENVOYER ");
+			print_asa(p->tag_return.expr);
 			break;
 	}
 }
@@ -1082,14 +1086,20 @@ void free_asa(asa *p) {
 			st_destroy(p->tag_fn.st);
 			break;
 		
+		case TagFnCall:
+			asa_list_destroy(p->tag_fn_call.args);
+			break;
+		
+		case TagReturn:
+			free_asa(p->tag_return.expr);
+			break;
+		
 		case TagInt:
 		case TagVar:
 		case TagAssignArray:
 		case TagRead:
 		case TagReadArray:
 		case TagPrintArray:
-		case TagFnCall:
-		case TagReturn:
 			break;
 	}
 	

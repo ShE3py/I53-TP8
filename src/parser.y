@@ -43,6 +43,7 @@
 %type <nval> BoolExpr
 
 %type <nlval> IntArray IntList
+%type <nlval> Args CommaArgs
 
 // Opérateurs
 %right Assign
@@ -118,7 +119,8 @@ Statement:
 | Print Expr                                                            { $$ = create_print_node($2); }
 | Print LeftSquareBracket Identifier RightSquareBracket                 { $$ = create_print_array_node($3); }
 
-| Return                                                                { $$ = create_return_node(); }
+| Return Expr                                                           { $$ = create_return_node($2); }
+| Return                                                                { $$ = create_return_node(NULL); }
 ;
 
 IntArray:
@@ -164,7 +166,17 @@ IntValue:
 | Identifier                                                 { $$ = create_var_leaf($1); }
 | Identifier LeftSquareBracket IntExpr RightSquareBracket    { $$ = create_index_node($1, $3); }
 | Identifier Dot Identifier LeftParenthesis RightParenthesis { $$ = create_methodcall_node($1, $3); }
-| Identifier LeftParenthesis RightParenthesis                { $$ = create_fncall_node($1); }
+| Identifier LeftParenthesis Args RightParenthesis           { $$ = create_fncall_node($1, $3); }
+;
+
+Args:
+  IntExpr CommaArgs { $$ = asa_list_append($1, $2); }
+| %empty            { $$ = asa_list_empty(); }
+;
+
+CommaArgs:
+  Comma IntExpr CommaArgs { $$ = asa_list_append($2, $3); }
+| %empty                  { $$ = asa_list_empty(); }
 ;
 
 CmpExpr:

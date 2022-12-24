@@ -528,13 +528,21 @@ typedef struct asa {
 			 * Le nom de la fonction.
 			 */
 			char identifier[32];
+			
+			/**
+			 * Les arguments de l'appel.
+			 */
+			asa_list args;
 		} tag_fn_call;
 		
 		/**
 		 * La valeur d'un noeud `TagReturn`.
 		 */
 		struct {
-			
+			/**
+			 * L'expression à renvoyer.
+			 */
+			struct asa *expr;
 		} tag_return;
 	};
 } asa;
@@ -682,14 +690,14 @@ asa* create_methodcall_node(const char varname[32], const char methodname[32]);
 asa* create_fn_node(const char id[32], id_list params, asa *body, symbol_table *st);
 
 /**
- * Créer un nouveau noeud `TagFnCall` avec la valeur spécifiée.
+ * Créer un nouveau noeud `TagFnCall` avec les paramètres spécifiés.
  */
-asa* create_fncall_node(const char id[32]);
+asa* create_fncall_node(const char id[32], asa_list args);
 
 /**
- * Créer un nouveau noeud `TagReturn`.
+ * Créer un nouveau noeud `TagReturn` avec l'expression spécifiée.
  */
-asa* create_return_node();
+asa* create_return_node(asa *expr);
 
 /**
  * Affiche le noeud dans la sortie standard.

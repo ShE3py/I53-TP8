@@ -1,12 +1,9 @@
 FONCTION main()
 DÉBUT
-	f();
-	f();
+	AFFICHER f(4);
 FIN
 
-FONCTION f()
+FONCTION f(x)
 DÉBUT
-	AFFICHER 4;
-	
-	RENVOYER;
+	RENVOYER 32;
 FIN
