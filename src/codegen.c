@@ -618,16 +618,28 @@ void codegen_nc(asa *p, int *ip) {
 			printf("LOAD @2\n");
 			printf("STORE 1\n");
 			
-			*ip += 12;
+			printf("LOAD 2\n");
+			printf("ADD #2\n");
+			printf("LOAD @0\n");
+			
+			*ip += 15;
 			break;
 		}
 		
 		case TagReturn: {
+			if(p->tag_return.expr && p->tag_return.expr != NOP) {
+				codegen_nc(p->tag_return.expr, ip);
+			}
+			else {
+				printf("LOAD #0\n");
+			}
+			
+			printf("STORE @2\n");
 			printf("DEC 2\n");
 			printf("LOAD @2\n");
 			printf("JUMP %i\n", dyn_jump_adr);
 			
-			*ip += 3;
+			*ip += 4;
 			break;
 		}
 	}
@@ -791,7 +803,7 @@ static void add_dyn_jump_adr(int adr) {
  * Génère le code pour la fonction de sauts dynamiques.
  */
 static void codegen_dyn_jump() {
-	printf("NOP ; JUMP @0\n");
+	printf("NOP ; BUILTIN JUMP @0\n");
 	
 	int_list_node *n = dyn_jumps;
 	int sum = 0;
