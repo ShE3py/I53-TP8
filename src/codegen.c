@@ -867,7 +867,7 @@ static void codegen_dyn_jump() {
 		printf("SUB #%i\n", n->value - sum);
 		printf("JUMZ %i\n", n->value);
 		
-		sum += n->value;
+		sum += n->value - sum;
 		n = n->next;
 	}
 	
