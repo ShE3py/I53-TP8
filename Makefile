@@ -14,7 +14,7 @@ mkdirs = $(OUT)/grass
 all: $(mkdirs) arc
 
 $(mkdirs):
-	mkdir $(OUT)/
+	mkdir -p $(OUT)/ram/
 	touch $@
 
 arc: $(addprefix $(OUT)/,$(OBJS))
@@ -31,6 +31,11 @@ $(OUT)/parser.c: $(SRC)/parser.y
 
 $(OUT)/lexer.c: $(SRC)/lexer.lex $(OUT)/parser.h
 	flex -o $@ $<
+
+examples: $(addprefix $(OUT)/ram/, sum.out max.out bubble_sort.out sub.out pow.out fibo.out)
+
+out/ram/%.out: examples/%.algo arc $(mkdirs)
+	./arc $< > $@
 
 clean:
 	rm -rf $(OUT)
