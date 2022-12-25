@@ -759,29 +759,31 @@ static void allocate_fn_space(asa_list fns, int base_ip) {
 	
 	ip += main->value->ninst;
 	
-	n = fns.head->next;
+	n = fns.head;
 	while(n) {
-		fn_location_node *m = &fn_locations;
-		while(1) {
-			if(m->value != n->value && strcmp(n->value->tag_fn.identifier, m->value->tag_fn.identifier) == 0) {
-				fprintf(stderr, "fonction dupliquée: '%s'\n", n->value->tag_fn.identifier);
-				exit(1);
+		if(n->value != main->value) {
+			fn_location_node *m = &fn_locations;
+			while(1) {
+				if(m->value != n->value && strcmp(n->value->tag_fn.identifier, m->value->tag_fn.identifier) == 0) {
+					fprintf(stderr, "fonction dupliquée: '%s'\n", n->value->tag_fn.identifier);
+					exit(1);
+				}
+				
+				if(!m->next) {
+					break;
+				}
+				
+				m = m->next;
 			}
 			
-			if(!m->next) {
-				break;
-			}
-			
-			m = m->next;
+			fn_location_node *o = malloc(sizeof(fn_location_node));
+			o->value = n->value;
+			o->adr = ip;
+			o->next = NULL;
+				
+			m->next = o;
+			ip += o->value->ninst;
 		}
-		
-		fn_location_node *o = malloc(sizeof(fn_location_node));
-		o->value = n->value;
-		o->adr = ip;
-		o->next = NULL;
-		
-		m->next = o;
-		ip += o->value->ninst;
 		
 		n = n->next;
 	}
@@ -869,7 +871,7 @@ static void codegen_dyn_jump() {
 		n = n->next;
 	}
 	
-	printf("STOP\n");
+	printf("STOP ; UNREACHABLE\n");
 }
 
 static void print_fn_locations() {
@@ -929,7 +931,7 @@ void codegen(asa_list fns) {
 	
 	allocate_fn_space(fns, ip);
 	
-	asa_list_node *n = fns.head;
+	fn_location_node *n = &fn_locations;
 	while(n) {
 		codegen_nc(n->value, &ip);
 		
