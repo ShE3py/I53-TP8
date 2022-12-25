@@ -1,0 +1,14 @@
+FONCTION fibo(i)
+DÉBUT
+	SI i <= 1 ALORS
+		RENVOYER i;
+	SINON
+		RENVOYER fibo(i - 2) + fibo(i - 1);
+	FSI
+FIN
+
+FONCTION main()
+DÉBUT
+	# l'algorithme récursif est un chouilla lent.
+	AFFICHER fibo(5);
+FIN

@@ -1,0 +1,11 @@
+FONCTION main()
+DÉBUT
+	VAR x := 2;
+	
+	AFFICHER sub(1, x);
+FIN
+
+FONCTION sub(x, y)
+DÉBUT
+	RENVOYER x - y;
+FIN

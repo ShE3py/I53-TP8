@@ -1,0 +1,23 @@
+FONCTION pow(x, n)
+DÉBUT
+	SI n == 0 ALORS
+		RENVOYER 1;
+	FSI
+	
+	VAR ret := 1;
+	TQ n > 0 FAIRE
+		SI n % 2 == 1 ALORS
+			ret := ret * x;
+		FSI
+		
+		x := x * x;
+		n := n / 2;
+	FTQ
+	
+	RENVOYER ret;
+FIN
+
+FONCTION main()
+DÉBUT
+	AFFICHER pow(2, 7);
+FIN
