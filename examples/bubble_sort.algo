@@ -1,0 +1,28 @@
+FONCTION main()
+DÉBUT
+	LIRE[5] t;
+	
+	VAR continue := 1;
+	VAR n := t.len();
+	
+	TQ continue == 1 FAIRE
+		continue := 0;
+		
+		VAR i := 1;
+		TQ i < n FAIRE
+			SI t[i - 1] > t[i] ALORS
+				VAR z := t[i - 1];
+				t[i - 1] := t[i];
+				t[i] := z;
+				
+				continue := 1;
+			FSI
+			
+			i := i + 1;
+		FTQ
+		
+		n := n - 1;
+	FTQ
+	
+	AFFICHER [t];
+FIN
