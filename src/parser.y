@@ -35,6 +35,7 @@
 %type <nlval> Fns
 %type <nval> FnScope
 %type <idlval> Params CommaParams
+%type <sval> Param
 %type <nval> Statements Statement Block
 %type <nval> ElseOrEndIf
 %type <nval> Expr
@@ -83,14 +84,18 @@ Fns:
 FnScope: Fn Identifier LeftParenthesis Params RightParenthesis Start Statements End { $$ = create_fn_node($2, $4, $7, st_pop_push_empty()); }
 
 Params:
-  Identifier CommaParams { $$ = id_list_append($1, $2); st_create_scalar($1); }
-| %empty                 { $$ = id_list_empty(); }
+  Param CommaParams { $$ = id_list_append($1, $2); }
+| %empty            { $$ = id_list_empty(); }
 ;
 
 CommaParams:
-  Comma Identifier CommaParams { $$ = id_list_append($2, $3); st_create_scalar($2); }
-| %empty                       { $$ = id_list_empty(); }
+  Comma Param CommaParams { $$ = id_list_append($2, $3); }
+| %empty                  { $$ = id_list_empty(); }
 ;
+
+// force la création des paramètres dès le passage de l'identifiant,
+// et non après que tous les paramètres à droite aient étés trouvés
+Param: Identifier { strcpy($$, $1); st_create_scalar($1); };
 
 Statements:
   Statement Semicolon Statements { $$ = make_block_node($1, $3); }
