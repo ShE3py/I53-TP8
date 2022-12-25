@@ -1,9 +1,15 @@
 FONCTION main()
 DÉBUT
-	AFFICHER f(4);
+	AFFICHER 1 - h(4) - 1;
 FIN
+
 
 FONCTION f(x)
 DÉBUT
-	RENVOYER 32;
+  RENVOYER 126 + x;
+FIN
+
+FONCTION h(x)
+DÉBUT
+	RENVOYER f(x);
 FIN

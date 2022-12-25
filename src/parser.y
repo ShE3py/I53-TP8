@@ -34,7 +34,7 @@
 %start Program
 %type <nlval> Fns
 %type <nval> FnScope
-%type <idlval> IdList CommaIdList
+%type <idlval> Params CommaParams
 %type <nval> Statements Statement Block
 %type <nval> ElseOrEndIf
 %type <nval> Expr
@@ -80,15 +80,15 @@ Fns:
 | %empty      { $$ = asa_list_empty(); st_destroy_current(); }
 ;
 
-FnScope: Fn Identifier LeftParenthesis IdList RightParenthesis Start Statements End { $$ = create_fn_node($2, $4, $7, st_pop_push_empty()); }
+FnScope: Fn Identifier LeftParenthesis Params RightParenthesis Start Statements End { $$ = create_fn_node($2, $4, $7, st_pop_push_empty()); }
 
-IdList:
-  Identifier CommaIdList { $$ = id_list_append($1, $2); }
+Params:
+  Identifier CommaParams { $$ = id_list_append($1, $2); st_create_scalar($1); }
 | %empty                 { $$ = id_list_empty(); }
 ;
 
-CommaIdList:
-  Comma Identifier CommaIdList { $$ = id_list_append($2, $3); }
+CommaParams:
+  Comma Identifier CommaParams { $$ = id_list_append($2, $3); st_create_scalar($2); }
 | %empty                       { $$ = id_list_empty(); }
 ;
 

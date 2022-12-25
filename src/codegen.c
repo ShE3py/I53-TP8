@@ -45,10 +45,30 @@ const char* binop_name(BinaryOp binop) {
 }
 
 /**
- * Renvoie l'adresse dans le segment de données de la fonction spécifiée,
+ * Un noeud d'un liste chaînée d'adresses de fonctions.
+ */
+typedef struct fn_location_node {
+	/**
+	 * La fonction.
+	 */
+	asa *value;
+	
+	/**
+	 * L'adresse de la fonction dans le segment de code.
+	 */
+	int adr;
+	
+	/**
+	 * La fonction suivante.
+	 */
+	struct fn_location_node *next;
+} fn_location_node;
+
+/**
+ * Renvoie les informations de la fonction spécifiée,
  * ou écrit un message d'erreur et ferme le programme si jamais la fonction n'existe pas.
  */
-int get_fn_loc(const char id[32]);
+fn_location_node* get_fn(const char id[32]);
 
 /**
  * L'adresse de la fonction de saut dynamique.
@@ -586,12 +606,13 @@ void codegen_nc(asa *p, int *ip) {
 			printf("NOP ; ");
 			print_asa(p);
 			
-			printf("\nLOAD 1\n");
+			printf("\nNOP ; STACK\n");
+			printf("LOAD 1\n");
 			printf("ADD #%i\n", st_temp_offset());
 			printf("STORE 2\n");
 			
 			printf("NOP ; DEBUT\n");
-			*ip += 5;
+			*ip += 6;
 			
 			codegen_nc(p->tag_fn.body, ip);
 			printf("STOP ; FIN\n");
@@ -604,25 +625,75 @@ void codegen_nc(asa *p, int *ip) {
 			printf("STORE @2\n");
 			printf("INC 2\n");
 			
-			add_dyn_jump_adr(*ip + 9);
-			printf("LOAD #%i\n", *ip + 9);
+			int jmp = *ip + 9 + p->tag_fn_call.args.ninst + (6 * p->tag_fn_call.args.len);
+			add_dyn_jump_adr(jmp);
+			printf("LOAD #%i\n", jmp);
 			printf("STORE @2\n");
 			printf("INC 2\n");
 			
+			*ip += 6;
+			
+			fn_location_node *fn = get_fn(p->tag_fn_call.identifier);
+			if(fn->value->tag_fn.params.len != p->tag_fn_call.args.len) {
+				fprintf(stderr, "'%s()': %lu paramètres attendus, %lu paramètres donnés\n", p->tag_fn_call.identifier, fn->value->tag_fn.params.len, p->tag_fn_call.args.len);
+				exit(1);
+			}
+			
+			int args = p->tag_fn_call.args.len;
+			if(args > 0) {
+				asa **aargs = malloc(args * sizeof(asa*));
+				
+				// on empile directement les paramètres sur la pile,
+				// vu qu'ils sont garantis d'avoir les adresses [0, args[
+				
+				// il faut d'abord inverser la liste
+				
+				asa_list_node *n = p->tag_fn_call.args.head;
+				int i = args;
+				while(n) {
+					aargs[--i] = n->value;
+					n = n->next;
+				}
+				
+				for(i = 0; i < args; ++i) {
+					codegen_nc(aargs[i], ip);
+					printf("STORE @2\n");
+					
+					printf("LOAD 2\n");
+					printf("ADD #%i\n", args - i - 1);
+					printf("STORE 3\n");
+					
+					printf("LOAD @2\n");
+					printf("STORE @3\n");
+					
+					*ip += 6;
+				}
+				
+				free(aargs);
+			}
+			
+			if(jmp != *ip + 3) {
+				fprintf(stderr, "bad jump\n");
+				exit(1);
+			}
+			
 			printf("LOAD 2\n");
 			printf("STORE 1\n");
 			
-			printf("JUMP %i\n", get_fn_loc(p->tag_fn_call.identifier));
+			printf("JUMP %i\n", fn->adr);
 			
-			printf("DEC 2\n");
-			printf("LOAD @2\n");
+			printf("LOAD 2\n");
+			printf("SUB #3\n");
+			printf("STORE 2\n");
+			
+			printf("LOAD @0\n");
 			printf("STORE 1\n");
 			
 			printf("LOAD 2\n");
-			printf("ADD #2\n");
+			printf("ADD #3\n");
 			printf("LOAD @0\n");
 			
-			*ip += 15;
+			*ip += 11;
 			break;
 		}
 		
@@ -632,11 +703,12 @@ void codegen_nc(asa *p, int *ip) {
 			}
 			else {
 				printf("LOAD #0\n");
+				++(*ip);
 			}
 			
 			printf("STORE @2\n");
-			printf("DEC 2\n");
-			printf("LOAD @2\n");
+			printf("DEC 1\n");
+			printf("LOAD @1\n");
 			printf("JUMP %i\n", dyn_jump_adr);
 			
 			*ip += 4;
@@ -653,26 +725,6 @@ void codegen_nc(asa *p, int *ip) {
 		fprintf(stderr, "warning: generated no instruction for current node, no-ops should be `NULL`\n");
 	}
 }
-
-/**
- * Un noeud d'un liste chaînée d'adresses de fonctions.
- */
-typedef struct fn_location_node {
-	/**
-	 * La fonction.
-	 */
-	asa *value;
-	
-	/**
-	 * L'adresse de la fonction dans le segment de code.
-	 */
-	int adr;
-	
-	/**
-	 * La fonction suivante.
-	 */
-	struct fn_location_node *next;
-} fn_location_node;
 
 /**
  * La tête de la liste chaînée contenant les adresses des fonctions.
@@ -737,15 +789,16 @@ static void allocate_fn_space(asa_list fns, int base_ip) {
 	dyn_jump_adr = ip;
 }
 
+
 /**
- * Renvoie l'adresse dans le segment de données de la fonction spécifiée,
+ * Renvoie les informations de la fonction spécifiée,
  * ou écrit un message d'erreur et ferme le programme si jamais la fonction n'existe pas.
  */
-int get_fn_loc(const char id[32]) {
+fn_location_node* get_fn(const char id[32]) {
 	fn_location_node *n = &fn_locations;
 	do {
 		if(strcmp(n->value->tag_fn.identifier, id) == 0) {
-			return n->adr;
+			return n;
 		}
 		
 		n = n->next;
