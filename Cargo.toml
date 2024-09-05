@@ -1,0 +1,16 @@
+[package]
+name = "rame"
+version = "0.0.0"
+authors = ["Lieselotte"]
+repository = "https://github.com/ShE3py/RAM/"
+license = "GPL-3.0-or-later"
+categories = []
+keywords = []
+edition = "2021"
+rust-version = "1.74"
+publish = false
+
+[package.metadata.docs.rs]
+all-features = true
+targets = []
+rustdoc-args = ["--cfg", "nightlydoc"]
