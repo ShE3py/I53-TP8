@@ -1,10 +1,63 @@
-use std::error::Error;
+use crate::error::{print_err, ParseInstructionError};
 use std::fmt::{self, Debug, Display, Formatter, Write};
+use std::fs::File;
 use std::hash::Hash;
+use std::io::{BufRead, BufReader};
 use std::num::ParseIntError;
+use std::path::Path;
+use std::process::exit;
 use std::str::FromStr;
 
+pub mod error;
+
 pub trait Integer: Copy + Clone + Eq + PartialEq + Hash + Default + Debug + Display + FromStr<Err = ParseIntError> {}
+
+impl<T: Copy + Clone + Eq + PartialEq + Hash + Default + Debug + Display + FromStr<Err = ParseIntError>> Integer for T {}
+
+#[derive(Clone, Debug)]
+pub struct RoCode<T: Integer>(Vec<Instruction<T>>);
+
+impl<T: Integer> RoCode<T> {
+    pub fn parse<P: AsRef<Path>>(path: P) -> RoCode<T> {
+        let path = path.as_ref();
+        let f = match File::open(path) {
+            Ok(f) => f,
+            Err(e) => {
+                eprintln!(concat!(env!("CARGO_PKG_NAME"), ": {}: {}"), path.display(), &e);
+                exit(1);
+            },
+        };
+        
+        let mut insts = Vec::new();
+        let mut errs = 0;
+        
+        for (i, l) in BufReader::new(f).lines().enumerate() {
+            let l = match l {
+                Ok(l) => l,
+                Err(e) => {
+                    print_err(path, "<err>", i, e);
+                    errs += 1;
+                    continue;
+                },
+            };
+            
+            match Instruction::from_str(&l) {
+                Ok(i) => insts.push(i),
+                Err(e) => {
+                    print_err(path, &l, i, e);
+                    errs += 1;
+                    continue;
+                }
+            }
+        }
+        
+        if errs != 0 {
+            exit(1);
+        }
+        
+        RoCode(insts)
+    }
+}
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug, Default)]
 pub enum Instruction<T: Integer> {
@@ -43,41 +96,6 @@ pub enum Register {
 pub enum Address {
     Constant(usize),
     Register(usize),
-}
-
-#[derive(Clone, Eq, PartialEq, Debug)]
-pub enum ParseInstructionError {
-    UnknownInstruction,
-    InvalidParameter(ParseIntError),
-}
-
-impl Display for ParseInstructionError {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        match self {
-            ParseInstructionError::UnknownInstruction => {
-                f.write_str("unknown instruction")
-            },
-            ParseInstructionError::InvalidParameter(e) => {
-                f.write_str("invalid parameter: ")?;
-                Display::fmt(e, f)
-            },
-        }
-    }
-}
-
-impl Error for ParseInstructionError {
-    fn source(&self) -> Option<&(dyn Error + 'static)> {
-        match self {
-            ParseInstructionError::UnknownInstruction => None,
-            ParseInstructionError::InvalidParameter(e) => Some(e),
-        }
-    }
-}
-
-impl From<ParseIntError> for ParseInstructionError {
-    fn from(e: ParseIntError) -> Self {
-        ParseInstructionError::InvalidParameter(e)
-    }
 }
 
 impl<T: Integer> FromStr for Instruction<T> {
