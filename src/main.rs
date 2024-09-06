@@ -11,5 +11,5 @@ fn main() {
     let cli = Cli::parse();
     let code = RoCode::<u8>::parse(&cli.path);
     
-    println!("{code:?}");
+    println!("{code}");
 }

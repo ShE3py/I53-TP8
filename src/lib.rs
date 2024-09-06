@@ -17,48 +17,6 @@ impl<T: Copy + Clone + Eq + PartialEq + Hash + Default + Debug + Display + FromS
 #[derive(Clone, Debug)]
 pub struct RoCode<T: Integer>(Vec<Instruction<T>>);
 
-impl<T: Integer> RoCode<T> {
-    pub fn parse<P: AsRef<Path>>(path: P) -> RoCode<T> {
-        let path = path.as_ref();
-        let f = match File::open(path) {
-            Ok(f) => f,
-            Err(e) => {
-                eprintln!(concat!(env!("CARGO_PKG_NAME"), ": {}: {}"), path.display(), &e);
-                exit(1);
-            },
-        };
-        
-        let mut insts = Vec::new();
-        let mut errs = 0;
-        
-        for (i, l) in BufReader::new(f).lines().enumerate() {
-            let l = match l {
-                Ok(l) => l,
-                Err(e) => {
-                    print_err(path, "<err>", i, e);
-                    errs += 1;
-                    continue;
-                },
-            };
-            
-            match Instruction::from_str(&l) {
-                Ok(i) => insts.push(i),
-                Err(e) => {
-                    print_err(path, &l, i, e);
-                    errs += 1;
-                    continue;
-                }
-            }
-        }
-        
-        if errs != 0 {
-            exit(1);
-        }
-        
-        RoCode(insts)
-    }
-}
-
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug, Default)]
 pub enum Instruction<T: Integer> {
     Read,
@@ -96,6 +54,73 @@ pub enum Register {
 pub enum Address {
     Constant(usize),
     Register(usize),
+}
+
+impl<T: Integer> RoCode<T> {
+    pub fn parse<P: AsRef<Path>>(path: P) -> RoCode<T> {
+        let path = path.as_ref();
+        let f = match File::open(path) {
+            Ok(f) => f,
+            Err(e) => {
+                eprintln!(concat!(env!("CARGO_PKG_NAME"), ": {}: {}"), path.display(), &e);
+                exit(1);
+            },
+        };
+        
+        let mut insts = Vec::new();
+        let mut errs = 0;
+        
+        for (i, l) in BufReader::new(f).lines().enumerate() {
+            let l = match l {
+                Ok(l) => l,
+                Err(e) => {
+                    print_err(path, "<err>", i, e);
+                    errs += 1;
+                    continue;
+                },
+            };
+            
+            // Remove `; comments` and spaces
+            let stripped = match l.split_once(';') {
+                Some((code, _)) => code,
+                None => l.as_str(),
+            }.trim_ascii();
+            
+            if stripped.is_empty() {
+                continue;
+            }
+            
+            match Instruction::from_str(stripped) {
+                Ok(i) => insts.push(i),
+                Err(e) => {
+                    print_err(path, &l, i, e);
+                    errs += 1;
+                    continue;
+                }
+            }
+        }
+        
+        if errs != 0 {
+            exit(1);
+        }
+        
+        RoCode(insts)
+    }
+}
+
+impl<T: Integer> Display for RoCode<T> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        let Some((last, insts)) = self.0.split_last() else {
+            return f.write_str("<no code>");
+        };
+        
+        for inst in insts {
+            Display::fmt(inst, f)?;
+            writeln!(f)?;
+        }
+        
+        Display::fmt(last, f)
+    }
 }
 
 impl<T: Integer> FromStr for Instruction<T> {
