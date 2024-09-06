@@ -1,9 +1,11 @@
 use clap::Parser;
-use std::path::PathBuf;
 use rame::RoCode;
+use std::path::PathBuf;
 
 #[derive(Parser)]
 struct Cli {
+    /// The program to execute.
+    #[arg(value_name = "FILE")]
     path: PathBuf,
 }
 

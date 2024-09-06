@@ -7,13 +7,16 @@ license = "GPL-3.0-or-later"
 categories = []
 keywords = []
 edition = "2021"
-rust-version = "1.74"
+rust-version = "1.80"
 publish = false
 
 [package.metadata.docs.rs]
 all-features = true
 targets = []
 rustdoc-args = ["--cfg", "nightlydoc"]
+
+[dependencies.num-traits]
+version = "0.2.19"
 
 [dependencies.clap]
 version = "4.5.17"

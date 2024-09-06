@@ -1,19 +1,35 @@
+use std::error::Error;
 use crate::error::{print_err, ParseInstructionError};
 use std::fmt::{self, Debug, Display, Formatter, Write};
 use std::fs::File;
 use std::hash::Hash;
 use std::io::{BufRead, BufReader};
 use std::num::ParseIntError;
+use std::ops::Deref;
 use std::path::Path;
 use std::process::exit;
 use std::str::FromStr;
+use num_traits::PrimInt;
 
 pub mod error;
 pub mod makro;
+pub mod run;
 
-pub trait Integer: Copy + Clone + Eq + PartialEq + Hash + Default + Debug + Display + FromStr<Err = ParseIntError> {}
+pub trait Integer: PrimInt + Debug + Display + FromStr<Err = ParseIntError> + TryInto<usize, Error: Copy + Clone + Eq + PartialEq + Error + 'static> {
+    fn bits() -> u32;
+}
 
-impl<T: Copy + Clone + Eq + PartialEq + Hash + Default + Debug + Display + FromStr<Err = ParseIntError>> Integer for T {}
+impl Integer for u8 { fn bits() -> u32 { 8 } }
+impl Integer for u16 { fn bits() -> u32 { 16 } }
+impl Integer for u32 { fn bits() -> u32 { 32 } }
+impl Integer for u64 { fn bits() -> u32 { 64 } }
+impl Integer for u128 { fn bits() -> u32 { 128 } }
+
+impl Integer for i8 { fn bits() -> u32 { 8 } }
+impl Integer for i16 { fn bits() -> u32 { 16 } }
+impl Integer for i32 { fn bits() -> u32 { 32 } }
+impl Integer for i64 { fn bits() -> u32 { 64 } }
+impl Integer for i128 { fn bits() -> u32 { 128 } }
 
 #[derive(Clone, Debug)]
 pub struct RoCode<T: Integer>(Vec<Instruction<T>>);
@@ -109,6 +125,14 @@ impl<T: Integer> RoCode<T> {
     }
 }
 
+impl<T: Integer> Deref for RoCode<T> {
+    type Target = [Instruction<T>];
+    
+    fn deref(&self) -> &Self::Target {
+        self.0.deref()
+    }
+}
+
 impl<T: Integer> Display for RoCode<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         let Some((last, insts)) = self.0.split_last() else {
@@ -126,13 +150,45 @@ impl<T: Integer> Display for RoCode<T> {
 
 impl<T: Integer> From<&[Instruction<T>]> for RoCode<T> {
     fn from(value: &[Instruction<T>]) -> Self {
-        RoCode(Vec::from(value))
+        RoCode(value.into())
+    }
+}
+
+impl<T: Integer, const N: usize> From<[Instruction<T>; N]> for RoCode<T> {
+    fn from(value: [Instruction<T>; N]) -> Self {
+        RoCode(value.into())
     }
 }
 
 impl<T: Integer> Default for RoCode<T> {
     fn default() -> Self {
-        RoCode(vec![Instruction::Nop])
+        RoCode(vec![Instruction::Stop])
+    }
+}
+
+impl<T: Integer> Instruction<T> {
+    /// Returns the address targeted by this instruction, if any.
+    pub const fn register(&self) -> Option<Register> {
+        match *self {
+            Instruction::Read | Instruction::Write | Instruction::Stop | Instruction::Nop => None,
+            Instruction::Load(v) | Instruction::Add(v) | Instruction::Sub(v) | Instruction::Mul(v) | Instruction::Div(v) | Instruction::Mod(v) => match v {
+                Value::Constant(_) => None,
+                Value::Register(reg) => Some(reg),
+            },
+            Instruction::Store(reg) | Instruction::Increment(reg) | Instruction::Decrement(reg) => Some(reg),
+            Instruction::Jump(adr) | Instruction::JumpZero(adr) | Instruction::JumpLtz(adr) | Instruction::JumpGtz(adr) => match adr {
+                Address::Constant(_) => None,
+                Address::Register(reg) => Some(Register::Direct(reg)),
+            },
+        }
+    }
+    
+    /// Returns if this instruction is a jump.
+    pub const fn is_jump(&self) -> bool {
+        match *self {
+            Instruction::Jump(_) | Instruction::JumpZero(_) | Instruction::JumpLtz(_) | Instruction::JumpGtz(_) => true,
+            Instruction::Read | Instruction::Write | Instruction::Load(_) | Instruction::Add(_) | Instruction::Sub(_) | Instruction::Mul(_) | Instruction::Div(_) | Instruction::Mod(_) | Instruction::Store(_) | Instruction::Increment(_) | Instruction::Decrement(_) | Instruction::Stop | Instruction::Nop => false,
+        }
     }
 }
 
@@ -287,6 +343,15 @@ impl Display for Register {
         
         match self {
             Register::Direct(n) | Register::Indirect(n) => Display::fmt(n, f),
+        }
+    }
+}
+
+impl Register {
+    #[must_use]
+    pub const fn adr(&self) -> usize {
+        match *self {
+            Register::Direct(n) | Register::Indirect(n) => n,
         }
     }
 }

@@ -25,7 +25,7 @@ macro_rules! inst {
     (DIV $n:literal) => { $crate::Instruction::Div($crate::Value::Register($crate::Register::Direct($n))) };
     (DIV @$n:literal) => { $crate::Instruction::Div($crate::Value::Register($crate::Register::Indirect($n))) };
     (MOD #$n:literal) => { $crate::Instruction::Mod($crate::Value::Constant($n)) };
-    (MOD $n:literal) => { $crate::Instruction::Modd($crate::Value::Register($crate::Register::Direct($n))) };
+    (MOD $n:literal) => { $crate::Instruction::Mod($crate::Value::Register($crate::Register::Direct($n))) };
     (MOD @$n:literal) => { $crate::Instruction::Mod($crate::Value::Register($crate::Register::Indirect($n))) };
     (JUMP $n:literal) => { $crate::Instruction::Jump($crate::Address::Constant($n)) };
     (JUMP @$n:literal) => { $crate::Instruction::Jump($crate::Address::Register($n)) };
@@ -41,19 +41,39 @@ macro_rules! inst {
 
 #[macro_export]
 macro_rules! rocode {
-    ($T:ty; $($inst:ident $($(#)? $(@)? $n:literal)?)+) => {
-        $crate::RoCode::<$T>::from(::std::vec![$($crate::inst!($inst $($(#)? $(@)? $n)?)),+].as_slice())
+    ($T:ty; $($inst:ident)+) => {
+        $crate::RoCode::<$T>::from(::std::vec![$($crate::inst!($inst)),+].as_slice())
     };
     
-    ($($inst:ident $($(#)? $(@)? $n:literal)?)+) => {
-        $crate::rocode!(i32; $($inst $($(#)? $(@)? $n)?)+)
+    ($($inst:ident)*) => {
+        $crate::rocode!(i32; $($inst)*)
     };
     
     ($T:ty$(;)?) => {
         $crate::RoCode::<$T>::default()
     };
+}
+
+#[macro_export]
+macro_rules! ram {
+    ($T:ty; $($input:literal)+; $($inst:ident)+) => {
+        $crate::run::Ram::new($crate::rocode!($T; $($inst)+), [$($input),+])
+    };
     
-    () => {
-        $crate::rocode!(i32)
+    ($($input:literal)+; $($inst:ident)+) => {
+        $crate::run::Ram::new($crate::rocode!(i32; $($inst)+), [$($input),+])
+    };
+    
+    ($T:ty; $($inst:ident)+) => {
+        $crate::run::Ram::without_inputs($crate::rocode!($T; $($inst)+))
+    };
+    
+    ($($inst:ident)*) => {
+        $crate::ram!(i32; $($inst)*)
     };
 }
+
+// ram!(u32; 1 2 3 4;
+//  ADD
+//  STOP
+// )
