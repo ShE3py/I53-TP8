@@ -9,6 +9,7 @@ use std::process::exit;
 use std::str::FromStr;
 
 pub mod error;
+pub mod makro;
 
 pub trait Integer: Copy + Clone + Eq + PartialEq + Hash + Default + Debug + Display + FromStr<Err = ParseIntError> {}
 
@@ -120,6 +121,18 @@ impl<T: Integer> Display for RoCode<T> {
         }
         
         Display::fmt(last, f)
+    }
+}
+
+impl<T: Integer> From<&[Instruction<T>]> for RoCode<T> {
+    fn from(value: &[Instruction<T>]) -> Self {
+        RoCode(Vec::from(value))
+    }
+}
+
+impl<T: Integer> Default for RoCode<T> {
+    fn default() -> Self {
+        RoCode(vec![Instruction::Nop])
     }
 }
 
