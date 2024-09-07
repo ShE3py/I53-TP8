@@ -1,10 +1,12 @@
 use clap::{Parser, ValueEnum};
 use rame::run::Ram;
 use rame::{Integer, RoCode};
+use std::fmt::Display;
 use std::io;
 use std::io::Write;
 use std::marker::PhantomData;
 use std::path::PathBuf;
+use std::process::exit;
 
 #[derive(Parser)]
 struct Cli {
@@ -15,6 +17,14 @@ struct Cli {
     /// The integer's type bits.
     #[arg(short, long, default_value = "16")]
     bits: Bits,
+    
+    /// The program's input, space-separated.
+    #[arg(short, long, value_delimiter = ',', num_args = 0..)]
+    input: Option<Vec<i128>>,
+    
+    /// The program's expected output, space-separated.
+    #[arg(short, long, value_delimiter = ',', num_args = 0..)]
+    output: Option<Vec<i128>>,
 }
 
 #[derive(ValueEnum, Copy, Clone, Default)]
@@ -86,6 +96,37 @@ impl<T: Integer> Iterator for Stdin<T> {
     }
 }
 
-fn run<T: Integer>(cli: Cli) {
-    println!("Output = {:?}", Ram::new(RoCode::<T>::parse(&cli.path), Stdin::<T>::new()).run());
+fn run<T: Integer + TryFrom<i128, Error: Display>>(cli: Cli) {
+    fn cvt<T: Integer + TryFrom<i128, Error: Display>>(opt: Option<Vec<i128>>) -> Option<Vec<T>> {
+        opt.map(|vec| Vec::from_iter(vec.into_iter().map(|v| match T::try_from(v) {
+            Ok(v) => v,
+            Err(e) => {
+                eprintln!("invalid integer {v}: {e}");
+                exit(1);
+            }
+        })))
+    }
+    
+    let input = cvt(cli.input);
+    let ouput = cvt(cli.output);
+    
+    if let Some(input) = input {
+        run_file(cli.path, input, ouput)
+    } else {
+        run_file(cli.path, Stdin::<T>::new(), ouput)
+    }
+}
+
+fn run_file<T: Integer, I: Iterator<Item = T>>(path: PathBuf, input: impl IntoIterator<IntoIter = I>, output: Option<Vec<T>>) {
+    let ret = Ram::new(RoCode::<T>::parse(path.as_path()), input).run();
+    
+    match output {
+        Some(output) => if ret != output {
+            eprintln!("error: output mismatch");
+            eprintln!("  computed: {ret:?}");
+            eprintln!("  expected: {output:?}");
+            exit(1);
+        },
+        None => println!("Output = {:?}", ret),
+    }
 }
