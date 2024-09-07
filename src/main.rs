@@ -18,12 +18,12 @@ struct Cli {
     #[arg(short, long, default_value = "16")]
     bits: Bits,
     
-    /// The program's input, space-separated.
-    #[arg(short, long, value_delimiter = ',', num_args = 0..)]
+    /// The program's arguments.
+    #[arg(value_name = "ARGS", value_delimiter = ',', num_args = 0..)]
     input: Option<Vec<i128>>,
     
-    /// The program's expected output, space-separated.
-    #[arg(short, long, value_delimiter = ',', num_args = 0..)]
+    /// Test the program's output.
+    #[arg(short = 't', long = "test", value_delimiter = ',', num_args = 0..)]
     output: Option<Vec<i128>>,
 }
 
@@ -123,8 +123,8 @@ fn run_file<T: Integer, I: Iterator<Item = T>>(path: PathBuf, input: impl IntoIt
     match output {
         Some(output) => if ret != output {
             eprintln!("error: output mismatch");
-            eprintln!("  computed: {ret:?}");
-            eprintln!("  expected: {output:?}");
+            eprintln!(" computed: {ret:?}");
+            eprintln!(" expected: {output:?}");
             exit(1);
         },
         None => println!("Output = {:?}", ret),
