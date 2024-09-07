@@ -3,10 +3,12 @@ use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::ops::Neg;
 
-fn collect_jump_targets<T: Integer>(code: &RoCode<T>) -> Vec<usize> {
+fn collect_jump_targets<T: Integer>(code: &RoCode<T>, modified_ir: &HashMap<usize, Instruction<T>>) -> Vec<usize> {
     let mut jt = Vec::new();
-    for inst in code.iter() {
-        match *inst {
+    for (ir, inst) in code.iter().enumerate() {
+        let inst = modified_ir.get(&ir).copied().unwrap_or(*inst);
+        
+        match inst {
             Instruction::Jump(adr) | Instruction::JumpZero(adr) | Instruction::JumpLtz(adr) | Instruction::JumpGtz(adr) => {
                 let Address::Constant(adr) = adr;
                 jt.push(adr);
@@ -33,14 +35,15 @@ pub struct SeqRewriter<'ro, T: Integer> {
 
 impl<'ro, T: Integer> From<&'ro RoCode<T>> for SeqRewriter<'ro, T> {
     fn from(code: &'ro RoCode<T>) -> Self {
-        let mut deltas = collect_jump_targets(code).into_iter().map(|jt| (jt, 0)).collect::<Vec<_>>();
+        let modified_ir = HashMap::new();
+        let mut deltas = collect_jump_targets(code, &modified_ir).into_iter().map(|jt| (jt, 0)).collect::<Vec<_>>();
         deltas.push((code.len(), 0));
         
         SeqRewriter {
             code,
             deltas,
             deleted_ir: Vec::new(),
-            modified_ir: HashMap::new(),
+            modified_ir,
         }
     }
 }
@@ -49,7 +52,11 @@ impl<'ro, T: Integer> SeqRewriter<'ro, T> {
     // DELETION
     
     pub(crate) fn delete_ir(&mut self, ir: usize) {
-        assert!(!self.deleted_ir.contains(&ir), "duplicated deletion");
+        if self.deleted_ir.contains(&ir) {
+            return;
+        }
+        
+        assert!(!self.modified_ir.contains_key(&ir));
         
         for (entry_point, delta) in self.deltas.iter_mut().rev() {
             if *entry_point > ir {
@@ -174,7 +181,77 @@ impl<'ro, T: Integer> SeqRewriter<'ro, T> {
             }
         }
         
+        self.update_jump_targets();
         self
+    }
+    
+    /// Remove the jump targets that are no longer jumpable into in the modified IR.
+    fn update_jump_targets(&mut self) {
+        let new_jt = collect_jump_targets(self.code, &self.modified_ir);
+        let mut to_rm = Vec::new();
+        
+        let mut i1 = self.deltas.iter().map(|(entry_point, _)| *entry_point);
+        for ep0 in new_jt {
+            loop {
+                let ep1 = i1.next().unwrap();
+                
+                if ep0 != ep1 {
+                    debug_assert!(ep0 > ep1);
+                    to_rm.push(ep0);
+                    continue;
+                }
+                
+                break;
+            }
+        }
+        
+        to_rm.sort_unstable();
+        to_rm.dedup();
+        self.deltas.retain_mut(|(entry_point, _)| to_rm.binary_search(entry_point).is_err());
+    }
+    
+    pub fn remove_dead_code(&mut self) -> &mut Self {
+        let mut reachable = vec![false; self.code.len()];
+        self.find_reachable_code_ir(0, &mut reachable);
+        
+        #[allow(clippy::needless_range_loop)]
+        for ir in 0..reachable.len() {
+            if !reachable[ir] {
+                self.delete_ir(ir);
+            }
+        }
+        
+        self
+    }
+    
+    /// Mark reachable code starting at the specified instruction into the specified vector.
+    fn find_reachable_code_ir(&mut self, mut ir: usize, reachable: &mut Vec<bool>) {
+        if reachable[ir] {
+            return;
+        }
+        
+        while let Some(inst) = self.code.get(ir).copied() {
+            reachable[ir] = true;
+            ir += 1;
+            
+            match inst {
+                Instruction::Stop => return,
+                Instruction::Jump(Address::Constant(adr)) => {
+                    if reachable[ir] {
+                        return;
+                    }
+                    
+                    ir = adr
+                },
+                Instruction::JumpZero(adr) | Instruction::JumpLtz(adr) | Instruction::JumpGtz(adr) => {
+                    let Address::Constant(adr) = adr;
+                    self.find_reachable_code_ir(adr, reachable);
+                },
+                _ => {},
+            }
+        }
+        
+        panic!("unexpected end of file")
     }
 }
 
@@ -329,7 +406,7 @@ impl<'ro, T: Integer + Neg<Output = T>> SeqRewriter<'ro, T> {
     }
     
     pub fn optimize(&mut self) -> &mut Self {
-        self.remove_nops().combine_jumps().combine_consts()
+        self.remove_nops().combine_jumps().remove_dead_code().combine_consts()
     }
 }
 
@@ -405,6 +482,25 @@ mod test {
     }
     
     #[test]
+    fn jump_block_combine_consts() {
+        let a = RoCode::<i32>::from([
+            inst!(ADD #1),
+            inst!(ADD #2),
+            inst!(ADD #3),
+            inst!(ADD #4),
+            inst!(JUMP 3),
+        ]);
+        
+        let b = RoCode::<i32>::from([
+            inst!(ADD #6),
+            inst!(ADD #4),
+            inst!(JUMP 1),
+        ]);
+        
+        assert_eq!(SeqRewriter::from(&a).combine_consts().rewritten(), b);
+    }
+    
+    #[test]
     fn combine_jumps() {
         let a = RoCode::<i32>::from([
             inst!(JUMZ 1),
@@ -432,5 +528,21 @@ mod test {
         ]);
         
         assert_eq!(SeqRewriter::from(&a).combine_jumps().rewritten(), a);
+    }
+    
+    #[test]
+    fn remove_dead_code() {
+        let a = RoCode::<i32>::from([
+            inst!(JUMP 2),
+            inst!(READ),
+            inst!(STOP),
+        ]);
+        
+        let b = RoCode::<i32>::from([
+            inst!(JUMP 1),
+            inst!(STOP),
+        ]);
+        
+        assert_eq!(SeqRewriter::from(&a).remove_dead_code().rewritten(), b);
     }
 }
