@@ -31,7 +31,7 @@ impl Integer for i32 { fn bits() -> u32 { 32 } }
 impl Integer for i64 { fn bits() -> u32 { 64 } }
 impl Integer for i128 { fn bits() -> u32 { 128 } }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Eq, PartialEq, Hash, Debug)]
 pub struct RoCode<T: Integer>(Vec<Instruction<T>>);
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug, Default)]
@@ -70,6 +70,7 @@ pub enum Register {
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
 pub enum Address {
     Constant(usize),
+    #[cfg(feature = "dynamic_jumps")]
     Register(usize),
 }
 
@@ -178,6 +179,7 @@ impl<T: Integer> Instruction<T> {
             Instruction::Store(reg) | Instruction::Increment(reg) | Instruction::Decrement(reg) => Some(reg),
             Instruction::Jump(adr) | Instruction::JumpZero(adr) | Instruction::JumpLtz(adr) | Instruction::JumpGtz(adr) => match adr {
                 Address::Constant(_) => None,
+                #[cfg(feature = "dynamic_jumps")]
                 Address::Register(reg) => Some(Register::Direct(reg)),
             },
         }
@@ -359,6 +361,7 @@ impl Register {
 impl FromStr for Address {
     type Err = ParseIntError;
     
+    #[cfg(feature = "dynamic_jumps")]
     fn from_str(mut s: &str) -> Result<Self, Self::Err> {
         let at = s.chars().next().is_some_and(|c| c == '@');
         if at {
@@ -368,9 +371,15 @@ impl FromStr for Address {
         let n = usize::from_str(s)?;
         Ok(if at { Address::Register(n) } else { Address::Constant(n) })
     }
+    
+    #[cfg(not(feature = "dynamic_jumps"))]
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        usize::from_str(s).map(Address::Constant)
+    }
 }
 
 impl Display for Address {
+    #[cfg(feature = "dynamic_jumps")]
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         if let Address::Register(_) = self {
             f.write_char('@')?;
@@ -378,6 +387,13 @@ impl Display for Address {
         
         match self {
             Address::Constant(n) | Address::Register(n) => Display::fmt(n, f),
+        }
+    }
+    
+    #[cfg(not(feature = "dynamic_jumps"))]
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            Address::Constant(n) => Display::fmt(n, f),
         }
     }
 }

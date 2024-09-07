@@ -15,6 +15,10 @@ all-features = true
 targets = []
 rustdoc-args = ["--cfg", "nightlydoc"]
 
+[features]
+# Allow `JUMP @n`, but we can't optimize such code.
+dynamic_jumps = []
+
 [dependencies.num-traits]
 version = "0.2.19"
 

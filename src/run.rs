@@ -357,8 +357,10 @@ impl Register {
 
 impl Address {
     pub fn get<T: Integer, I: Iterator<Item = T>>(&self, ram: &mut Ram<T, I>) -> Result<usize, RunError<T>> {
+        #[allow(clippy::infallible_destructuring_match)]
         let ir = match *self {
             Address::Constant(adr) => adr,
+            #[cfg(feature = "dynamic_jumps")]
             Address::Register(adr) => {
                 let adr = ram.loc(adr).get()?;
                 
@@ -517,14 +519,14 @@ mod test {
     #[test]
     #[should_panic = "jumping to an inexistent location"]
     fn jump_inexistent() {
-        Ram::<_, _>::run([
-            inst!(LOAD #100),
-            inst!(JUMP @0),
+        Ram::<i32, _>::run([
+            inst!(JUMP 100),
         ].into());
     }
     
     #[test]
     #[should_panic = "jumping to an inexistent location"]
+    #[cfg(feature = "dynamic_jumps")]
     fn jump_negative() {
         Ram::<_, _>::run([
             inst!(LOAD #-2),
@@ -536,7 +538,7 @@ mod test {
     fn jumz_inexistent() {
         Ram::<_, _>::run([
             inst!(LOAD #-2),
-            inst!(JUMZ @0),
+            inst!(JUMZ 100),
             inst!(STOP)
         ].into());
     }
