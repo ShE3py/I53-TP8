@@ -7,6 +7,7 @@ use std::io::Write;
 use std::marker::PhantomData;
 use std::path::PathBuf;
 use std::process::exit;
+use rame::opt::SeqRewriter;
 
 #[derive(Parser)]
 struct Cli {
@@ -25,6 +26,10 @@ struct Cli {
     /// Test the program's output.
     #[arg(short = 't', long = "test", value_delimiter = ',', num_args = 0..)]
     output: Option<Vec<i128>>,
+    
+    /// Optimize the program into the specified file (experimental).
+    #[arg(short = 'o', long = "optimize", value_name = "FILE")]
+    optimize: Option<Option<PathBuf>>,
 }
 
 #[derive(ValueEnum, Copy, Clone, Default)]
@@ -111,14 +116,25 @@ fn run<T: Integer + TryFrom<i128, Error: Display>>(cli: Cli) {
     let ouput = cvt(cli.output);
     
     if let Some(input) = input {
-        run_file(cli.path, input, ouput)
+        run_file(cli.path, input, ouput, cli.optimize)
     } else {
-        run_file(cli.path, Stdin::<T>::new(), ouput)
+        run_file(cli.path, Stdin::<T>::new(), ouput, cli.optimize)
     }
 }
 
-fn run_file<T: Integer, I: Iterator<Item = T>>(path: PathBuf, input: impl IntoIterator<IntoIter = I>, output: Option<Vec<T>>) {
-    let ret = Ram::new(RoCode::<T>::parse(path.as_path()), input).run();
+fn run_file<T: Integer, I: Iterator<Item = T>>(path: PathBuf, input: impl IntoIterator<IntoIter = I>, output: Option<Vec<T>>, optimize: Option<Option<PathBuf>>) {
+    let mut code = RoCode::<T>::parse(path.as_path());
+    if optimize.is_some() {
+        code = SeqRewriter::from(&code).remove_nops().rewritten();
+        
+        if let Some(Some(f)) = optimize {
+            if let Err(e) = code.write_to_file(f) {
+                eprintln!("unable to save optimized code: {e}");
+            }
+        }
+    }
+    
+    let ret = Ram::new(code, input).run();
     
     match output {
         Some(output) => if ret != output {

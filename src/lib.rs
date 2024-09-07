@@ -3,7 +3,7 @@ use crate::error::{print_err, ParseInstructionError};
 use std::fmt::{self, Debug, Display, Formatter, Write};
 use std::fs::File;
 use std::hash::Hash;
-use std::io::{BufRead, BufReader};
+use std::io::{self, BufRead, BufReader, BufWriter};
 use std::num::ParseIntError;
 use std::ops::Deref;
 use std::path::Path;
@@ -14,6 +14,9 @@ use num_traits::PrimInt;
 pub mod error;
 pub mod makro;
 pub mod run;
+
+#[cfg(not(feature = "dynamic_jumps"))]
+pub mod opt;
 
 pub trait Integer: PrimInt + Debug + Display + FromStr<Err = ParseIntError> + TryInto<usize, Error: Copy + Clone + Eq + PartialEq + Error + 'static> {
     fn bits() -> u32;
@@ -123,6 +126,15 @@ impl<T: Integer> RoCode<T> {
         }
         
         RoCode(insts)
+    }
+    
+    pub fn write<W: io::Write>(&self, mut w: W) -> io::Result<()> {
+        w.write_all(self.to_string().as_bytes())
+    }
+    
+    pub fn write_to_file<P: AsRef<Path>>(&self, path: P) -> io::Result<()> {
+        let f = File::create(path)?;
+        self.write(BufWriter::new(f))
     }
 }
 
