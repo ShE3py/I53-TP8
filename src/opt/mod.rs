@@ -126,6 +126,56 @@ impl<'ro, T: Integer> SeqRewriter<'ro, T> {
         self.code.iter().enumerate().filter(|(_, inst)| **inst == Instruction::Nop).for_each(|(ir, _)| self.delete_ir(ir));
         self
     }
+    
+    pub fn combine_jumps(&mut self) -> &mut Self {
+        let final_adr = |mut adr: usize| -> Option<usize> {
+            let mut path = vec![adr];
+            
+            while let Some(Instruction::Jump(Address::Constant(to))) = self.code.get(adr).copied() {
+                if path.contains(&to) {
+                    return None;
+                }
+                
+                adr = to;
+                path.push(adr);
+            }
+            
+            if adr != path.first().copied().unwrap() {
+                Some(adr)
+            }
+            else {
+                None
+            }
+        };
+        
+        for (ir, inst) in self.code.iter().copied().enumerate() {
+            match inst {
+                Instruction::Jump(Address::Constant(adr)) => {
+                    if let Some(adr) = final_adr(adr) {
+                        self.set_ir(ir, Instruction::Jump(Address::Constant(adr)));
+                    }
+                },
+                Instruction::JumpZero(Address::Constant(adr)) => {
+                    if let Some(adr) = final_adr(adr) {
+                        self.set_ir(ir, Instruction::JumpZero(Address::Constant(adr)));
+                    }
+                },
+                Instruction::JumpLtz(Address::Constant(adr)) => {
+                    if let Some(adr) = final_adr(adr) {
+                        self.set_ir(ir, Instruction::JumpLtz(Address::Constant(adr)));
+                    }
+                },
+                Instruction::JumpGtz(Address::Constant(adr)) => {
+                    if let Some(adr) = final_adr(adr) {
+                        self.set_ir(ir, Instruction::JumpGtz(Address::Constant(adr)));
+                    }
+                },
+                _ => {},
+            }
+        }
+        
+        self
+    }
 }
 
 impl<'ro, T: Integer + Neg<Output = T>> SeqRewriter<'ro, T> {
@@ -279,7 +329,7 @@ impl<'ro, T: Integer + Neg<Output = T>> SeqRewriter<'ro, T> {
     }
     
     pub fn optimize(&mut self) -> &mut Self {
-        self.remove_nops().combine_consts()
+        self.remove_nops().combine_jumps().combine_consts()
     }
 }
 
@@ -352,5 +402,35 @@ mod test {
         ]);
         
         assert_eq!(SeqRewriter::from(&a).combine_consts().rewritten(), b);
+    }
+    
+    #[test]
+    fn combine_jumps() {
+        let a = RoCode::<i32>::from([
+            inst!(JUMZ 1),
+            inst!(JUMP 2),
+            inst!(JUMP 3),
+            inst!(JUML 4),
+        ]);
+        
+        let b = RoCode::<i32>::from([
+            inst!(JUMZ 3),
+            inst!(JUMP 3),
+            inst!(JUMP 3),
+            inst!(JUML 4),
+        ]);
+        
+        assert_eq!(SeqRewriter::from(&a).combine_jumps().rewritten(), b);
+    }
+    
+    #[test]
+    fn dont_combine_infinite_jumps() {
+        let a = RoCode::<i32>::from([
+            inst!(JUMP 0),
+            inst!(JUMP 2),
+            inst!(JUMP 1),
+        ]);
+        
+        assert_eq!(SeqRewriter::from(&a).combine_jumps().rewritten(), a);
     }
 }
