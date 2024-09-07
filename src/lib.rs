@@ -1,5 +1,6 @@
-use std::error::Error;
 use crate::error::{print_err, ParseInstructionError};
+use num_traits::PrimInt;
+use std::error::Error;
 use std::fmt::{self, Debug, Display, Formatter, Write};
 use std::fs::File;
 use std::hash::Hash;
@@ -9,7 +10,6 @@ use std::ops::Deref;
 use std::path::Path;
 use std::process::exit;
 use std::str::FromStr;
-use num_traits::PrimInt;
 
 pub mod error;
 pub mod makro;

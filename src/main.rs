@@ -1,13 +1,14 @@
 use clap::{Parser, ValueEnum};
+use rame::opt::SeqRewriter;
 use rame::run::Ram;
 use rame::{Integer, RoCode};
 use std::fmt::Display;
 use std::io;
 use std::io::Write;
 use std::marker::PhantomData;
+use std::ops::Neg;
 use std::path::PathBuf;
 use std::process::exit;
-use rame::opt::SeqRewriter;
 
 #[derive(Parser)]
 struct Cli {
@@ -101,7 +102,7 @@ impl<T: Integer> Iterator for Stdin<T> {
     }
 }
 
-fn run<T: Integer + TryFrom<i128, Error: Display>>(cli: Cli) {
+fn run<T: Integer + Neg<Output = T> + TryFrom<i128, Error: Display>>(cli: Cli) {
     fn cvt<T: Integer + TryFrom<i128, Error: Display>>(opt: Option<Vec<i128>>) -> Option<Vec<T>> {
         opt.map(|vec| Vec::from_iter(vec.into_iter().map(|v| match T::try_from(v) {
             Ok(v) => v,
@@ -122,10 +123,10 @@ fn run<T: Integer + TryFrom<i128, Error: Display>>(cli: Cli) {
     }
 }
 
-fn run_file<T: Integer, I: Iterator<Item = T>>(path: PathBuf, input: impl IntoIterator<IntoIter = I>, output: Option<Vec<T>>, optimize: Option<Option<PathBuf>>) {
+fn run_file<T: Integer + Neg<Output = T>, I: Iterator<Item = T>>(path: PathBuf, input: impl IntoIterator<IntoIter = I>, output: Option<Vec<T>>, optimize: Option<Option<PathBuf>>) {
     let mut code = RoCode::<T>::parse(path.as_path());
     if optimize.is_some() {
-        code = SeqRewriter::from(&code).remove_nops().rewritten();
+        code = SeqRewriter::from(&code).optimize().rewritten();
         
         if let Some(Some(f)) = optimize {
             if let Err(e) = code.write_to_file(f) {
