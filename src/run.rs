@@ -32,7 +32,15 @@ pub struct Ram<T: Integer, I: Iterator<Item = T>> {
 
 impl<T: Integer, I: Iterator<Item = T>> Ram<T, I> {
     pub fn new(code: RoCode<T>, input: impl IntoIterator<IntoIter = I>) -> Ram<T, I> {
-        let inst = code.first().copied().expect("empty instruction table");
+        let Some(inst) = code.first().copied() else {
+            if cfg!(test) {
+                panic!("empty instruction table");
+            }
+            else {
+                eprintln!("error: empty instruction table");
+                exit(1);
+            }
+        };
         
         Ram {
             input: input.into_iter().fuse(),

@@ -1,6 +1,7 @@
+use std::any::TypeId;
 use clap::{Parser, ValueEnum};
 use rame::run::Ram;
-use rame::{Integer, RoCode};
+use rame::{Instruction, Integer, RoCode};
 use std::fmt::Display;
 use std::io;
 use std::io::Write;
@@ -8,6 +9,7 @@ use std::marker::PhantomData;
 use std::ops::Neg;
 use std::path::PathBuf;
 use std::process::exit;
+use std::str::FromStr;
 
 #[cfg_attr(feature = "optimizer", doc = "Run, test or optimize a RAM program.")]
 #[cfg_attr(not(feature = "optimizer"), doc = "Run or test a RAM program.")]
@@ -58,14 +60,13 @@ fn main() {
         Bits::Int128 => run::<i128>(cli),
     }
 }
-
-struct Stdin<T: Integer> {
+struct Stdin<T> {
     buf: String,
     i: usize,
     _phantom: PhantomData<T>,
 }
 
-impl<T: Integer> Stdin<T> {
+impl<T> Stdin<T> {
     fn new() -> Stdin<T> {
         Stdin {
             buf: String::new(),
@@ -75,12 +76,30 @@ impl<T: Integer> Stdin<T> {
     }
 }
 
-impl<T: Integer> Iterator for Stdin<T> {
+impl<T: FromStr<Err: Display> + 'static> Iterator for Stdin<T> {
     type Item = T;
     
     fn next(&mut self) -> Option<Self::Item> {
         loop {
-            print!("E{} = ", self.i);
+            match TypeId::of::<T>() {
+                ty if [
+                    TypeId::of::<Instruction<i8>>(),
+                    TypeId::of::<Instruction<i16>>(),
+                    TypeId::of::<Instruction<i32>>(),
+                    TypeId::of::<Instruction<i64>>(),
+                    TypeId::of::<Instruction<i128>>(),
+                ].contains(&ty) => print!("{} | ", self.i),
+                
+                ty if [
+                    TypeId::of::<i8>(),
+                    TypeId::of::<i16>(),
+                    TypeId::of::<i32>(),
+                    TypeId::of::<i64>(),
+                    TypeId::of::<i128>(),
+                ].contains(&ty) => print!("E{} = ", self.i),
+                
+                _ => unimplemented!(),
+            }
             drop(io::stdout().flush());
             
             self.buf.clear();
@@ -101,6 +120,7 @@ impl<T: Integer> Iterator for Stdin<T> {
                     self.i += 1;
                     break Some(v)
                 },
+                Err(_) if self.buf.trim_ascii_end().is_empty() => return None,
                 Err(e) => eprintln!("error: {e}"),
             }
         }
@@ -110,7 +130,7 @@ impl<T: Integer> Iterator for Stdin<T> {
 #[cfg(feature = "optimizer")] type Optimize = Option<Option<PathBuf>>;
 #[cfg(not(feature = "optimizer"))] type Optimize = ();
 
-fn run<T: Integer + Neg<Output = T> + TryFrom<i128, Error: Display>>(cli: Cli) {
+fn run<T: Integer + Neg<Output = T> + TryFrom<i128, Error: Display> + 'static>(cli: Cli) {
     fn cvt<T: Integer + TryFrom<i128, Error: Display>>(opt: Option<Vec<i128>>) -> Option<Vec<T>> {
         opt.map(|vec| Vec::from_iter(vec.into_iter().map(|v| match T::try_from(v) {
             Ok(v) => v,
@@ -135,8 +155,11 @@ fn run<T: Integer + Neg<Output = T> + TryFrom<i128, Error: Display>>(cli: Cli) {
 }
 
 #[cfg_attr(not(feature = "optimizer"), expect(unused_mut, unused_variables))]
-fn run_file<T: Integer + Neg<Output = T>, I: Iterator<Item = T>>(path: PathBuf, input: impl IntoIterator<IntoIter = I>, output: Option<Vec<T>>, optimize: Optimize) {
-    let mut code = RoCode::<T>::parse(path.as_path());
+fn run_file<T: Integer + Neg<Output = T> + 'static, I: Iterator<Item = T>>(path: PathBuf, input: impl IntoIterator<IntoIter = I>, output: Option<Vec<T>>, optimize: Optimize) {
+    let mut code = match path {
+        path if path.to_str().is_some_and(|p| p == "-") => RoCode::<T>::from(Stdin::<Instruction<T>>::new().collect::<Vec<_>>().as_slice()),
+        path =>  RoCode::<T>::parse(path.as_path()),
+    };
     
     #[cfg(feature = "optimizer")]
     if optimize.is_some() {
