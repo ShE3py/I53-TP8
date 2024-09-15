@@ -9,12 +9,12 @@ rustflags = [
 
 	# Restrictions
 	"-Wclippy::alloc_instead_of_core", "-Fclippy::as_underscore", "-Wclippy::assertions_on_result_states",
-	"-Fclippy::clone_on_ref_ptr", "-Fclippy::default_union_representation", "-Wclippy::else_if_without_else", "-Wclippy::empty_drop",
+	"-Fclippy::clone_on_ref_ptr", "-Fclippy::default_union_representation", "-Wclippy::empty_drop",
 	"-Fclippy::empty_enum_variants_with_brackets", "-Fclippy::empty_structs_with_brackets", "-Fclippy::error_impl_error", "-Fclippy::exit",
 	"-Dclippy::filetype_is_file", "-Wclippy::float_cmp_const", "-Dclippy::fn_to_numeric_cast_any", "-Wclippy::format_push_string",
 	"-Wclippy::get_unwrap", "-Wclippy::if_then_some_else_none", "-Wclippy::large_include_file", "-Wclippy::let_underscore_must_use",
-	"-Wclippy::map_err_ignore", "-Wclippy::missing_assert_message", "-Wclippy::missing_asserts_for_indexing",
-	"-Fclippy::mixed_read_write_in_expression", "-Fclippy::mod_module_files", "-Wclippy::mutex_atomic", "-Fclippy::pub_without_shorthand",
+	"-Wclippy::map_err_ignore", "-Wclippy::missing_asserts_for_indexing",
+	"-Fclippy::mixed_read_write_in_expression", "-Fclippy::self_named_module_files", "-Wclippy::mutex_atomic", "-Fclippy::pub_without_shorthand",
 	"-Wclippy::rc_buffer", "-Wclippy::rc_mutex", "-Fclippy::redundant_type_annotations", "-Wclippy::rest_pat_in_fully_bound_structs",
 	"-Fclippy::semicolon_outside_block", "-Fclippy::str_to_string", "-Fclippy::string_add", "-Wclippy::string_lit_chars_any",
 	"-Fclippy::string_to_string", "-Fclippy::try_err", "-Fclippy::undocumented_unsafe_blocks", "-Wclippy::unnecessary_safety_comment",
