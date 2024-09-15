@@ -109,6 +109,18 @@ impl<T: Integer> SeqRewriter<'_, T> {
         unreachable!("a fake entry point should be after the last inst")
     }
     
+    /// Returns the next non-deleted IR.
+    pub(crate) fn next_ir(&mut self, ir0: usize) -> usize {
+        self.deleted_ir.sort_unstable();
+        
+        let mut ir1 = ir0 + 1;
+        while self.deleted_ir.binary_search(&ir1).is_ok() {
+            ir1 += 1;
+        }
+        
+        ir1
+    }
+    
     pub(crate) fn set_ir(&mut self, ir: usize, inst: Instruction<T>) {
         assert!(!self.deleted_ir.contains(&ir));
         self.modified_ir.insert(ir, inst);
@@ -137,7 +149,7 @@ impl<T: Integer> SeqRewriter<'_, T> {
         self
     }
     
-    pub fn combine_jumps(&mut self) -> &mut Self {
+    pub fn follow_jumps(&mut self) -> &mut Self {
         let final_adr = |initial_adr: usize| -> Option<usize> {
             let mut path = vec![initial_adr];
             
@@ -251,6 +263,25 @@ impl<T: Integer> SeqRewriter<'_, T> {
         }
         
         panic!("unexpected end of file")
+    }
+    
+    pub fn combine_jumps(&mut self) -> &mut Self {
+        for (ir, inst) in self.code.iter().copied().enumerate() {
+            match inst {
+                Instruction::Jump(adr) | Instruction::JumpZero(adr) | Instruction::JumpLtz(adr) | Instruction::JumpGtz(adr) => {
+                    let Address::Constant(adr) = adr;
+                    let next_ir = self.next_ir(ir);
+                    
+                    if adr == next_ir {
+                        // We're jumping to the next inst
+                        self.delete_ir(ir);
+                    }
+                },
+                _ => {},
+            }
+        }
+        
+        self
     }
 }
 
@@ -405,7 +436,7 @@ impl<T: Integer + Neg<Output = T>> SeqRewriter<'_, T> {
     }
     
     pub fn optimize(&mut self) -> &mut Self {
-        self.remove_nops().combine_jumps().remove_dead_code().combine_consts()
+        self.remove_nops().follow_jumps().remove_dead_code().combine_jumps().combine_consts()
     }
 }
 
@@ -500,7 +531,7 @@ mod test {
     }
     
     #[test]
-    fn combine_jumps() {
+    fn follow_jumps() {
         let a = RoCode::<i32>::from([
             inst!(JUMZ 1),
             inst!(JUMP 2),
@@ -515,31 +546,37 @@ mod test {
             inst!(JUML 4),
         ]);
         
-        assert_eq!(SeqRewriter::from(&a).combine_jumps().rewritten(), b);
+        assert_eq!(SeqRewriter::from(&a).follow_jumps().rewritten(), b);
     }
     
     #[test]
-    fn dont_combine_infinite_jumps() {
+    fn dont_follow_infinite_jumps() {
         let a = RoCode::<i32>::from([
             inst!(JUMP 0),
             inst!(JUMP 2),
             inst!(JUMP 1),
         ]);
         
-        assert_eq!(SeqRewriter::from(&a).combine_jumps().rewritten(), a);
+        assert_eq!(SeqRewriter::from(&a).follow_jumps().rewritten(), a);
     }
     
     #[test]
     fn remove_dead_code() {
         let a = RoCode::<i32>::from([
-            inst!(JUMP 2),
-            inst!(READ),
-            inst!(STOP),
+            inst!(LOAD #0),
+            inst!(JUMP 5),
+            inst!(ADD #1),
+            inst!(ADD 0),
+            inst!(DIV 2),
+            inst!(WRITE),
+            inst!(JUMP 5),
         ]);
         
         let b = RoCode::<i32>::from([
-            inst!(JUMP 1),
-            inst!(STOP),
+            inst!(LOAD #0),
+            inst!(JUMP 2),
+            inst!(WRITE),
+            inst!(JUMP 2),
         ]);
         
         assert_eq!(SeqRewriter::from(&a).remove_dead_code().rewritten(), b);
