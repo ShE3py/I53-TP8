@@ -357,7 +357,7 @@ impl Register {
 
 impl Address {
     pub fn get<T: Integer, I: Iterator<Item = T>>(&self, ram: &mut Ram<T, I>) -> Result<usize, RunError<T>> {
-        #[allow(clippy::infallible_destructuring_match)]
+        #[cfg_attr(feature = "optimizer", expect(clippy::infallible_destructuring_match))]
         let ir = match *self {
             Address::Constant(adr) => adr,
             #[cfg(feature = "dynamic_jumps")]
@@ -478,6 +478,15 @@ mod test {
             inst!(STORE 1),
             inst!(LOAD #70),
             inst!(ADD 1),
+        ].into());
+    }
+    
+    #[test]
+    #[should_panic = "integer overflow"]
+    fn div_zero() {
+        Ram::<u8, _>::run([
+            inst!(LOAD #1),
+            inst!(DIV #0),
         ].into());
     }
     
