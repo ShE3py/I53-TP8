@@ -9,7 +9,12 @@ use std::ops::Neg;
 use std::path::PathBuf;
 use std::process::exit;
 
+#[cfg_attr(feature = "optimizer", doc = "Run, test or optimize a RAM program.")]
+#[cfg_attr(not(feature = "optimizer"), doc = "Run or test a RAM program.")]
 #[derive(Parser)]
+#[cfg_attr(not(any(feature = "optimizer", feature = "dynamic_jumps")), command(version = concat!(env!("CARGO_PKG_VERSION"), " (no optimizer or dynamic jumps)")))]
+#[cfg_attr(feature = "optimizer", command(version = concat!(env!("CARGO_PKG_VERSION"), " (with optimizer, no dynamic jumps)")))]
+#[cfg_attr(feature = "dynamic_jumps", command(version = concat!(env!("CARGO_PKG_VERSION"), " (with dynamic jumps, no optimizer)")))]
 struct Cli {
     /// The program to execute.
     #[arg(value_name = "FILE")]
