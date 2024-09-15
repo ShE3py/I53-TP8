@@ -1,5 +1,4 @@
 use clap::{Parser, ValueEnum};
-use rame::opt::SeqRewriter;
 use rame::run::Ram;
 use rame::{Integer, RoCode};
 use std::fmt::Display;
@@ -44,6 +43,12 @@ enum Bits {
 
 fn main() {
     let cli = Cli::parse();
+    
+    #[cfg(feature = "dynamic_jumps")]
+    if cli.optimize.is_some() {
+        eprintln!("error: optimizer is incompatible with `--features dynamic_jumps`");
+        exit(1);
+    }
     
     match cli.bits {
         Bits::Int8 => run::<i8>(cli),
@@ -123,14 +128,17 @@ fn run<T: Integer + Neg<Output = T> + TryFrom<i128, Error: Display>>(cli: Cli) {
     }
 }
 
+#[cfg_attr(feature = "dynamic_jumps", expect(unused_mut, unused_variables))]
 fn run_file<T: Integer + Neg<Output = T>, I: Iterator<Item = T>>(path: PathBuf, input: impl IntoIterator<IntoIter = I>, output: Option<Vec<T>>, optimize: Option<Option<PathBuf>>) {
     let mut code = RoCode::<T>::parse(path.as_path());
+    
+    #[cfg(not(feature = "dynamic_jumps"))]
     if optimize.is_some() {
-        code = SeqRewriter::from(&code).optimize().rewritten();
+        code = ::rame::opt::SeqRewriter::from(&code).optimize().rewritten();
         
         if let Some(Some(f)) = optimize {
             if let Err(e) = code.write_to_file(f) {
-                eprintln!("unable to save optimized code: {e}");
+                eprintln!("error: unable to save optimized code: {e}");
             }
         }
     }

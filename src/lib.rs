@@ -83,7 +83,7 @@ impl<T: Integer> RoCode<T> {
         let f = match File::open(path) {
             Ok(f) => f,
             Err(e) => {
-                eprintln!(concat!(env!("CARGO_PKG_NAME"), ": {}: {}"), path.display(), &e);
+                eprintln!("error: {path:?}: {e}");
                 exit(1);
             },
         };
