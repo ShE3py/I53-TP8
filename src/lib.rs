@@ -15,8 +15,11 @@ pub mod error;
 pub mod makro;
 pub mod run;
 
-#[cfg(not(feature = "dynamic_jumps"))]
+#[cfg(all(feature = "optimizer", not(feature = "dynamic_jumps")))]
 pub mod opt;
+
+#[cfg(all(feature = "optimizer", feature = "dynamic_jumps"))]
+compile_error!("the `optimizer` feature is not compatible with the `dyanmic_jumps` feature");
 
 pub trait Integer: PrimInt + Debug + Display + FromStr<Err = ParseIntError> + TryInto<usize, Error: Copy + Clone + Eq + PartialEq + Error + 'static> {
     fn bits() -> u32;

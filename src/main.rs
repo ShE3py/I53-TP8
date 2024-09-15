@@ -29,6 +29,7 @@ struct Cli {
     
     /// Optimize the program into the specified file (experimental).
     #[arg(short = 'o', long = "optimize", value_name = "FILE")]
+    #[cfg(feature = "optimizer")]
     optimize: Option<Option<PathBuf>>,
 }
 
@@ -43,12 +44,6 @@ enum Bits {
 
 fn main() {
     let cli = Cli::parse();
-    
-    #[cfg(feature = "dynamic_jumps")]
-    if cli.optimize.is_some() {
-        eprintln!("error: optimizer is incompatible with `--features dynamic_jumps`");
-        exit(1);
-    }
     
     match cli.bits {
         Bits::Int8 => run::<i8>(cli),
@@ -107,6 +102,9 @@ impl<T: Integer> Iterator for Stdin<T> {
     }
 }
 
+#[cfg(feature = "optimizer")] type Optimize = Option<Option<PathBuf>>;
+#[cfg(not(feature = "optimizer"))] type Optimize = ();
+
 fn run<T: Integer + Neg<Output = T> + TryFrom<i128, Error: Display>>(cli: Cli) {
     fn cvt<T: Integer + TryFrom<i128, Error: Display>>(opt: Option<Vec<i128>>) -> Option<Vec<T>> {
         opt.map(|vec| Vec::from_iter(vec.into_iter().map(|v| match T::try_from(v) {
@@ -121,18 +119,21 @@ fn run<T: Integer + Neg<Output = T> + TryFrom<i128, Error: Display>>(cli: Cli) {
     let input = cvt(cli.input);
     let ouput = cvt(cli.output);
     
+    #[cfg(feature = "optimizer")] let optimize = cli.optimize;
+    #[cfg(not(feature = "optimizer"))] let optimize = ();
+    
     if let Some(input) = input {
-        run_file(cli.path, input, ouput, cli.optimize)
+        run_file(cli.path, input, ouput, optimize)
     } else {
-        run_file(cli.path, Stdin::<T>::new(), ouput, cli.optimize)
+        run_file(cli.path, Stdin::<T>::new(), ouput, optimize)
     }
 }
 
-#[cfg_attr(feature = "dynamic_jumps", expect(unused_mut, unused_variables))]
-fn run_file<T: Integer + Neg<Output = T>, I: Iterator<Item = T>>(path: PathBuf, input: impl IntoIterator<IntoIter = I>, output: Option<Vec<T>>, optimize: Option<Option<PathBuf>>) {
+#[cfg_attr(not(feature = "optimizer"), expect(unused_mut, unused_variables))]
+fn run_file<T: Integer + Neg<Output = T>, I: Iterator<Item = T>>(path: PathBuf, input: impl IntoIterator<IntoIter = I>, output: Option<Vec<T>>, optimize: Optimize) {
     let mut code = RoCode::<T>::parse(path.as_path());
     
-    #[cfg(not(feature = "dynamic_jumps"))]
+    #[cfg(feature = "optimizer")]
     if optimize.is_some() {
         code = ::rame::opt::SeqRewriter::from(&code).optimize().rewritten();
         
