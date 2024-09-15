@@ -162,39 +162,34 @@ impl<T: Integer, I: Iterator<Item = T>> Ram<T, I> {
         let snip = inst.map(|inst| inst.to_string()).unwrap_or_default();
         let mut err = format_err(path, &snip, ir, e.to_string());
         
-        if let Some(inst) = inst {
-            // Show ACC value
-            if inst.should_print_acc() && e != RunError::Eof {
-                err.push('\n');
-                err.push_str(&format_help(path, ir, format!("ACC = {}", self.acc().inner)));
-            }
-            
-            // Show register value
-            if e != RunError::Eof {
+        if !matches!(e, RunError::Eof | RunError::ReadUninit { .. }) {
+            if let Some(inst) = inst {
+                // Show ACC value
+                if inst.should_print_acc() {
+                    err.push('\n');
+                    err.push_str(&format_help(path, ir, format!("ACC = {}", self.acc().inner)));
+                }
+                
+                // Show register value
                 match inst.register() {
                     Some(Register::Direct(adr)) if !matches!(e, RunError::ReadUninit { .. }) => {
                         let loc = self.loc(adr);
-                    
+                        
                         err.push('\n');
                         err.push_str(&format_help(path, ir, loc));
                     },
                     Some(Register::Indirect(adr)) => {
-                        match self.loc(adr).get() {
-                            Ok(val) => {
-                                let loc = match val.try_into() {
-                                    Ok(adr) => Ok(self.loc(adr)),
-                                    Err(err) => Err(RunError::InvalidAddress { adr: val, err }),
-                                };
-                                
-                                let msg = loc.map_or_else(|err| format!("<{err}>"), |val| val.to_string());
-                                
-                                err.push('\n');
-                                err.push_str(&format_help(path, ir, msg));
-                            },
-                            Err(e) => {
-                                assert!(matches!(e, RunError::ReadUninit { .. }));
-                            }
-                        }
+                        let val = self.loc(adr).get().unwrap();
+                        let loc = match val.try_into() {
+                            Ok(adr) => Ok(self.loc(adr)),
+                            Err(err) => Err(RunError::InvalidAddress { adr: val, err }),
+                        };
+                        
+                        let msg = loc.map_or_else(|err| format!("<{err}>"), |val| val.to_string());
+                        
+                        err.push('\n');
+                        err.push_str(&format_help(path, ir, msg));
+                        
                     },
                     _ => {},
                 }
