@@ -1,4 +1,4 @@
-use crate::{Address, Instruction, Integer, RoCode, Value};
+use crate::model::{Address, Instruction, Integer, RoCode, Value};
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::ops::Neg;
@@ -442,8 +442,9 @@ impl<T: Integer + Neg<Output = T>> SeqRewriter<'_, T> {
 
 #[cfg(test)]
 mod test {
-    use crate::opt::SeqRewriter;
-    use crate::{inst, RoCode};
+    use crate::inst;
+    use crate::model::RoCode;
+    use crate::optimizer::SeqRewriter;
     
     #[test]
     fn remove_nops() {

@@ -33,7 +33,7 @@ rustflags = [
 	"-Fclippy::manual_c_str_literals", "-Wclippy::manual_instant_elapsed", "-Wclippy::manual_is_variant_and", "-Wclippy::manual_let_else",
 	"-Wclippy::manual_ok_or", "-Fclippy::manual_string_new", "-Wclippy::map_unwrap_or", "-Wclippy::match_bool", "-Wclippy::match_on_vec_items",
 	"-Wclippy::match_same_arms", "-Fclippy::match_wild_err_arm", "-Wclippy::match_wildcard_for_single_variants",
-	"-Wclippy::mismatching_type_param_order", "-Wclippy::module_name_repetitions", "-Wclippy::must_use_candidate", "-Wclippy::mut_mut",
+	"-Wclippy::mismatching_type_param_order", "-Wclippy::must_use_candidate", "-Wclippy::mut_mut",
 	"-Wclippy::naive_bytecount", "-Wclippy::needless_bitwise_bool", "-Wclippy::needless_continue", "-Wclippy::needless_for_each",
 	"-Wclippy::needless_pass_by_value", "-Fclippy::no_mangle_with_rust_abi", "-Fclippy::option_as_ref_cloned", "-Fclippy::option_option",
 	"-Fclippy::ptr_as_ptr", "-Fclippy::ptr_cast_constness", "-Wclippy::pub_underscore_fields", "-Wclippy::range_minus_one",

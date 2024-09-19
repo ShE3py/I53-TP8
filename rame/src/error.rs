@@ -1,11 +1,9 @@
-#![allow(clippy::module_name_repetitions)]
-
+use crate::model::Integer;
 use std::error::Error;
 use std::fmt;
 use std::fmt::{Display, Formatter};
 use std::num::ParseIntError;
 use std::path::Path;
-use crate::Integer;
 
 pub(crate) fn format_err(path: &Path, line: &str, line_nb: usize, msg: impl Display) -> String {
     if !line.is_empty() {

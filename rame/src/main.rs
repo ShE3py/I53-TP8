@@ -1,7 +1,7 @@
-use std::any::TypeId;
 use clap::{Parser, ValueEnum};
-use rame::run::Ram;
-use rame::{Instruction, Integer, RoCode};
+use rame::model::{Instruction, Integer, RoCode};
+use rame::runner::Ram;
+use std::any::TypeId;
 use std::fmt::Display;
 use std::io;
 use std::io::Write;
@@ -163,7 +163,7 @@ fn run_file<T: Integer + Neg<Output = T> + 'static, I: Iterator<Item = T>>(path:
     
     #[cfg(feature = "optimizer")]
     if optimize.is_some() {
-        code = ::rame::opt::SeqRewriter::from(&code).optimize().rewritten();
+        code = ::rame::optimizer::SeqRewriter::from(&code).optimize().rewritten();
         
         if let Some(Some(f)) = optimize {
             if let Err(e) = code.write_to_file(f) {
