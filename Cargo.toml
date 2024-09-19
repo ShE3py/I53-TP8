@@ -1,0 +1,32 @@
+[package]
+name = "rame"
+version = "0.0.0"
+authors = ["Lieselotte"]
+repository = "https://github.com/ShE3py/RAM/"
+license = "GPL-3.0-or-later"
+categories = []
+keywords = []
+edition = "2021"
+rust-version = "1.80"
+publish = false
+
+[package.metadata.docs.rs]
+all-features = true
+targets = []
+rustdoc-args = ["--cfg", "nightlydoc"]
+
+[features]
+default = ["optimizer"]
+
+# feat: allow `JUMP @n`, but we can't optimize such code.
+dynamic_jumps = []
+
+# feat: enable to optimizer.
+optimizer = []
+
+[dependencies.num-traits]
+version = "0.2.19"
+
+[dependencies.clap]
+version = "4.5.17"
+features = ["derive"]

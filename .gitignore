@@ -1,5 +1,2 @@
-out/
-arc
-
-*.out
-*.pdf
+/.idea/
+/target/
