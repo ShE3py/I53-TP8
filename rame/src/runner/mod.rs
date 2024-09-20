@@ -1,4 +1,4 @@
-use crate::error::{format_err, format_help, RunError};
+use crate::error::{format_err, format_help};
 use crate::model::{Address, Instruction, Integer, Ir, Register, RoCode, Value};
 use crate::runner::mem::{Loc, LocEntry};
 use std::cell::{Cell, UnsafeCell};
@@ -6,7 +6,10 @@ use std::hint::assert_unchecked;
 use std::iter::{self, Fuse};
 use std::process::exit;
 
+mod error;
 mod mem;
+
+pub use error::RunError;
 
 type Memory<T> = UnsafeCell<Vec<Cell<Loc<T>>>>;
 
@@ -131,7 +134,7 @@ impl<T: Integer, I: Iterator<Item = T>> Ram<T, I> {
     }
     
     /// Arithmetic instructions on ACC.
-    fn binop<F: Fn(&T, &T) -> Option<T>>(&mut self, v: Value<T>, f: F) -> Result<(), RunError<T>> {
+    fn binop<F: Fn(&T, &T) -> Option<T>>(&self, v: Value<T>, f: F) -> Result<(), RunError<T>> {
         let acc = self.acc().get()?;
         let v = v.get(self)?;
         f(&acc, &v).map(|r| self.acc().set(r)).ok_or(RunError::IntegerOverfow)

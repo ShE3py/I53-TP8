@@ -1,6 +1,5 @@
-use crate::error::RunError;
 use crate::model::{Address, Instruction, Integer, Ir, Register, Value};
-use crate::runner::Ram;
+use crate::runner::{Ram, RunError};
 use std::cell::Cell;
 use std::fmt;
 use std::fmt::{Display, Formatter};

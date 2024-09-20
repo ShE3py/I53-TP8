@@ -1,5 +1,4 @@
-use crate::error::ParseInstructionError;
-use crate::model::{Integer, Ir};
+use crate::model::{Integer, Ir, ParseInstructionError};
 use std::fmt;
 use std::fmt::{Display, Formatter, Write};
 use std::num::ParseIntError;
@@ -98,18 +97,18 @@ impl<T: Integer> FromStr for Instruction<T> {
         Ok(if let Some((inst, param)) = s.split_once(' ') {
             match inst {
                 "LOAD" => Instruction::Load(Value::from_str(param)?),
-                "STORE" => Instruction::Store(Register::from_str(param).map_err(ParseInstructionError::InvalidUsize)?),
-                "INC" => Instruction::Increment(Register::from_str(param).map_err(ParseInstructionError::InvalidUsize)?),
-                "DEC" => Instruction::Decrement(Register::from_str(param).map_err(ParseInstructionError::InvalidUsize)?),
+                "STORE" => Instruction::Store(Register::from_str(param).map_err(ParseInstructionError::InvalidRegister)?),
+                "INC" => Instruction::Increment(Register::from_str(param).map_err(ParseInstructionError::InvalidRegister)?),
+                "DEC" => Instruction::Decrement(Register::from_str(param).map_err(ParseInstructionError::InvalidRegister)?),
                 "ADD" => Instruction::Add(Value::from_str(param)?),
                 "SUB" => Instruction::Sub(Value::from_str(param)?),
                 "MUL" => Instruction::Mul(Value::from_str(param)?),
                 "DIV" => Instruction::Div(Value::from_str(param)?),
                 "MOD" => Instruction::Mod(Value::from_str(param)?),
-                "JUMP" => Instruction::Jump(Address::from_str(param).map_err(ParseInstructionError::InvalidUsize)?),
-                "JUMZ" => Instruction::JumpZero(Address::from_str(param).map_err(ParseInstructionError::InvalidUsize)?),
-                "JUML" => Instruction::JumpLtz(Address::from_str(param).map_err(ParseInstructionError::InvalidUsize)?),
-                "JUMG" => Instruction::JumpGtz(Address::from_str(param).map_err(ParseInstructionError::InvalidUsize)?),
+                "JUMP" => Instruction::Jump(Address::from_str(param).map_err(ParseInstructionError::InvalidAddress)?),
+                "JUMZ" => Instruction::JumpZero(Address::from_str(param).map_err(ParseInstructionError::InvalidAddress)?),
+                "JUML" => Instruction::JumpLtz(Address::from_str(param).map_err(ParseInstructionError::InvalidAddress)?),
+                "JUMG" => Instruction::JumpGtz(Address::from_str(param).map_err(ParseInstructionError::InvalidAddress)?),
                 _ => return Err(ParseInstructionError::UnknownInstruction),
             }
         }
@@ -201,9 +200,9 @@ impl<T: Integer> FromStr for Value<T> {
     
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         if s.chars().next().is_some_and(|c| c == '#') {
-            T::from_str(&s['#'.len_utf8()..]).map(Value::Constant).map_err(ParseInstructionError::InvalidT)
+            T::from_str(&s['#'.len_utf8()..]).map(Value::Constant).map_err(ParseInstructionError::InvalidValue)
         } else {
-            Register::from_str(s).map(Value::Register).map_err(ParseInstructionError::InvalidUsize)
+            Register::from_str(s).map(Value::Register).map_err(ParseInstructionError::InvalidRegister)
         }
     }
 }

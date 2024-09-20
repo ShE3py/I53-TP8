@@ -1,4 +1,4 @@
-pub mod error;
+pub(crate) mod error;
 pub mod model;
 pub mod runner;
 

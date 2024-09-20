@@ -5,11 +5,13 @@ use std::error::Error;
 use std::fmt::{Debug, Display};
 use std::str::FromStr;
 
+mod error;
 mod inst;
 mod ir;
 mod makro;
 mod ro;
 
+pub use error::ParseInstructionError;
 pub use inst::{Address, Instruction, Register, Value};
 pub use ir::Ir;
 pub use ro::RoCode;
