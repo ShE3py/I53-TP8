@@ -2,6 +2,7 @@ use crate::error::{format_err, format_help, RunError};
 use crate::model::{Instruction, Integer, Register, RoCode, Value};
 use crate::runner::mem::{Loc, LocEntry};
 use std::cell::{Cell, UnsafeCell};
+use std::hint::assert_unchecked;
 use std::iter::{self, Fuse};
 use std::process::exit;
 
@@ -216,8 +217,18 @@ impl<T: Integer, I: Iterator<Item = T>> Ram<T, I> {
         let memory = unsafe { &mut *self.memory.get() };
         
         if adr >= memory.len() {
-            memory.resize(adr + 1, Cell::new(Loc::Uninit));
+            #[cold]
+            #[inline(never)]
+            fn resize_mem<T: Integer>(memory: &mut Vec<Cell<Loc<T>>>, new_len: usize) {
+                memory.resize(new_len, Cell::new(Loc::Uninit));
+            }
+            
+            resize_mem(memory, adr + 1);
         };
+        
+        // SAFETY: if `adr >= memory.len()`, we resize so that `memory.len() == adr + 1`,
+        //  so `memory.len() > adr`.
+        unsafe { assert_unchecked(adr < memory.len()) };
         
         LocEntry {
             adr,
