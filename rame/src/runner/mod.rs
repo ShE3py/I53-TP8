@@ -188,7 +188,7 @@ impl<T: Integer, I: Iterator<Item = T>> Ram<T, I> {
         match e {
             RunError::IntegerOverfow => {
                 err.push('\n');
-                err.push_str(&format_help(path, ir, format!("using `--bits={}`; only values from {} to {} are accepted.", &T::bits(), &T::min_value(), &T::max_value())));
+                err.push_str(&format_help(path, ir, format!("using `--bits={}`; only values from {} to {} are accepted.", size_of::<T>() * 8, &T::min_value(), &T::max_value())));
             },
             RunError::Eof => {
                 err.push('\n');

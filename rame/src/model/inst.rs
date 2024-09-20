@@ -73,24 +73,24 @@ impl<T: Integer> Instruction<T> {
 }
 
 impl<T: Integer> FromStr for Instruction<T> {
-    type Err = ParseInstructionError;
+    type Err = ParseInstructionError<T>;
     
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(if let Some((inst, param)) = s.split_once(' ') {
             match inst {
                 "LOAD" => Instruction::Load(Value::from_str(param)?),
-                "STORE" => Instruction::Store(Register::from_str(param)?),
-                "INC" => Instruction::Increment(Register::from_str(param)?),
-                "DEC" => Instruction::Decrement(Register::from_str(param)?),
+                "STORE" => Instruction::Store(Register::from_str(param).map_err(ParseInstructionError::InvalidUsize)?),
+                "INC" => Instruction::Increment(Register::from_str(param).map_err(ParseInstructionError::InvalidUsize)?),
+                "DEC" => Instruction::Decrement(Register::from_str(param).map_err(ParseInstructionError::InvalidUsize)?),
                 "ADD" => Instruction::Add(Value::from_str(param)?),
                 "SUB" => Instruction::Sub(Value::from_str(param)?),
                 "MUL" => Instruction::Mul(Value::from_str(param)?),
                 "DIV" => Instruction::Div(Value::from_str(param)?),
                 "MOD" => Instruction::Mod(Value::from_str(param)?),
-                "JUMP" => Instruction::Jump(Address::from_str(param)?),
-                "JUMZ" => Instruction::JumpZero(Address::from_str(param)?),
-                "JUML" => Instruction::JumpLtz(Address::from_str(param)?),
-                "JUMG" => Instruction::JumpGtz(Address::from_str(param)?),
+                "JUMP" => Instruction::Jump(Address::from_str(param).map_err(ParseInstructionError::InvalidUsize)?),
+                "JUMZ" => Instruction::JumpZero(Address::from_str(param).map_err(ParseInstructionError::InvalidUsize)?),
+                "JUML" => Instruction::JumpLtz(Address::from_str(param).map_err(ParseInstructionError::InvalidUsize)?),
+                "JUMG" => Instruction::JumpGtz(Address::from_str(param).map_err(ParseInstructionError::InvalidUsize)?),
                 _ => return Err(ParseInstructionError::UnknownInstruction),
             }
         }
@@ -178,14 +178,14 @@ impl<T: Integer> Display for Instruction<T> {
 }
 
 impl<T: Integer> FromStr for Value<T> {
-    type Err = ParseIntError;
+    type Err = ParseInstructionError<T>;
     
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(if s.chars().next().is_some_and(|c| c == '#') {
-            Value::Constant(T::from_str(&s['#'.len_utf8()..])?)
+        if s.chars().next().is_some_and(|c| c == '#') {
+            T::from_str(&s['#'.len_utf8()..]).map(Value::Constant).map_err(ParseInstructionError::InvalidT)
         } else {
-            Value::Register(Register::from_str(s)?)
-        })
+            Register::from_str(s).map(Value::Register).map_err(ParseInstructionError::InvalidUsize)
+        }
     }
 }
 

@@ -1,9 +1,10 @@
 use crate::model::Integer;
+use any::type_name;
 use std::error::Error;
-use std::fmt;
 use std::fmt::{Display, Formatter};
-use std::num::ParseIntError;
 use std::path::Path;
+use std::str::FromStr;
+use std::{any, fmt};
 
 pub(crate) fn format_err(path: &Path, line: &str, line_nb: usize, msg: impl Display) -> String {
     if !line.is_empty() {
@@ -21,7 +22,7 @@ pub(crate) fn print_err(path: &Path, line: &str, line_nb: usize, msg: impl Displ
     eprintln!("{}", format_err(path, line, line_nb, msg));
 }
 
-#[derive(Copy, Clone, Eq, PartialEq, Debug)]
+#[derive(Debug)]
 pub enum RunError<T: Integer> {
     ReadEof,
     ReadUninit { adr: usize },
@@ -29,6 +30,36 @@ pub enum RunError<T: Integer> {
     IntegerOverfow,
     InexistentJump,
     Eof,
+}
+
+impl<T: Integer> Copy for RunError<T> where <T as TryInto<usize>>::Error: Copy {}
+
+impl<T: Integer> Clone for RunError<T> where <T as TryInto<usize>>::Error: Clone {
+    fn clone(&self) -> Self {
+        match self {
+            RunError::ReadEof => RunError::ReadEof,
+            RunError::ReadUninit { adr } => RunError::ReadUninit { adr: *adr },
+            RunError::InvalidAddress { adr, err } => RunError::InvalidAddress { adr: *adr, err: err.clone() },
+            RunError::IntegerOverfow => RunError::IntegerOverfow,
+            RunError::InexistentJump => RunError::InexistentJump,
+            RunError::Eof => RunError::Eof,
+        }
+    }
+}
+
+impl<T: Integer> Eq for RunError<T> where <T as TryInto<usize>>::Error: Eq {}
+
+impl<T: Integer> PartialEq for RunError<T> where <T as TryInto<usize>>::Error: PartialEq {
+    fn eq(&self, other: &Self) -> bool {
+        match self {
+            RunError::ReadEof => matches!(other, RunError::ReadEof),
+            RunError::ReadUninit { adr } => matches!(other, RunError::ReadUninit { adr: adr1 } if adr == adr1),
+            RunError::InvalidAddress { adr, err } => matches!(other, RunError::InvalidAddress { adr: adr1, err: err1 } if adr == adr1 && err == err1),
+            RunError::IntegerOverfow => matches!(other, RunError::IntegerOverfow),
+            RunError::InexistentJump => matches!(other, RunError::InexistentJump),
+            RunError::Eof => matches!(other, RunError::Eof),
+        }
+    }
 }
 
 impl<T: Integer> Display for RunError<T> {
@@ -53,37 +84,59 @@ impl<T: Integer> Error for RunError<T> {
     }
 }
 
-#[derive(Clone, Eq, PartialEq, Debug)]
-pub enum ParseInstructionError {
+#[derive(Debug)]
+pub enum ParseInstructionError<T: Integer> {
     UnknownInstruction,
-    InvalidParameter(ParseIntError),
+    InvalidUsize(<usize as FromStr>::Err),
+    InvalidT(<T as FromStr>::Err),
 }
 
-impl Display for ParseInstructionError {
+impl<T: Integer> Clone for ParseInstructionError<T> where <T as FromStr>::Err: Clone {
+    fn clone(&self) -> Self {
+        match self {
+            ParseInstructionError::UnknownInstruction => ParseInstructionError::UnknownInstruction,
+            ParseInstructionError::InvalidUsize(err) => ParseInstructionError::InvalidUsize(err.clone()),
+            ParseInstructionError::InvalidT(err) => ParseInstructionError::InvalidT(err.clone()),
+        }
+    }
+}
+
+impl<T: Integer> Eq for ParseInstructionError<T> where <T as FromStr>::Err: Eq {}
+
+impl<T: Integer> PartialEq for ParseInstructionError<T> where <T as FromStr>::Err: PartialEq {
+    fn eq(&self, other: &Self) -> bool {
+        match self {
+            ParseInstructionError::UnknownInstruction => matches!(other, ParseInstructionError::UnknownInstruction),
+            ParseInstructionError::InvalidUsize(err) => matches!(other, ParseInstructionError::InvalidUsize(err1) if err == err1),
+            ParseInstructionError::InvalidT(err) => matches!(other, ParseInstructionError::InvalidT(err1) if err == err1),
+        }
+    }
+}
+
+impl<T: Integer> Display for ParseInstructionError<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
             ParseInstructionError::UnknownInstruction => {
                 f.write_str("unknown instruction")
             },
-            ParseInstructionError::InvalidParameter(e) => {
-                f.write_str("invalid parameter: ")?;
+            ParseInstructionError::InvalidUsize(e) => {
+                f.write_str(concat!("invalid usize: "))?;
+                Display::fmt(e, f)
+            },
+            ParseInstructionError::InvalidT(e) => {
+                f.write_fmt(format_args!("invalid {}: ", type_name::<T>()))?;
                 Display::fmt(e, f)
             },
         }
     }
 }
 
-impl Error for ParseInstructionError {
+impl<T: Integer> Error for ParseInstructionError<T> {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
             ParseInstructionError::UnknownInstruction => None,
-            ParseInstructionError::InvalidParameter(e) => Some(e),
+            ParseInstructionError::InvalidUsize(e) => Some(e),
+            ParseInstructionError::InvalidT(e) => Some(e),
         }
-    }
-}
-
-impl From<ParseIntError> for ParseInstructionError {
-    fn from(e: ParseIntError) -> Self {
-        ParseInstructionError::InvalidParameter(e)
     }
 }
