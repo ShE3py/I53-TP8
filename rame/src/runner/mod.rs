@@ -17,6 +17,7 @@ pub struct Ram<T: Integer, I: Iterator<Item = T>> {
     output: Vec<T>,
     memory: Memory<T>,
     code: RoCode<T>,
+    
     /// The next instruction to run.
     inst: Instruction<T>,
     /// Instruction register (the index of `inst`).
@@ -266,7 +267,7 @@ impl<T: Integer, I: Iterator<Item = T> + Default> Default for Ram<T, I> {
     fn default() -> Self {
         Ram {
             input: I::default().fuse(),
-            output: vec![],
+            output: Vec::default(),
             memory: Memory::default(),
             code: RoCode::default(),
             inst: Instruction::Stop,
@@ -276,6 +277,7 @@ impl<T: Integer, I: Iterator<Item = T> + Default> Default for Ram<T, I> {
 }
 
 impl<T: Integer> Ram<T, iter::Empty<T>> {
+    /// Returns a program
     pub fn empty() -> Self {
         Self::default()
     }

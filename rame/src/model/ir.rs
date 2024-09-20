@@ -6,6 +6,7 @@ use std::num::ParseIntError;
 use std::ops::{Add, AddAssign};
 use std::str::FromStr;
 
+/// Represents the value of a program counter, e.g. the index of an instruction.
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Default)]
 #[repr(transparent)]
 #[must_use]
@@ -14,6 +15,7 @@ pub struct Ir(usize);
 pub(crate) type Enumerate<T, I> = iter::Map<iter::Enumerate<I>, fn((usize, Instruction<T>)) -> (Ir, Instruction<T>)>;
 
 impl Ir {
+    /// Creates a new `Ir` from an `usize`.
     #[inline]
     pub const fn new(ir: usize) -> Ir {
         Ir(ir)
@@ -24,6 +26,8 @@ impl Ir {
         self.0
     }
     
+    /// Checked addition with a signed integer.
+    /// Computes `self + rhs`, returning `None` if overflow occured.
     #[inline]
     pub fn checked_add_signed(self, rhs: isize) -> Option<Ir> {
         self.0.checked_add_signed(rhs).map(Ir)

@@ -5,6 +5,7 @@ use std::fmt::{Display, Formatter, Write};
 use std::num::ParseIntError;
 use std::str::FromStr;
 
+/// Represents a [random-access machine](https://en.wikipedia.org/wiki/Random-access_machine) instruction.
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug, Default)]
 pub enum Instruction<T: Integer> {
     Read,
@@ -26,25 +27,34 @@ pub enum Instruction<T: Integer> {
     #[default] Nop,
 }
 
+/// Either the value of a register, or a constant.
+/// Read-only memory access.
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
 pub enum Value<T: Integer> {
     Constant(T),
     Register(Register),
 }
 
+/// The value of a registrer.
+/// Read-write memory access.
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
 pub enum Register {
+    /// The value is read/wrote directly into the register.
     Direct(usize),
+    /// The value is read/wrote from the register this register points to.
     Indirect(usize),
 }
 
+/// Where the instructions can jump to.
 #[cfg(not(feature = "dynamic_jumps"))]
 pub type Address = Ir;
 
 #[cfg(feature = "dynamic_jumps")]
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
 pub enum Address {
+    /// A constant address.
     Constant(Ir),
+    /// The value of a register.
     Register(usize),
 }
 
@@ -237,6 +247,7 @@ impl Display for Register {
 }
 
 impl Register {
+    /// Returns the address of the register.
     #[must_use]
     pub const fn adr(&self) -> usize {
         match *self {

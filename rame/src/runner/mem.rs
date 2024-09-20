@@ -31,7 +31,8 @@ impl<T: Integer> LocEntry<'_, T> {
 }
 
 impl<T: Integer> Value<T> {
-    pub fn get<I: Iterator<Item = T>>(&self, ram: &mut Ram<T, I>) -> Result<T, RunError<T>> {
+    /// Fetches the value.
+    pub fn get<I: Iterator<Item = T>>(&self, ram: &Ram<T, I>) -> Result<T, RunError<T>> {
         match self {
             Value::Constant(n) => Ok(*n),
             Value::Register(reg) => reg.get(ram),
@@ -54,13 +55,15 @@ impl Register {
         }
     }
     
-    pub fn set<T: Integer, I: Iterator<Item = T>>(&self, v: T, ram: &mut Ram<T, I>) -> Result<(), RunError<T>> {
-        self.loc(ram)?.set(v);
-        Ok(())
+    /// Fetches the value.
+    pub fn get<T: Integer, I: Iterator<Item = T>>(&self, ram: &Ram<T, I>) -> Result<T, RunError<T>> {
+        self.loc(ram)?.get()
     }
     
-    pub fn get<T: Integer, I: Iterator<Item = T>>(&self, ram: &mut Ram<T, I>) -> Result<T, RunError<T>> {
-        self.loc(ram)?.get()
+    /// Sets the value.
+    pub fn set<T: Integer, I: Iterator<Item = T>>(&self, v: T, ram: &Ram<T, I>) -> Result<(), RunError<T>> {
+        self.loc(ram)?.set(v);
+        Ok(())
     }
 }
 

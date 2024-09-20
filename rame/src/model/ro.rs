@@ -1,18 +1,25 @@
-use std::fmt::{Display, Formatter};
+use crate::error::print_err;
+use crate::model::{Instruction, Integer, Ir};
+use crate::optimizer::SeqRewriter;
+use crate::runner::Ram;
+use std::fmt::{self, Display, Formatter};
 use std::fs::File;
-use std::{fmt, io};
+use std::io;
 use std::io::{BufRead, BufReader, BufWriter};
 use std::ops::Deref;
 use std::path::Path;
 use std::process::exit;
 use std::str::FromStr;
-use crate::error::print_err;
-use crate::model::{Instruction, Integer, Ir};
 
+/// Represents a read-only code segment.
+///
+/// It may be executed with [`Ram`], and modified with [`SeqRewriter`].
 #[derive(Clone, Eq, PartialEq, Hash, Debug)]
 pub struct RoCode<T: Integer>(Vec<Instruction<T>>);
 
 impl<T: Integer> RoCode<T> {
+    /// Parses a file.
+    /// Blank lines and `; comments` are allowed.
     pub fn parse<P: AsRef<Path>>(path: P) -> RoCode<T> {
         let path = path.as_ref();
         let f = match File::open(path) {
@@ -63,10 +70,12 @@ impl<T: Integer> RoCode<T> {
         RoCode(insts)
     }
     
+    /// Writes `self` into something.
     pub fn write<W: io::Write>(&self, mut w: W) -> io::Result<()> {
         w.write_all(self.to_string().as_bytes())
     }
     
+    /// Write `self` into the specified file.
     pub fn write_to_file<P: AsRef<Path>>(&self, path: P) -> io::Result<()> {
         let f = File::create(path)?;
         self.write(BufWriter::new(f))
@@ -106,20 +115,23 @@ impl<T: Integer> Display for RoCode<T> {
     }
 }
 
+impl<T: Integer> Default for RoCode<T> {
+    /// Returns a program with only a [`STOP` instruction.](`Instruction::Stop`)
+    fn default() -> Self {
+        RoCode(vec![Instruction::Stop])
+    }
+}
+
 impl<T: Integer> From<&[Instruction<T>]> for RoCode<T> {
+    /// Transforms an array of [`Instruction`]s into a [`RoCode`].
     fn from(value: &[Instruction<T>]) -> Self {
         RoCode(value.into())
     }
 }
 
 impl<T: Integer, const N: usize> From<[Instruction<T>; N]> for RoCode<T> {
+    /// Transforms an array of [`Instruction`]s into a [`RoCode`].
     fn from(value: [Instruction<T>; N]) -> Self {
         RoCode(value.into())
-    }
-}
-
-impl<T: Integer> Default for RoCode<T> {
-    fn default() -> Self {
-        RoCode(vec![Instruction::Stop])
     }
 }
