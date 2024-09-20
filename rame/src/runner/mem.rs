@@ -17,15 +17,6 @@ pub(super) struct LocEntry<'ram, T: Integer> {
     pub inner: &'ram Cell<Loc<T>>,
 }
 
-impl<T: Integer> Display for Loc<T> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        match self {
-            Loc::Uninit => f.write_str("<uninitialized>"),
-            Loc::Init(v) => Display::fmt(v, f),
-        }
-    }
-}
-
 impl<T: Integer> LocEntry<'_, T> {
     pub(super) fn set(&self, v: T) {
         self.inner.set(Loc::Init(v));
@@ -36,12 +27,6 @@ impl<T: Integer> LocEntry<'_, T> {
             Loc::Uninit => Err(RunError::ReadUninit { adr: self.adr }),
             Loc::Init(v) => Ok(v),
         }
-    }
-}
-
-impl<T: Integer> Display for LocEntry<'_, T> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "R{} = {}", self.adr, self.inner.get())
     }
 }
 
@@ -98,5 +83,20 @@ impl Address {
         }
         
         Ok(ir)
+    }
+}
+
+impl<T: Integer> Display for Loc<T> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            Loc::Uninit => f.write_str("<uninitialized>"),
+            Loc::Init(v) => Display::fmt(v, f),
+        }
+    }
+}
+
+impl<T: Integer> Display for LocEntry<'_, T> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "R{} = {}", self.adr, self.inner.get())
     }
 }

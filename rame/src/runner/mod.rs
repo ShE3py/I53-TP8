@@ -213,7 +213,7 @@ impl<T: Integer, I: Iterator<Item = T>> Ram<T, I> {
     fn loc(&self, adr: usize) -> LocEntry<'_, T> {
         // SAFETY: this function is the only one that uses `self.memory`,
         //  we don't call code that could call this function a 2nd time,
-        //  so no there's references that point to our memory.
+        //  so there's no references that point to our emulated memory.
         let memory = unsafe { &mut *self.memory.get() };
         
         if adr >= memory.len() {
