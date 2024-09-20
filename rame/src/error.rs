@@ -34,6 +34,7 @@ pub enum RunError<T: Integer> {
 
 impl<T: Integer> Copy for RunError<T> where <T as TryInto<usize>>::Error: Copy {}
 
+#[expect(clippy::expl_impl_clone_on_copy)]
 impl<T: Integer> Clone for RunError<T> where <T as TryInto<usize>>::Error: Clone {
     fn clone(&self) -> Self {
         match self {

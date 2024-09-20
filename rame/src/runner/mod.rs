@@ -1,17 +1,20 @@
 use crate::error::{format_err, format_help, RunError};
 use crate::model::{Instruction, Integer, Register, RoCode, Value};
 use crate::runner::mem::{Loc, LocEntry};
+use std::cell::{Cell, UnsafeCell};
 use std::iter::{self, Fuse};
 use std::process::exit;
 
 pub mod mem;
+
+type Memory<T> = UnsafeCell<Vec<Cell<Loc<T>>>>;
 
 #[derive(Debug)]
 #[must_use]
 pub struct Ram<T: Integer, I: Iterator<Item = T>> {
     input: Fuse<I>,
     output: Vec<T>,
-    memory: Vec<Loc<T>>,
+    memory: Memory<T>,
     code: RoCode<T>,
     /// The next instruction to run.
     inst: Instruction<T>,
@@ -34,7 +37,7 @@ impl<T: Integer, I: Iterator<Item = T>> Ram<T, I> {
         Ram {
             input: input.into_iter().fuse(),
             output: vec![],
-            memory: vec![],
+            memory: Memory::default(),
             code,
             inst,
             ir: 0,
@@ -119,8 +122,8 @@ impl<T: Integer, I: Iterator<Item = T>> Ram<T, I> {
     }
     
     /// Either `INC` or `DEC`.
-    fn unop<F: Fn(&T, &T) -> Option<T>>(&mut self, reg: Register, f: F) -> Result<(), RunError<T>> {
-        let mut loc = reg.loc(self)?;
+    fn unop<F: Fn(&T, &T) -> Option<T>>(&self, reg: Register, f: F) -> Result<(), RunError<T>> {
+        let loc = reg.loc(self)?;
         let v = loc.get()?;
         f(&v, &T::one()).map(|r| loc.set(r)).ok_or(RunError::IntegerOverfow)
     }
@@ -145,7 +148,8 @@ impl<T: Integer, I: Iterator<Item = T>> Ram<T, I> {
         }
     }
     
-    fn emit_err(&mut self, ir: usize, e: RunError<T>) -> ! {
+    #[expect(clippy::needless_pass_by_value)]
+    fn emit_err(&self, ir: usize, e: RunError<T>) -> ! {
         let path = "anon".as_ref();
         let inst = self.code.get(ir).copied();
         let snip = inst.map(|inst| inst.to_string()).unwrap_or_default();
@@ -156,7 +160,7 @@ impl<T: Integer, I: Iterator<Item = T>> Ram<T, I> {
                 // Show ACC value
                 if inst.should_print_acc() {
                     err.push('\n');
-                    err.push_str(&format_help(path, ir, format!("ACC = {}", self.acc().inner)));
+                    err.push_str(&format_help(path, ir, format!("ACC = {}", self.acc().inner.get())));
                 }
                 
                 // Show register value
@@ -205,18 +209,23 @@ impl<T: Integer, I: Iterator<Item = T>> Ram<T, I> {
         &self.output
     }
     
-    fn loc(&mut self, adr: usize) -> LocEntry<'_, T> {
-        if adr >= self.memory.len() {
-            self.memory.resize(adr + 1, Loc::Uninit);
+    fn loc(&self, adr: usize) -> LocEntry<'_, T> {
+        // SAFETY: this function is the only one that uses `self.memory`,
+        //  we don't call code that could call this function a 2nd time,
+        //  so no there's references that point to our memory.
+        let memory = unsafe { &mut *self.memory.get() };
+        
+        if adr >= memory.len() {
+            memory.resize(adr + 1, Cell::new(Loc::Uninit));
         };
         
         LocEntry {
             adr,
-            inner: &mut self.memory[adr],
+            inner: &memory[adr],
         }
     }
     
-    fn acc(&mut self) -> LocEntry<'_, T> {
+    fn acc(&self) -> LocEntry<'_, T> {
         self.loc(0)
     }
     
@@ -234,7 +243,7 @@ impl<T: Integer, I: Iterator<Item = T> + Default> Default for Ram<T, I> {
         Ram {
             input: I::default().fuse(),
             output: vec![],
-            memory: vec![],
+            memory: Memory::default(),
             code: RoCode::default(),
             inst: Instruction::Stop,
             ir: 0,

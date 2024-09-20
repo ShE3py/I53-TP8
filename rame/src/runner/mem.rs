@@ -1,8 +1,9 @@
 use crate::error::RunError;
+use crate::model::{Address, Integer, Register, Value};
 use crate::runner::Ram;
+use std::cell::Cell;
 use std::fmt;
 use std::fmt::{Display, Formatter};
-use crate::model::{Address, Integer, Register, Value};
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug, Default)]
 pub enum Loc<T: Integer> {
@@ -10,12 +11,11 @@ pub enum Loc<T: Integer> {
     Init(T)
 }
 
-#[derive(Eq, PartialEq, Hash, Debug)]
-pub struct LocEntry<'a, T: Integer> {
+#[derive(Clone, Eq, PartialEq, Debug)]
+pub struct LocEntry<'ram, T: Integer> {
     pub adr: usize,
-    pub inner: &'a mut Loc<T>,
+    pub inner: &'ram Cell<Loc<T>>,
 }
-
 
 impl<T: Integer> Loc<T> {
     pub fn set(&mut self, v: T) {
@@ -33,21 +33,21 @@ impl<T: Integer> Display for Loc<T> {
 }
 
 impl<T: Integer> LocEntry<'_, T> {
-    pub fn set(&mut self, v: T) {
-        self.inner.set(v);
+    pub fn set(&self, v: T) {
+        self.inner.set(Loc::Init(v));
     }
     
-    pub fn get(&mut self) -> Result<T, RunError<T>> {
-        match self.inner {
+    pub fn get(&self) -> Result<T, RunError<T>> {
+        match self.inner.get() {
             Loc::Uninit => Err(RunError::ReadUninit { adr: self.adr }),
-            Loc::Init(v) => Ok(*v),
+            Loc::Init(v) => Ok(v),
         }
     }
 }
 
 impl<T: Integer> Display for LocEntry<'_, T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "R{} = {}", self.adr, self.inner)
+        write!(f, "R{} = {}", self.adr, self.inner.get())
     }
 }
 
@@ -61,7 +61,7 @@ impl<T: Integer> Value<T> {
 }
 
 impl Register {
-    pub fn loc<'ram, T: Integer, I: Iterator<Item = T>>(&self, ram: &'ram mut Ram<T, I>) -> Result<LocEntry<'ram, T>, RunError<T>> {
+    pub fn loc<'ram, T: Integer, I: Iterator<Item = T>>(&self, ram: &'ram Ram<T, I>) -> Result<LocEntry<'ram, T>, RunError<T>> {
         match *self {
             Register::Direct(n) => Ok(ram.loc(n)),
             Register::Indirect(n) => {
