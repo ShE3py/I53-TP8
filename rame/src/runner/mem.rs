@@ -6,21 +6,15 @@ use std::fmt;
 use std::fmt::{Display, Formatter};
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug, Default)]
-pub enum Loc<T: Integer> {
+pub(super) enum Loc<T: Integer> {
     #[default] Uninit,
     Init(T)
 }
 
 #[derive(Clone, Eq, PartialEq, Debug)]
-pub struct LocEntry<'ram, T: Integer> {
+pub(super) struct LocEntry<'ram, T: Integer> {
     pub adr: usize,
     pub inner: &'ram Cell<Loc<T>>,
-}
-
-impl<T: Integer> Loc<T> {
-    pub fn set(&mut self, v: T) {
-        *self = Loc::Init(v);
-    }
 }
 
 impl<T: Integer> Display for Loc<T> {
@@ -33,11 +27,11 @@ impl<T: Integer> Display for Loc<T> {
 }
 
 impl<T: Integer> LocEntry<'_, T> {
-    pub fn set(&self, v: T) {
+    pub(super) fn set(&self, v: T) {
         self.inner.set(Loc::Init(v));
     }
     
-    pub fn get(&self) -> Result<T, RunError<T>> {
+    pub(super) fn get(&self) -> Result<T, RunError<T>> {
         match self.inner.get() {
             Loc::Uninit => Err(RunError::ReadUninit { adr: self.adr }),
             Loc::Init(v) => Ok(v),
@@ -61,7 +55,7 @@ impl<T: Integer> Value<T> {
 }
 
 impl Register {
-    pub fn loc<'ram, T: Integer, I: Iterator<Item = T>>(&self, ram: &'ram Ram<T, I>) -> Result<LocEntry<'ram, T>, RunError<T>> {
+    pub(super) fn loc<'ram, T: Integer, I: Iterator<Item = T>>(&self, ram: &'ram Ram<T, I>) -> Result<LocEntry<'ram, T>, RunError<T>> {
         match *self {
             Register::Direct(n) => Ok(ram.loc(n)),
             Register::Indirect(n) => {

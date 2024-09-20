@@ -5,7 +5,7 @@ use std::cell::{Cell, UnsafeCell};
 use std::iter::{self, Fuse};
 use std::process::exit;
 
-pub mod mem;
+mod mem;
 
 type Memory<T> = UnsafeCell<Vec<Cell<Loc<T>>>>;
 
