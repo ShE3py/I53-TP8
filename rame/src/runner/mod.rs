@@ -1,5 +1,5 @@
 use crate::error::{format_err, format_help, RunError};
-use crate::model::{Instruction, Integer, Ir, Register, RoCode, Value};
+use crate::model::{Address, Instruction, Integer, Ir, Register, RoCode, Value};
 use crate::runner::mem::{Loc, LocEntry};
 use std::cell::{Cell, UnsafeCell};
 use std::hint::assert_unchecked;
@@ -46,9 +46,7 @@ impl<T: Integer, I: Iterator<Item = T>> Ram<T, I> {
     }
     
     /// Executes the next instruction.
-    pub fn step(&mut self) -> Result<bool /* continue */, RunError<T>> {
-        self.ir += 1;
-        
+    pub fn step(&mut self) -> Result<(), RunError<T>> {
         match self.inst {
             Instruction::Read => {
                 let Some(v) = self.input.next() else {
@@ -91,35 +89,37 @@ impl<T: Integer, I: Iterator<Item = T>> Ram<T, I> {
                 self.binop(v, |a, b| Some(a.rem(*b)))?;
             },
             Instruction::Jump(addr) => {
-                self.ir = addr.get(self)?;
+                return self.jump(addr);
             }
             Instruction::JumpZero(addr) => {
                 if self.acc().get()?.is_zero() {
-                    self.ir = addr.get(self)?;
+                    return self.jump(addr);
                 }
             },
             Instruction::JumpLtz(addr) => {
                 if self.acc().get()? < T::zero() {
-                    self.ir = addr.get(self)?;
+                    return self.jump(addr);
                 }
             },
             Instruction::JumpGtz(addr) => {
                 if self.acc().get()? > T::zero() {
-                    self.ir = addr.get(self)?;
+                    return self.jump(addr);
                 }
             },
             Instruction::Stop => {
-                return Ok(false);
+                return Ok(());
             }
             Instruction::Nop => {}
         }
         
+        self.ir += 1;
         match self.code.get(self.ir) {
-            Some(inst) => self.inst = inst,
-            None => return Err(RunError::Eof),
+            Some(inst) => {
+                self.inst = inst;
+                Ok(())
+            },
+            None => Err(RunError::Eof),
         }
-        
-        Ok(true)
     }
     
     /// Either `INC` or `DEC`.
@@ -136,14 +136,23 @@ impl<T: Integer, I: Iterator<Item = T>> Ram<T, I> {
         f(&acc, &v).map(|r| self.acc().set(r)).ok_or(RunError::IntegerOverfow)
     }
     
+    /// Jumps at the specified address, updating the current instruction.
+    fn jump(&mut self, adr: Address) -> Result<(), RunError<T>> {
+        let (ir, inst) = adr.get(self)?;
+        
+        self.ir = ir;
+        self.inst = inst;
+        Ok(())
+    }
+    
     /// Runs the whole program, and returns its output.
     pub fn run(mut self) -> Vec<T> {
         loop {
             let ir = self.ir;
             
             match self.step() {
-                Ok(true) => continue,
-                Ok(false) => break self.output,
+                Ok(()) if self.inst == Instruction::Stop => break self.output,
+                Ok(()) => continue,
                 Err(e) => self.emit_err(ir, e),
             }
         }
@@ -460,7 +469,7 @@ mod test {
     }
     
     #[test]
-    #[should_panic = "jumping to an inexistent location"]
+    #[should_panic = "jumping to an invalid location"]
     #[cfg(feature = "dynamic_jumps")]
     fn jump_negative() {
         Ram::<_, _>::run([

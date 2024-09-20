@@ -1,5 +1,5 @@
 use crate::error::RunError;
-use crate::model::{Address, Integer, Ir, Register, Value};
+use crate::model::{Address, Instruction, Integer, Ir, Register, Value};
 use crate::runner::Ram;
 use std::cell::Cell;
 use std::fmt;
@@ -65,7 +65,8 @@ impl Register {
 }
 
 impl Address {
-    pub fn get<T: Integer, I: Iterator<Item = T>>(&self, ram: &mut Ram<T, I>) -> Result<Ir, RunError<T>> {
+    #[cfg_attr(not(feature = "dynamic_jumps"), expect(clippy::trivially_copy_pass_by_ref))]
+    pub(super) fn get<T: Integer, I: Iterator<Item = T>>(&self, ram: &Ram<T, I>) -> Result<(Ir, Instruction<T>), RunError<T>> {
         #[cfg(not(feature = "dynamic_jumps"))]
         let ir = *self;
         
@@ -74,15 +75,12 @@ impl Address {
             Address::Constant(adr) => adr,
             Address::Register(adr) => {
                 let adr = ram.loc(adr).get()?;
-                adr.try_into().map(Ir::new).map_err(|_| RunError::InexistentJump)?
+                adr.try_into().map(Ir::new).map_err(|err| RunError::InvalidJump { err })?
             }
         };
         
-        if ir >= ram.code.len() {
-            return Err(RunError::InexistentJump);
-        }
         
-        Ok(ir)
+        ram.code.get(ir).map_or(Err(RunError::InexistentJump), |inst| Ok((ir, inst)))
     }
 }
 
