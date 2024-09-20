@@ -1,4 +1,4 @@
-//! The implemtation model of the [random-access machines.](https://en.wikipedia.org/wiki/Random-access_machine)
+//! The implementation model of a [random-access machine.](https://en.wikipedia.org/wiki/Random-access_machine)
 
 use num_traits::PrimInt;
 use std::error::Error;

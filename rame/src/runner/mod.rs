@@ -1,3 +1,5 @@
+//! An emulator for RAM programs.
+
 use crate::error::{format_err, format_help};
 use crate::model::{Address, Instruction, Integer, Ir, Register, RoCode, Value};
 use crate::runner::mem::{Loc, LocEntry};
@@ -13,6 +15,26 @@ pub use error::RunError;
 
 type Memory<T> = UnsafeCell<Vec<Cell<Loc<T>>>>;
 
+/// A process for a RAM program.
+///
+/// The type parameter `I` is an iterator consumed by [`Instruction::Read`],
+/// allowing input to be read lazily (e.g. interactivly through a terminal).
+///
+/// # Example
+///
+/// ```
+/// # use rame::inst;
+/// # use rame::model::RoCode;
+/// # use rame::runner::Ram;
+/// let code = RoCode::from([
+///     inst!(READ),
+///     inst!(ADD #2),
+///     inst!(WRITE),
+///     inst!(STOP),
+/// ]);
+/// let ram = Ram::new(code, [1]);
+/// assert_eq!(ram.run(), [3]);
+/// ```
 #[derive(Debug)]
 #[must_use]
 pub struct Ram<T: Integer, I: Iterator<Item = T>> {
@@ -28,6 +50,7 @@ pub struct Ram<T: Integer, I: Iterator<Item = T>> {
 }
 
 impl<T: Integer, I: Iterator<Item = T>> Ram<T, I> {
+    /// Creates a new `Ram` from its source code and input.
     pub fn new(code: RoCode<T>, input: impl IntoIterator<IntoIter = I>) -> Ram<T, I> {
         let Some(inst) = code.first().copied() else {
             if cfg!(test) {
@@ -219,6 +242,7 @@ impl<T: Integer, I: Iterator<Item = T>> Ram<T, I> {
         exit(1);
     }
     
+    /// Returns `self`'s current output.
     #[inline]
     pub fn output(&self) -> &[T] {
         &self.output
@@ -255,18 +279,16 @@ impl<T: Integer, I: Iterator<Item = T>> Ram<T, I> {
         self.loc(0)
     }
     
+    /// Returns `self`'s source code.
     #[inline]
     pub const fn code(&self) -> &RoCode<T> {
         &self.code
     }
-    
-    #[inline]
-    pub const fn ir(&self) -> Ir {
-        self.ir
-    }
 }
 
 impl<T: Integer, I: Iterator<Item = T> + Default> Default for Ram<T, I> {
+    /// Returns a process with only a [`STOP` instruction,](`Instruction::Stop`)
+    /// and `I::default()` input.
     fn default() -> Self {
         Ram {
             input: I::default().fuse(),
@@ -280,29 +302,38 @@ impl<T: Integer, I: Iterator<Item = T> + Default> Default for Ram<T, I> {
 }
 
 impl<T: Integer> Ram<T, iter::Empty<T>> {
-    /// Returns a program
+    /// Returns a process with only a [`STOP` instruction,](`Instruction::Stop`)
+    /// and no input.
     pub fn empty() -> Self {
         Self::default()
     }
     
+    /// Creates a process for the specified source code,
+    /// and no input.
     pub fn without_inputs(code: RoCode<T>) -> Self {
         Self::new(code, iter::empty())
     }
 }
 
 impl<T: Integer> From<RoCode<T>> for Ram<T, iter::Empty<T>> {
+    /// Creates a process for the specified source code,
+    /// and no input.
     fn from(code: RoCode<T>) -> Self {
         Self::without_inputs(code)
     }
 }
 
 impl<T: Integer> From<&[Instruction<T>]> for Ram<T, iter::Empty<T>> {
+    /// Creates a process for the specified source code,
+    /// and no input.
     fn from(code: &[Instruction<T>]) -> Self {
         Self::without_inputs(code.into())
     }
 }
 
 impl<T: Integer, const N: usize> From<[Instruction<T>; N]> for Ram<T, iter::Empty<T>> {
+    /// Creates a process for the specified source code,
+    /// and no input.
     fn from(code: [Instruction<T>; N]) -> Self {
         Self::without_inputs(code.into())
     }

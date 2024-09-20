@@ -44,7 +44,7 @@ impl<T: Integer> Clone for RunError<T> where <T as TryInto<usize>>::Error: Clone
             RunError::InvalidAddress { adr, err } => RunError::InvalidAddress { adr: *adr, err: err.clone() },
             RunError::IntegerOverfow => RunError::IntegerOverfow,
             RunError::InexistentJump => RunError::InexistentJump,
-            RunError::InvalidJump { err } => RunError::InvalidJump { err: err.clone() },
+            #[cfg(feature = "dynamic_jumps")] RunError::InvalidJump { err } => RunError::InvalidJump { err: err.clone() },
             RunError::Eof => RunError::Eof,
         }
     }
@@ -60,7 +60,7 @@ impl<T: Integer> PartialEq for RunError<T> where <T as TryInto<usize>>::Error: P
             RunError::InvalidAddress { adr, err } => matches!(other, RunError::InvalidAddress { adr: adr1, err: err1 } if adr == adr1 && err == err1),
             RunError::IntegerOverfow => matches!(other, RunError::IntegerOverfow),
             RunError::InexistentJump => matches!(other, RunError::InexistentJump),
-            RunError::InvalidJump { err } => matches!(other, RunError::InvalidJump { err: err1 } if err == err1),
+            #[cfg(feature = "dynamic_jumps")]  RunError::InvalidJump { err } => matches!(other, RunError::InvalidJump { err: err1 } if err == err1),
             RunError::Eof => matches!(other, RunError::Eof),
         }
     }
@@ -74,7 +74,7 @@ impl<T: Integer> Display for RunError<T> {
             RunError::InvalidAddress { adr, err } => write!(f, "invalid address R{adr}: {err}"),
             RunError::IntegerOverfow => f.write_str("integer overflow"),
             RunError::InexistentJump => f.write_str("jumping to an inexistent location"),
-            RunError::InvalidJump { err } => write!(f, "jumping to an invalid location: {err}"),
+            #[cfg(feature = "dynamic_jumps")]  RunError::InvalidJump { err } => write!(f, "jumping to an invalid location: {err}"),
             RunError::Eof => f.write_str("unexpected end of file"),
         }
     }
@@ -83,7 +83,8 @@ impl<T: Integer> Display for RunError<T> {
 impl<T: Integer> Error for RunError<T> {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
-            RunError::InvalidAddress { adr: _, err } | RunError::InvalidJump { err } => Some(err),
+            RunError::InvalidAddress { adr: _, err } => Some(err),
+            #[cfg(feature = "dynamic_jumps")]  RunError::InvalidJump { err } => Some(err),
             _ => None,
         }
     }

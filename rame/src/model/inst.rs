@@ -4,7 +4,7 @@ use std::fmt::{Display, Formatter, Write};
 use std::num::ParseIntError;
 use std::str::FromStr;
 
-/// Represents a [random-access machine](https://en.wikipedia.org/wiki/Random-access_machine) instruction.
+/// Represents an instruction.
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug, Default)]
 pub enum Instruction<T: Integer> {
     Read,
@@ -34,7 +34,7 @@ pub enum Value<T: Integer> {
     Register(Register),
 }
 
-/// The value of a registrer.
+/// The value of a register.
 /// Read-write memory access.
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
 pub enum Register {
