@@ -27,13 +27,13 @@ macro_rules! inst {
     (MOD #$n:literal) => { $crate::model::Instruction::Mod($crate::model::Value::Constant($n)) };
     (MOD $n:literal) => { $crate::model::Instruction::Mod($crate::model::Value::Register($crate::model::Register::Direct($n))) };
     (MOD @$n:literal) => { $crate::model::Instruction::Mod($crate::model::Value::Register($crate::model::Register::Indirect($n))) };
-    (JUMP $n:literal) => { $crate::model::Instruction::Jump($crate::model::Address::Constant($n)) };
+    (JUMP $n:literal) => { $crate::model::Instruction::Jump($crate::model::Address::from($crate::model::Ir::new($n))) };
     (JUMP @$n:literal) => { $crate::model::Instruction::Jump($crate::model::Address::Register($n)) };
-    (JUMZ $n:literal) => { $crate::model::Instruction::JumpZero($crate::model::Address::Constant($n)) };
+    (JUMZ $n:literal) => { $crate::model::Instruction::JumpZero($crate::model::Address::from($crate::model::Ir::new($n))) };
     (JUMZ @$n:literal) => { $crate::model::Instruction::JumpZero($crate::model::Address::Register($n)) };
-    (JUML $n:literal) => { $crate::model::Instruction::JumpLtz($crate::model::Address::Constant($n)) };
+    (JUML $n:literal) => { $crate::model::Instruction::JumpLtz($crate::model::Address::from($crate::model::Ir::new($n))) };
     (JUML @$n:literal) => { $crate::model::Instruction::JumpLtz($crate::model::Address::Register($n)) };
-    (JUMG $n:literal) => { $crate::model::Instruction::JumpGtz($crate::model::Address::Constant($n)) };
+    (JUMG $n:literal) => { $crate::model::Instruction::JumpGtz($crate::model::Address::from($crate::model::Ir::new($n))) };
     (JUMG @$n:literal) => { $crate::model::Instruction::JumpGtz($crate::model::Address::Register($n)) };
     (STOP) => { $crate::model::Instruction::Stop };
     (NOP) => { $crate::model::Instruction::Nop };

@@ -1,5 +1,5 @@
 use crate::error::{format_err, format_help, RunError};
-use crate::model::{Instruction, Integer, Register, RoCode, Value};
+use crate::model::{Instruction, Integer, Ir, Register, RoCode, Value};
 use crate::runner::mem::{Loc, LocEntry};
 use std::cell::{Cell, UnsafeCell};
 use std::hint::assert_unchecked;
@@ -20,7 +20,7 @@ pub struct Ram<T: Integer, I: Iterator<Item = T>> {
     /// The next instruction to run.
     inst: Instruction<T>,
     /// Instruction register (the index of `inst`).
-    ir: usize,
+    ir: Ir,
 }
 
 impl<T: Integer, I: Iterator<Item = T>> Ram<T, I> {
@@ -37,11 +37,11 @@ impl<T: Integer, I: Iterator<Item = T>> Ram<T, I> {
         
         Ram {
             input: input.into_iter().fuse(),
-            output: vec![],
+            output: Vec::default(),
             memory: Memory::default(),
             code,
             inst,
-            ir: 0,
+            ir: Ir::default(),
         }
     }
     
@@ -114,7 +114,7 @@ impl<T: Integer, I: Iterator<Item = T>> Ram<T, I> {
             Instruction::Nop => {}
         }
         
-        match self.code.get(self.ir).copied() {
+        match self.code.get(self.ir) {
             Some(inst) => self.inst = inst,
             None => return Err(RunError::Eof),
         }
@@ -150,18 +150,18 @@ impl<T: Integer, I: Iterator<Item = T>> Ram<T, I> {
     }
     
     #[expect(clippy::needless_pass_by_value)]
-    fn emit_err(&self, ir: usize, e: RunError<T>) -> ! {
+    fn emit_err(&self, ir: Ir, e: RunError<T>) -> ! {
         let path = "anon".as_ref();
-        let inst = self.code.get(ir).copied();
+        let inst = self.code.get(ir);
         let snip = inst.map(|inst| inst.to_string()).unwrap_or_default();
-        let mut err = format_err(path, &snip, ir, e.to_string());
+        let mut err = format_err(path, &snip, ir.inner(), e.to_string());
         
         if !matches!(e, RunError::Eof | RunError::ReadUninit { .. }) {
             if let Some(inst) = inst {
                 // Show ACC value
                 if inst.should_print_acc() {
                     err.push('\n');
-                    err.push_str(&format_help(path, ir, format!("ACC = {}", self.acc().inner.get())));
+                    err.push_str(&format_help(path, ir.inner(), format!("ACC = {}", self.acc().inner.get())));
                 }
                 
                 // Show register value
@@ -170,7 +170,7 @@ impl<T: Integer, I: Iterator<Item = T>> Ram<T, I> {
                         let loc = self.loc(adr);
                         
                         err.push('\n');
-                        err.push_str(&format_help(path, ir, loc));
+                        err.push_str(&format_help(path, ir.inner(), loc));
                     },
                     Some(Register::Indirect(adr)) => {
                         let val = self.loc(adr).get().unwrap();
@@ -182,7 +182,7 @@ impl<T: Integer, I: Iterator<Item = T>> Ram<T, I> {
                         let msg = loc.map_or_else(|err| format!("<{err}>"), |val| val.to_string());
                         
                         err.push('\n');
-                        err.push_str(&format_help(path, ir, msg));
+                        err.push_str(&format_help(path, ir.inner(), msg));
                         
                     },
                     _ => {},
@@ -193,11 +193,11 @@ impl<T: Integer, I: Iterator<Item = T>> Ram<T, I> {
         match e {
             RunError::IntegerOverfow => {
                 err.push('\n');
-                err.push_str(&format_help(path, ir, format!("using `--bits={}`; only values from {} to {} are accepted.", size_of::<T>() * 8, &T::min_value(), &T::max_value())));
+                err.push_str(&format_help(path, ir.inner(), format!("using `--bits={}`; only values from {} to {} are accepted.", size_of::<T>() * 8, &T::min_value(), &T::max_value())));
             },
             RunError::Eof => {
                 err.push('\n');
-                err.push_str(&format_help(path, ir, "missing `STOP`?"));
+                err.push_str(&format_help(path, ir.inner(), "missing `STOP`?"));
             },
             _ => {}
         }
@@ -206,6 +206,7 @@ impl<T: Integer, I: Iterator<Item = T>> Ram<T, I> {
         exit(1);
     }
     
+    #[inline]
     pub fn output(&self) -> &[T] {
         &self.output
     }
@@ -236,15 +237,18 @@ impl<T: Integer, I: Iterator<Item = T>> Ram<T, I> {
         }
     }
     
+    #[inline]
     fn acc(&self) -> LocEntry<'_, T> {
         self.loc(0)
     }
     
+    #[inline]
     pub const fn code(&self) -> &RoCode<T> {
         &self.code
     }
     
-    pub const fn ir(&self) -> usize {
+    #[inline]
+    pub const fn ir(&self) -> Ir {
         self.ir
     }
 }
@@ -257,7 +261,7 @@ impl<T: Integer, I: Iterator<Item = T> + Default> Default for Ram<T, I> {
             memory: Memory::default(),
             code: RoCode::default(),
             inst: Instruction::Stop,
-            ir: 0,
+            ir: Ir::default(),
         }
     }
 }

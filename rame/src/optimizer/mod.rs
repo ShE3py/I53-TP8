@@ -1,16 +1,15 @@
-use crate::model::{Address, Instruction, Integer, RoCode, Value};
+use crate::model::{Address, Instruction, Integer, Ir, RoCode, Value};
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::ops::Neg;
 
-fn collect_jump_targets<T: Integer>(code: &RoCode<T>, modified_ir: &HashMap<usize, Instruction<T>>) -> Vec<usize> {
+fn collect_jump_targets<T: Integer>(code: &RoCode<T>, modified_ir: &HashMap<Ir, Instruction<T>>) -> Vec<Ir> {
     let mut jt = Vec::new();
-    for (ir, inst) in code.iter().enumerate() {
-        let inst = modified_ir.get(&ir).copied().unwrap_or(*inst);
+    for (ir, inst) in code.iter() {
+        let inst = modified_ir.get(&ir).copied().unwrap_or(inst);
         
         match inst {
             Instruction::Jump(adr) | Instruction::JumpZero(adr) | Instruction::JumpLtz(adr) | Instruction::JumpGtz(adr) => {
-                let Address::Constant(adr) = adr;
                 jt.push(adr);
             },
             _ => {},
@@ -26,18 +25,18 @@ fn collect_jump_targets<T: Integer>(code: &RoCode<T>, modified_ir: &HashMap<usiz
 pub struct SeqRewriter<'ro, T: Integer> {
     code: &'ro RoCode<T>,
     /// First element is the index of a jumped-to instruction, second is the count of instructions added/removed up to that instruction.
-    deltas: Vec<(usize, isize)>,
+    deltas: Vec<(Ir, isize)>,
     /// List of deleted indices.
-    deleted_ir: Vec<usize>,
+    deleted_ir: Vec<Ir>,
     /// List of modified indices + new instruction.
-    modified_ir: HashMap<usize, Instruction<T>>,
+    modified_ir: HashMap<Ir, Instruction<T>>,
 }
 
 impl<'ro, T: Integer> From<&'ro RoCode<T>> for SeqRewriter<'ro, T> {
     fn from(code: &'ro RoCode<T>) -> Self {
         let modified_ir = HashMap::new();
         let mut deltas = collect_jump_targets(code, &modified_ir).into_iter().map(|jt| (jt, 0)).collect::<Vec<_>>();
-        deltas.push((code.len(), 0));
+        deltas.push((Ir::new(code.len()), 0));
         
         SeqRewriter {
             code,
@@ -51,7 +50,7 @@ impl<'ro, T: Integer> From<&'ro RoCode<T>> for SeqRewriter<'ro, T> {
 impl<T: Integer> SeqRewriter<'_, T> {
     // DELETION
     
-    pub(crate) fn delete_ir(&mut self, ir: usize) {
+    pub(crate) fn delete_ir(&mut self, ir: Ir) {
         if self.deleted_ir.contains(&ir) {
             return;
         }
@@ -70,14 +69,12 @@ impl<T: Integer> SeqRewriter<'_, T> {
     }
     
     fn update_adr(&self, adr: Address) -> Address {
-        let Address::Constant(adr) = adr;
-        
         let mut i = 0;
         while i < self.deltas.len() && self.deltas[i].0 < adr {
             i += 1;
         }
         
-        Address::Constant(adr.checked_add_signed(self.deltas[i].1).expect("integer overflow"))
+        adr.checked_add_signed(self.deltas[i].1).expect("integer overflow")
     }
     
     fn rewrite_inst(&self, inst: Instruction<T>) -> Instruction<T> {
@@ -93,7 +90,7 @@ impl<T: Integer> SeqRewriter<'_, T> {
     // MODIFICATION
     
     /// Returns `true` iff there's a jump entry point in `]ir0, ir1]`.
-    pub(crate) fn can_combine(&self, ir0: usize, ir1: usize) -> bool {
+    pub(crate) fn can_combine(&self, ir0: Ir, ir1: Ir) -> bool {
         debug_assert!(ir1 > ir0);
         debug_assert!(ir1 <= self.code.len());
         
@@ -110,7 +107,7 @@ impl<T: Integer> SeqRewriter<'_, T> {
     }
     
     /// Returns the next non-deleted IR.
-    pub(crate) fn next_ir(&mut self, ir0: usize) -> usize {
+    pub(crate) fn next_ir(&mut self, ir0: Ir) -> Ir {
         self.deleted_ir.sort_unstable();
         
         let mut ir1 = ir0 + 1;
@@ -121,7 +118,7 @@ impl<T: Integer> SeqRewriter<'_, T> {
         ir1
     }
     
-    pub(crate) fn set_ir(&mut self, ir: usize, inst: Instruction<T>) {
+    pub(crate) fn set_ir(&mut self, ir: Ir, inst: Instruction<T>) {
         assert!(!self.deleted_ir.contains(&ir));
         self.modified_ir.insert(ir, inst);
     }
@@ -135,7 +132,7 @@ impl<T: Integer> SeqRewriter<'_, T> {
 impl<'ro, T: Integer> From<&mut SeqRewriter<'ro, T>> for RoCode<T> {
     fn from(rewriter: &mut SeqRewriter<'ro, T>) -> Self {
         rewriter.deleted_ir.sort_unstable();
-        rewriter.code.iter().copied().enumerate()
+        rewriter.code.iter()
             .filter(|(ir, _)| rewriter.deleted_ir.binary_search(ir).is_err())
             .map(|(ir, inst)| (ir, rewriter.modified_ir.get(&ir).copied().unwrap_or(inst)))
             .map(|(_, inst)| rewriter.rewrite_inst(inst))
@@ -145,16 +142,16 @@ impl<'ro, T: Integer> From<&mut SeqRewriter<'ro, T>> for RoCode<T> {
 
 impl<T: Integer> SeqRewriter<'_, T> {
     pub fn remove_nops(&mut self) -> &mut Self {
-        self.code.iter().enumerate().filter(|(_, inst)| **inst == Instruction::Nop).for_each(|(ir, _)| self.delete_ir(ir));
+        self.code.iter().filter(|(_, inst)| *inst == Instruction::Nop).for_each(|(ir, _)| self.delete_ir(ir));
         self
     }
     
     pub fn follow_jumps(&mut self) -> &mut Self {
-        let final_adr = |initial_adr: usize| -> Option<usize> {
+        let final_adr = |initial_adr: Address| -> Option<Address> {
             let mut path = vec![initial_adr];
             
             let mut adr = initial_adr;
-            while let Some(Instruction::Jump(Address::Constant(to))) = self.code.get(adr).copied() {
+            while let Some(Instruction::Jump(to)) = self.code.get(adr) {
                 if path.contains(&to) {
                     return None;
                 }
@@ -166,26 +163,26 @@ impl<T: Integer> SeqRewriter<'_, T> {
             Some(adr).filter(|adr| *adr != initial_adr)
         };
         
-        for (ir, inst) in self.code.iter().copied().enumerate() {
+        for (ir, inst) in self.code.iter() {
             match inst {
-                Instruction::Jump(Address::Constant(adr)) => {
+                Instruction::Jump(adr) => {
                     if let Some(adr) = final_adr(adr) {
-                        self.set_ir(ir, Instruction::Jump(Address::Constant(adr)));
+                        self.set_ir(ir, Instruction::Jump(adr));
                     }
                 },
-                Instruction::JumpZero(Address::Constant(adr)) => {
+                Instruction::JumpZero(adr) => {
                     if let Some(adr) = final_adr(adr) {
-                        self.set_ir(ir, Instruction::JumpZero(Address::Constant(adr)));
+                        self.set_ir(ir, Instruction::JumpZero(adr));
                     }
                 },
-                Instruction::JumpLtz(Address::Constant(adr)) => {
+                Instruction::JumpLtz(adr) => {
                     if let Some(adr) = final_adr(adr) {
-                        self.set_ir(ir, Instruction::JumpLtz(Address::Constant(adr)));
+                        self.set_ir(ir, Instruction::JumpLtz(adr));
                     }
                 },
-                Instruction::JumpGtz(Address::Constant(adr)) => {
+                Instruction::JumpGtz(adr) => {
                     if let Some(adr) = final_adr(adr) {
-                        self.set_ir(ir, Instruction::JumpGtz(Address::Constant(adr)));
+                        self.set_ir(ir, Instruction::JumpGtz(adr));
                     }
                 },
                 _ => {},
@@ -223,39 +220,32 @@ impl<T: Integer> SeqRewriter<'_, T> {
     
     pub fn remove_dead_code(&mut self) -> &mut Self {
         let mut reachable = vec![false; self.code.len()];
-        self.find_reachable_code_ir(0, &mut reachable);
+        self.find_reachable_code_ir(Ir::default(), &mut reachable);
         
-        #[allow(clippy::needless_range_loop)]
-        for ir in 0..reachable.len() {
-            if !reachable[ir] {
-                self.delete_ir(ir);
-            }
-        }
-        
+        reachable.into_iter().enumerate().filter_map(|(i, reachable)| (!reachable).then_some(Ir::new(i))).for_each(|ir| self.delete_ir(ir));
         self
     }
     
     /// Mark reachable code starting at the specified instruction into the specified vector.
-    fn find_reachable_code_ir(&mut self, mut ir: usize, reachable: &mut Vec<bool>) {
-        if reachable[ir] {
+    fn find_reachable_code_ir(&mut self, mut ir: Ir, reachable: &mut Vec<bool>) {
+        if reachable[ir.inner()] {
             return;
         }
         
-        while let Some(inst) = self.code.get(ir).copied() {
-            reachable[ir] = true;
+        while let Some(inst) = self.code.get(ir) {
+            reachable[ir.inner()] = true;
             ir += 1;
             
             match inst {
                 Instruction::Stop => return,
-                Instruction::Jump(Address::Constant(adr)) => {
-                    if reachable[adr] {
+                Instruction::Jump(adr) => {
+                    if reachable[adr.inner()] {
                         return;
                     }
                     
                     ir = adr;
                 },
                 Instruction::JumpZero(adr) | Instruction::JumpLtz(adr) | Instruction::JumpGtz(adr) => {
-                    let Address::Constant(adr) = adr;
                     self.find_reachable_code_ir(adr, reachable);
                 },
                 _ => {},
@@ -266,10 +256,9 @@ impl<T: Integer> SeqRewriter<'_, T> {
     }
     
     pub fn combine_jumps(&mut self) -> &mut Self {
-        for (ir, inst) in self.code.iter().copied().enumerate() {
+        for (ir, inst) in self.code.iter() {
             match inst {
                 Instruction::Jump(adr) | Instruction::JumpZero(adr) | Instruction::JumpLtz(adr) | Instruction::JumpGtz(adr) => {
-                    let Address::Constant(adr) = adr;
                     let next_ir = self.next_ir(ir);
                     
                     if adr == next_ir {
@@ -287,10 +276,10 @@ impl<T: Integer> SeqRewriter<'_, T> {
 
 impl<T: Integer + Neg<Output = T>> SeqRewriter<'_, T> {
     /// Simplifies add/subs; returns where to continue the search.
-    fn combine_adds(&mut self, ir0: usize) -> usize {
+    fn combine_adds(&mut self, ir0: Ir) -> Ir {
         let mut ir1 = ir0 + 1;
         
-        let mut v = match self.code.get(ir0).copied() {
+        let mut v = match self.code.get(ir0) {
             Some(Instruction::Add(Value::Constant(v))) => v,
             Some(Instruction::Sub(Value::Constant(v))) => -v,
             _ => return ir0,
@@ -305,7 +294,7 @@ impl<T: Integer + Neg<Output = T>> SeqRewriter<'_, T> {
         }
         
         loop {
-            let v1 = match self.code.get(ir1).copied() {
+            let v1 = match self.code.get(ir1) {
                 Some(Instruction::Add(Value::Constant(v))) => v,
                 Some(Instruction::Sub(Value::Constant(v))) => -v,
                 Some(Instruction::Mul(Value::Constant(v))) if v == T::one() => T::zero(),
@@ -332,10 +321,10 @@ impl<T: Integer + Neg<Output = T>> SeqRewriter<'_, T> {
     }
     
     /// Simplifies muls; returns where to continue the search.
-    fn combine_muls(&mut self, ir0: usize) -> usize {
+    fn combine_muls(&mut self, ir0: Ir) -> Ir {
         let mut ir1 = ir0 + 1;
         
-        let Some(Instruction::Mul(Value::Constant(mut v))) = self.code.get(ir0).copied() else {
+        let Some(Instruction::Mul(Value::Constant(mut v))) = self.code.get(ir0) else {
             return ir0;
         };
         
@@ -353,7 +342,7 @@ impl<T: Integer + Neg<Output = T>> SeqRewriter<'_, T> {
         }
         
         loop {
-            let Some(Instruction::Mul(Value::Constant(v1))) = self.code.get(ir1).copied() else {
+            let Some(Instruction::Mul(Value::Constant(v1))) = self.code.get(ir1) else {
                 break;
             };
             
@@ -380,10 +369,10 @@ impl<T: Integer + Neg<Output = T>> SeqRewriter<'_, T> {
     }
     
     // Simplifies divs; returns where to continue the search.
-    fn combine_divs(&mut self, ir0: usize) -> usize {
+    fn combine_divs(&mut self, ir0: Ir) -> Ir {
         let mut ir1 = ir0 + 1;
         
-        let Some(Instruction::Div(Value::Constant(mut v))) = self.code.get(ir0).copied() else {
+        let Some(Instruction::Div(Value::Constant(mut v))) = self.code.get(ir0) else {
             return ir0;
         };
         
@@ -396,7 +385,7 @@ impl<T: Integer + Neg<Output = T>> SeqRewriter<'_, T> {
         }
         
         loop {
-            let Some(Instruction::Div(Value::Constant(v1))) = self.code.get(ir1).copied() else {
+            let Some(Instruction::Div(Value::Constant(v1))) = self.code.get(ir1) else {
                 break;
             };
             
@@ -420,7 +409,7 @@ impl<T: Integer + Neg<Output = T>> SeqRewriter<'_, T> {
     }
     
     pub fn combine_consts(&mut self) -> &mut Self {
-        let mut ir = 0;
+        let mut ir = Ir::default();
         while ir < self.code.len() {
             let _ir = ir;
             ir = self.combine_adds(ir);
@@ -443,8 +432,7 @@ impl<T: Integer + Neg<Output = T>> SeqRewriter<'_, T> {
 #[cfg(test)]
 mod test {
     use crate::inst;
-    use crate::model::RoCode;
-    use crate::optimizer::SeqRewriter;
+    use super::*;
     
     #[test]
     fn remove_nops() {
@@ -476,7 +464,7 @@ mod test {
         ]);
         
         let rewriter = SeqRewriter::from(&code);
-        assert!(!rewriter.can_combine(1, 2));
+        assert!(!rewriter.can_combine(Ir::new(1), Ir::new(2)));
     }
     
     #[test]

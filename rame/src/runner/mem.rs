@@ -1,5 +1,5 @@
 use crate::error::RunError;
-use crate::model::{Address, Integer, Register, Value};
+use crate::model::{Address, Integer, Ir, Register, Value};
 use crate::runner::Ram;
 use std::cell::Cell;
 use std::fmt;
@@ -65,16 +65,16 @@ impl Register {
 }
 
 impl Address {
-    pub fn get<T: Integer, I: Iterator<Item = T>>(&self, ram: &mut Ram<T, I>) -> Result<usize, RunError<T>> {
-        #[cfg_attr(feature = "optimizer", expect(clippy::infallible_destructuring_match))]
+    pub fn get<T: Integer, I: Iterator<Item = T>>(&self, ram: &mut Ram<T, I>) -> Result<Ir, RunError<T>> {
+        #[cfg(not(feature = "dynamic_jumps"))]
+        let ir = *self;
+        
+        #[cfg(feature = "dynamic_jumps")]
         let ir = match *self {
             Address::Constant(adr) => adr,
-            #[cfg(feature = "dynamic_jumps")]
             Address::Register(adr) => {
                 let adr = ram.loc(adr).get()?;
-                
-                #[allow(clippy::map_err_ignore)]
-                adr.try_into().map_err(|_| RunError::InexistentJump)?
+                adr.try_into().map(Ir::new).map_err(|_| RunError::InexistentJump)?
             }
         };
         

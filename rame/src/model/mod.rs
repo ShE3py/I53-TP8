@@ -4,10 +4,12 @@ use std::fmt::{Debug, Display};
 use std::str::FromStr;
 
 mod inst;
+mod ir;
 mod makro;
 mod ro;
 
 pub use inst::{Address, Instruction, Register, Value};
+pub use ir::Ir;
 pub use ro::RoCode;
 
 pub trait Integer: PrimInt

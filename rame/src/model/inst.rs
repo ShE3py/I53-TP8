@@ -1,5 +1,5 @@
 use crate::error::ParseInstructionError;
-use crate::model::Integer;
+use crate::model::{Integer, Ir};
 use std::fmt;
 use std::fmt::{Display, Formatter, Write};
 use std::num::ParseIntError;
@@ -38,10 +38,13 @@ pub enum Register {
     Indirect(usize),
 }
 
+#[cfg(not(feature = "dynamic_jumps"))]
+pub type Address = Ir;
+
+#[cfg(feature = "dynamic_jumps")]
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
 pub enum Address {
-    Constant(usize),
-    #[cfg(feature = "dynamic_jumps")]
+    Constant(Ir),
     Register(usize),
 }
 
@@ -50,14 +53,20 @@ impl<T: Integer> Instruction<T> {
     pub const fn register(&self) -> Option<Register> {
         match *self {
             Instruction::Read | Instruction::Write | Instruction::Stop | Instruction::Nop => None,
+            
             Instruction::Load(v) | Instruction::Add(v) | Instruction::Sub(v) | Instruction::Mul(v) | Instruction::Div(v) | Instruction::Mod(v) => match v {
                 Value::Constant(_) => None,
                 Value::Register(reg) => Some(reg),
             },
+            
             Instruction::Store(reg) | Instruction::Increment(reg) | Instruction::Decrement(reg) => Some(reg),
+            
+            #[cfg(not(feature = "dynamic_jumps"))]
+            Instruction::Jump(_) | Instruction::JumpZero(_) | Instruction::JumpLtz(_) | Instruction::JumpGtz(_) => None,
+            
+            #[cfg(feature = "dynamic_jumps")]
             Instruction::Jump(adr) | Instruction::JumpZero(adr) | Instruction::JumpLtz(adr) | Instruction::JumpGtz(adr) => match adr {
                 Address::Constant(_) => None,
-                #[cfg(feature = "dynamic_jumps")]
                 Address::Register(reg) => Some(Register::Direct(reg)),
             },
         }
@@ -236,42 +245,41 @@ impl Register {
     }
 }
 
+#[cfg(feature = "dynamic_jumps")]
 impl FromStr for Address {
     type Err = ParseIntError;
     
-    #[cfg(feature = "dynamic_jumps")]
     fn from_str(mut s: &str) -> Result<Self, Self::Err> {
         let at = s.chars().next().is_some_and(|c| c == '@');
         if at {
             s = &s['@'.len_utf8()..];
         }
         
-        let n = usize::from_str(s)?;
-        Ok(if at { Address::Register(n) } else { Address::Constant(n) })
-    }
-    
-    #[cfg(not(feature = "dynamic_jumps"))]
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        usize::from_str(s).map(Address::Constant)
+        Ok(if at {
+            Address::Register(usize::from_str(s)?)
+        } else {
+            Address::Constant(Ir::from_str(s)?)
+        })
     }
 }
 
+#[cfg(feature = "dynamic_jumps")]
 impl Display for Address {
-    #[cfg(feature = "dynamic_jumps")]
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         if let Address::Register(_) = self {
             f.write_char('@')?;
         }
         
         match self {
-            Address::Constant(n) | Address::Register(n) => Display::fmt(n, f),
+            Address::Constant(n) => Display::fmt(n, f),
+            Address::Register(n) => Display::fmt(n, f),
         }
     }
-    
-    #[cfg(not(feature = "dynamic_jumps"))]
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        match self {
-            Address::Constant(n) => Display::fmt(n, f),
-        }
+}
+
+#[cfg(feature = "dynamic_jumps")]
+impl From<Ir> for Address {
+    fn from(ir: Ir) -> Self {
+        Address::Constant(ir)
     }
 }

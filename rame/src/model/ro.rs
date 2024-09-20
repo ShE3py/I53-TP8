@@ -7,7 +7,7 @@ use std::path::Path;
 use std::process::exit;
 use std::str::FromStr;
 use crate::error::print_err;
-use crate::model::{Instruction, Integer};
+use crate::model::{Instruction, Integer, Ir};
 
 #[derive(Clone, Eq, PartialEq, Hash, Debug)]
 pub struct RoCode<T: Integer>(Vec<Instruction<T>>);
@@ -70,6 +70,16 @@ impl<T: Integer> RoCode<T> {
     pub fn write_to_file<P: AsRef<Path>>(&self, path: P) -> io::Result<()> {
         let f = File::create(path)?;
         self.write(BufWriter::new(f))
+    }
+    
+    #[inline]
+    #[must_use]
+    pub fn get(&self, ir: Ir) -> Option<Instruction<T>> {
+        ir.index(self)
+    }
+    
+    pub fn iter(&self) -> impl Iterator<Item = (Ir, Instruction<T>)> + '_ {
+        Ir::enumerate((**self).iter().copied())
     }
 }
 
