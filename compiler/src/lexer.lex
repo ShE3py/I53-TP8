@@ -3,14 +3,14 @@
 
 #include "parser.h"
 
-extern const char *input;
+extern const char *infile;
 
 void yyerror(const char *s) {
-	fprintf(stderr, "%s:%i: %s\n", input, yylineno, s);
+	fprintf(stderr, "%s:%i: %s\n", infile, yylineno, s);
 	exit(1);
 }
 %}
-  
+
 %option nounput
 %option noinput
 %option yylineno
@@ -84,6 +84,7 @@ void yyerror(const char *s) {
 #.+ {}
 
  /* Tout le reste */
-. { fprintf(stderr, "%1$s:%2$i: caractère inconnu: '%3$c' (%3$u)\n", input, yylineno, (unsigned char) yytext[0]); exit(1); }
+. { fprintf(stderr, "%1$s:%2$i: caractère inconnu: '%3$c' (%3$u)\n", infile, yylineno, (unsigned char) yytext[0]); exit(1); }
 
 %%
+

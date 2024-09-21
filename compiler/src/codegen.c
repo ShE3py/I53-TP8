@@ -3,6 +3,8 @@
 #pragma GCC diagnostic ignored "-Wmain"
 #pragma GCC diagnostic ignored "-Wunused-function"
 
+extern FILE *outfile;
+
 /**
  * Renvoie l'instruction de la machine RAM associée à un opérateur binaire.
  */
@@ -103,7 +105,7 @@ void codegen_nc(asa *p, int *ip) {
 	
 	switch(p->tag) {
 		case TagInt: {
-			printf("LOAD #%i\n", p->tag_int.value);
+			fprintf(outfile, "LOAD #%i\n", p->tag_int.value);
 			++(*ip);
 			
 			break;
@@ -112,9 +114,9 @@ void codegen_nc(asa *p, int *ip) {
 		case TagVar: {
 			symbol var = st_find_or_internal_error(p->tag_var.identifier);
 			
-			printf("LOAD 1\n");
-			printf("ADD #%i\n", var.base_adr);
-			printf("LOAD @0\n");
+			fprintf(outfile, "LOAD 1\n");
+			fprintf(outfile, "ADD #%i\n", var.base_adr);
+			fprintf(outfile, "LOAD @0\n");
 			*ip += 3;
 			
 			break;
@@ -124,19 +126,19 @@ void codegen_nc(asa *p, int *ip) {
 			symbol var = st_find_or_internal_error(p->tag_index.identifier);
 			
 			if(p->tag_index.index->tag == TagInt) {
-				printf("LOAD 1\n");
-				printf("ADD #%i\n", var.base_adr + p->tag_index.index->tag_int.value);
-				printf("LOAD @0\n");
+				fprintf(outfile, "LOAD 1\n");
+				fprintf(outfile, "ADD #%i\n", var.base_adr + p->tag_index.index->tag_int.value);
+				fprintf(outfile, "LOAD @0\n");
 				
 				*ip += 3;
 			}
 			else {
 				codegen_nc(p->tag_index.index, ip);
-				printf("STORE @2\n");
-				printf("LOAD 1\n");
-				printf("ADD @2\n");
-				printf("ADD #%i\n", var.base_adr);
-				printf("LOAD @0\n");
+				fprintf(outfile, "STORE @2\n");
+				fprintf(outfile, "LOAD 1\n");
+				fprintf(outfile, "ADD @2\n");
+				fprintf(outfile, "ADD #%i\n", var.base_adr);
+				fprintf(outfile, "LOAD @0\n");
 				
 				*ip += 5;
 			}
@@ -156,13 +158,13 @@ void codegen_nc(asa *p, int *ip) {
 					
 					
 					codegen_nc(p->tag_binary_op.rhs, ip);
-					printf("STORE @2\n");
-					printf("INC 2\n");
+					fprintf(outfile, "STORE @2\n");
+					fprintf(outfile, "INC 2\n");
 					*ip += 2;
 					
 					codegen_nc(p->tag_binary_op.lhs, ip);
-					printf("DEC 2\n");
-					printf("%s @2\n", binop_name(p->tag_binary_op.op));
+					fprintf(outfile, "DEC 2\n");
+					fprintf(outfile, "%s @2\n", binop_name(p->tag_binary_op.op));
 					*ip += 2;
 					
 					// on génère ensuite le code de comparaison pour les opérateurs
@@ -175,10 +177,10 @@ void codegen_nc(asa *p, int *ip) {
 						case OpGe:
 							// x - y >= 0 <=> !((x - y) < 0)
 							
-							printf("JUML %i\n", *ip + 3);
-							printf("LOAD #1\n");
-							printf("JUMP %i\n", *ip + 4);
-							printf("LOAD #0\n");
+							fprintf(outfile, "JUML %i\n", *ip + 3);
+							fprintf(outfile, "LOAD #1\n");
+							fprintf(outfile, "JUMP %i\n", *ip + 4);
+							fprintf(outfile, "LOAD #0\n");
 							
 							*ip += 4;
 							break;
@@ -186,10 +188,10 @@ void codegen_nc(asa *p, int *ip) {
 						case OpGt:
 							// x - y > 0
 							
-							printf("JUMG %i\n", *ip + 3);
-							printf("LOAD #0\n");
-							printf("JUMP %i\n", *ip + 4);
-							printf("LOAD #1\n");
+							fprintf(outfile, "JUMG %i\n", *ip + 3);
+							fprintf(outfile, "LOAD #0\n");
+							fprintf(outfile, "JUMP %i\n", *ip + 4);
+							fprintf(outfile, "LOAD #1\n");
 							
 							*ip += 4;
 							break;
@@ -197,10 +199,10 @@ void codegen_nc(asa *p, int *ip) {
 						case OpLe:
 							// x - y <= 0 <=> !((x - y) > 0)
 							
-							printf("JUMG %i\n", *ip + 3);
-							printf("LOAD #1\n");
-							printf("JUMP %i\n", *ip + 4);
-							printf("LOAD #0\n");
+							fprintf(outfile, "JUMG %i\n", *ip + 3);
+							fprintf(outfile, "LOAD #1\n");
+							fprintf(outfile, "JUMP %i\n", *ip + 4);
+							fprintf(outfile, "LOAD #0\n");
 							
 							*ip += 4;
 							break;
@@ -208,10 +210,10 @@ void codegen_nc(asa *p, int *ip) {
 						case OpLt:
 							// x - y < 0
 							
-							printf("JUML %i\n", *ip + 3);
-							printf("LOAD #0\n");
-							printf("JUMP %i\n", *ip + 4);
-							printf("LOAD #1\n");
+							fprintf(outfile, "JUML %i\n", *ip + 3);
+							fprintf(outfile, "LOAD #0\n");
+							fprintf(outfile, "JUMP %i\n", *ip + 4);
+							fprintf(outfile, "LOAD #1\n");
 							
 							*ip += 4;
 							break;
@@ -219,10 +221,10 @@ void codegen_nc(asa *p, int *ip) {
 						case OpEq:
 							// x - y == 0
 							
-							printf("JUMZ %i\n", *ip + 3);
-							printf("LOAD #0\n");
-							printf("JUMP %i\n", *ip + 4);
-							printf("LOAD #1\n");
+							fprintf(outfile, "JUMZ %i\n", *ip + 3);
+							fprintf(outfile, "LOAD #0\n");
+							fprintf(outfile, "JUMP %i\n", *ip + 4);
+							fprintf(outfile, "LOAD #1\n");
 							
 							*ip += 4;
 							break;
@@ -230,10 +232,10 @@ void codegen_nc(asa *p, int *ip) {
 						case OpNe:
 							// x - y != 0
 							
-							printf("JUMZ %i\n", *ip + 3);
-							printf("LOAD #1\n");
-							printf("JUMP %i\n", *ip + 4);
-							printf("LOAD #0\n");
+							fprintf(outfile, "JUMZ %i\n", *ip + 3);
+							fprintf(outfile, "LOAD #1\n");
+							fprintf(outfile, "JUMP %i\n", *ip + 4);
+							fprintf(outfile, "LOAD #0\n");
 							
 							*ip += 4;
 							break;
@@ -268,18 +270,18 @@ void codegen_nc(asa *p, int *ip) {
 							
 							// sinon, ACC = opérande droite
 							
-							printf("NOP ; TEST (");
-							print_asa(p->tag_binary_op.lhs);
-							printf(")\n");
+							fprintf(outfile, "NOP ; TEST (");
+							fprint_asa(outfile, p->tag_binary_op.lhs);
+							fprintf(outfile, ")\n");
 							++(*ip);
 							
 							codegen_nc(p->tag_binary_op.lhs, ip);
-							printf("JUMZ %i\n", *ip + p->tag_binary_op.rhs->ninst + 2);
+							fprintf(outfile, "JUMZ %i\n", *ip + p->tag_binary_op.rhs->ninst + 2);
 							++(*ip);
 							
-							printf("NOP ; TEST (");
-							print_asa(p->tag_binary_op.rhs);
-							printf(")\n");
+							fprintf(outfile, "NOP ; TEST (");
+							fprint_asa(outfile, p->tag_binary_op.rhs);
+							fprintf(outfile, ")\n");
 							++(*ip);
 							
 							codegen_nc(p->tag_binary_op.rhs, ip);
@@ -292,21 +294,21 @@ void codegen_nc(asa *p, int *ip) {
 							
 							// sinon, ACC = opérande droite
 							
-							printf("NOP ; TEST (");
-							print_asa(p->tag_binary_op.lhs);
-							printf(")\n");
+							fprintf(outfile, "NOP ; TEST (");
+							fprint_asa(outfile, p->tag_binary_op.lhs);
+							fprintf(outfile, ")\n");
 							++(*ip);
 							
 							codegen_nc(p->tag_binary_op.lhs, ip);
-							printf("JUMZ %i\n", *ip + 2);
+							fprintf(outfile, "JUMZ %i\n", *ip + 2);
 							++(*ip);
 							
-							printf("JUMP %i\n", *ip + p->tag_binary_op.rhs->ninst + 2);
+							fprintf(outfile, "JUMP %i\n", *ip + p->tag_binary_op.rhs->ninst + 2);
 							++(*ip);
 							
-							printf("NOP ; TEST (");
-							print_asa(p->tag_binary_op.rhs);
-							printf(")\n");
+							fprintf(outfile, "NOP ; TEST (");
+							fprint_asa(outfile, p->tag_binary_op.rhs);
+							fprintf(outfile, ")\n");
 							++(*ip);
 							
 							codegen_nc(p->tag_binary_op.rhs, ip);
@@ -328,28 +330,28 @@ void codegen_nc(asa *p, int *ip) {
 							// donc ACC = 1 si R[*sp] = 0,
 							// et ACC = 0 si R[*sp] = 1
 							
-							printf("NOP ; TEST (");
-							print_asa(p->tag_binary_op.lhs);
-							printf(")\n");
+							fprintf(outfile, "NOP ; TEST (");
+							fprint_asa(outfile, p->tag_binary_op.lhs);
+							fprintf(outfile, ")\n");
 							++(*ip);
 							
 							codegen_nc(p->tag_binary_op.lhs, ip);
-							printf("STORE @2\n");
-							printf("INC 2\n");
+							fprintf(outfile, "STORE @2\n");
+							fprintf(outfile, "INC 2\n");
 							*ip += 2;
 							
-							printf("NOP ; TEST (");
-							print_asa(p->tag_binary_op.rhs);
-							printf(")\n");
+							fprintf(outfile, "NOP ; TEST (");
+							fprint_asa(outfile, p->tag_binary_op.rhs);
+							fprintf(outfile, ")\n");
 							++(*ip);
 							
 							codegen_nc(p->tag_binary_op.rhs, ip);
-							printf("NOP ; OU EXCLUSIF\n");
-							printf("DEC 2\n");
-							printf("JUMZ %i\n", *ip + 5);
-							printf("SUB @2\n");
-							printf("JUMP %i\n", *ip + 6);
-							printf("LOAD @2\n");
+							fprintf(outfile, "NOP ; OU EXCLUSIF\n");
+							fprintf(outfile, "DEC 2\n");
+							fprintf(outfile, "JUMZ %i\n", *ip + 5);
+							fprintf(outfile, "SUB @2\n");
+							fprintf(outfile, "JUMP %i\n", *ip + 6);
+							fprintf(outfile, "LOAD @2\n");
 							
 							*ip += 6;
 							break;
@@ -381,9 +383,9 @@ void codegen_nc(asa *p, int *ip) {
 		case TagUnaryOp: {
 			codegen_nc(p->tag_unary_op.expr, ip);
 			
-			printf("STORE @2\n");
-			printf("LOAD #0\n");
-			printf("SUB @2\n");
+			fprintf(outfile, "STORE @2\n");
+			fprintf(outfile, "LOAD #0\n");
+			fprintf(outfile, "SUB @2\n");
 			
 			*ip += 3;
 			break;
@@ -392,22 +394,22 @@ void codegen_nc(asa *p, int *ip) {
 		case TagAssignScalar: {
 			symbol var = st_find_or_internal_error(p->tag_assign_scalar.identifier);
 			
-			printf("LOAD 1\n");
-			printf("ADD #%i\n", var.base_adr);
-			printf("STORE @2\n");
-			printf("INC 2\n");
+			fprintf(outfile, "LOAD 1\n");
+			fprintf(outfile, "ADD #%i\n", var.base_adr);
+			fprintf(outfile, "STORE @2\n");
+			fprintf(outfile, "INC 2\n");
 			*ip += 4;
 			
 			codegen_nc(p->tag_assign_scalar.expr, ip);
 			
-			printf("STORE @2\n");
-			printf("DEC 2\n");
-			printf("LOAD @2\n");
-			printf("STORE 3\n");
-			printf("INC 2\n");
-			printf("LOAD @2\n");
-			printf("STORE @3\n");
-			printf("DEC 2\n");
+			fprintf(outfile, "STORE @2\n");
+			fprintf(outfile, "DEC 2\n");
+			fprintf(outfile, "LOAD @2\n");
+			fprintf(outfile, "STORE 3\n");
+			fprintf(outfile, "INC 2\n");
+			fprintf(outfile, "LOAD @2\n");
+			fprintf(outfile, "STORE @3\n");
+			fprintf(outfile, "DEC 2\n");
 			*ip += 8;
 			break;
 		}
@@ -416,21 +418,21 @@ void codegen_nc(asa *p, int *ip) {
 			symbol var = st_find_or_internal_error(p->tag_assign_indexed.identifier);
 			
 			codegen_nc(p->tag_assign_indexed.index, ip);
-			printf("ADD 1\n");
-			printf("ADD #%i\n", var.base_adr);
-			printf("STORE @2\n");
-			printf("INC 2\n");
+			fprintf(outfile, "ADD 1\n");
+			fprintf(outfile, "ADD #%i\n", var.base_adr);
+			fprintf(outfile, "STORE @2\n");
+			fprintf(outfile, "INC 2\n");
 			
 			*ip += 4;
 			codegen_nc(p->tag_assign_indexed.expr, ip);
-			printf("STORE @2\n");
-			printf("DEC 2\n");
-			printf("LOAD @2\n");
-			printf("STORE 3\n");
-			printf("INC 2\n");
-			printf("LOAD @2\n");
-			printf("STORE @3\n");
-			printf("DEC 2\n");
+			fprintf(outfile, "STORE @2\n");
+			fprintf(outfile, "DEC 2\n");
+			fprintf(outfile, "LOAD @2\n");
+			fprintf(outfile, "STORE 3\n");
+			fprintf(outfile, "INC 2\n");
+			fprintf(outfile, "LOAD @2\n");
+			fprintf(outfile, "STORE @3\n");
+			fprintf(outfile, "DEC 2\n");
 			
 			*ip += 8;
 			break;
@@ -443,12 +445,12 @@ void codegen_nc(asa *p, int *ip) {
 			
 			for(int i = 0; i < var.size; ++i) {
 				codegen_nc(n->value, ip);
-				printf("STORE @2\n");
-				printf("LOAD 1\n");
-				printf("ADD #%i\n", var.base_adr + i);
-				printf("STORE 3\n");
-				printf("LOAD @2\n");
-				printf("STORE @3\n");
+				fprintf(outfile, "STORE @2\n");
+				fprintf(outfile, "LOAD 1\n");
+				fprintf(outfile, "ADD #%i\n", var.base_adr + i);
+				fprintf(outfile, "STORE 3\n");
+				fprintf(outfile, "LOAD @2\n");
+				fprintf(outfile, "STORE @3\n");
 				
 				*ip += 6;
 				n = n->next;
@@ -461,17 +463,17 @@ void codegen_nc(asa *p, int *ip) {
 			symbol dst = st_find_or_internal_error(p->tag_assign_array.dst);
 			symbol src = st_find_or_internal_error(p->tag_assign_array.src);
 			
-			printf("LOAD 1\n");
-			printf("ADD #%i\n", dst.base_adr);
-			printf("STORE 3\n");
+			fprintf(outfile, "LOAD 1\n");
+			fprintf(outfile, "ADD #%i\n", dst.base_adr);
+			fprintf(outfile, "STORE 3\n");
 			
 			for(int i = 0; i < dst.size; ++i) {
-				printf("LOAD 1\n");
-				printf("ADD #%i\n", src.base_adr + i);
-				printf("LOAD @0\n");
+				fprintf(outfile, "LOAD 1\n");
+				fprintf(outfile, "ADD #%i\n", src.base_adr + i);
+				fprintf(outfile, "LOAD @0\n");
 				
-				printf("STORE @3\n");
-				printf("INC 3\n");
+				fprintf(outfile, "STORE @3\n");
+				fprintf(outfile, "INC 3\n");
 			}
 			
 			*ip += 3 + dst.size * 5;
@@ -481,21 +483,21 @@ void codegen_nc(asa *p, int *ip) {
 		case TagTest: {
 			codegen_nc(p->tag_test.expr, ip);
 			
-			printf("JUMZ %i\n", *ip + (p->tag_test.therefore ? p->tag_test.therefore->ninst : 0) + 2 + (p->tag_test.alternative ? 1 : 0));
-			printf("NOP ; ALORS\n");
+			fprintf(outfile, "JUMZ %i\n", *ip + (p->tag_test.therefore ? p->tag_test.therefore->ninst : 0) + 2 + (p->tag_test.alternative ? 1 : 0));
+			fprintf(outfile, "NOP ; ALORS\n");
 			
 			*ip += 2;
 			codegen_nc(p->tag_test.therefore, ip);
 			
 			if(p->tag_test.alternative) {
-				printf("JUMP %i\n", *ip + p->tag_test.alternative->ninst + 2);
-				printf("NOP ; SINON\n");
+				fprintf(outfile, "JUMP %i\n", *ip + p->tag_test.alternative->ninst + 2);
+				fprintf(outfile, "NOP ; SINON\n");
 				
 				*ip += 2;
 				codegen_nc(p->tag_test.alternative, ip);
 			}
 			
-			printf("NOP ; FSI\n");
+			fprintf(outfile, "NOP ; FSI\n");
 			
 			++(*ip);
 			break;
@@ -504,12 +506,12 @@ void codegen_nc(asa *p, int *ip) {
 		case TagWhile: {
 			codegen_nc(p->tag_while.expr, ip);
 			
-			printf("JUMZ %i\n", *ip + p->tag_while.body->ninst + 2);
+			fprintf(outfile, "JUMZ %i\n", *ip + p->tag_while.body->ninst + 2);
 			++(*ip);
 			
 			codegen_nc(p->tag_while.body, ip);
 			
-			printf("JUMP %i\n", before_codegen_ip);
+			fprintf(outfile, "JUMP %i\n", before_codegen_ip);
 			++(*ip);
 			
 			break;
@@ -518,12 +520,12 @@ void codegen_nc(asa *p, int *ip) {
 		case TagRead: {
 			symbol var = st_find_or_internal_error(p->tag_read.identifier);
 			
-			printf("LOAD 1\n");
-			printf("ADD #%i\n", var.base_adr);
-			printf("STORE 3\n");
+			fprintf(outfile, "LOAD 1\n");
+			fprintf(outfile, "ADD #%i\n", var.base_adr);
+			fprintf(outfile, "STORE 3\n");
 			
-			printf("READ\n");
-			printf("STORE @3\n");
+			fprintf(outfile, "READ\n");
+			fprintf(outfile, "STORE @3\n");
 			
 			*ip += 5;
 			break;
@@ -534,14 +536,14 @@ void codegen_nc(asa *p, int *ip) {
 			
 			codegen_nc(p->tag_read_indexed.index, ip);
 			
-			printf("STORE @2\n");
-			printf("LOAD 1\n");
-			printf("ADD #%i\n", var.base_adr);
-			printf("ADD @2\n");
-			printf("STORE 3\n");
+			fprintf(outfile, "STORE @2\n");
+			fprintf(outfile, "LOAD 1\n");
+			fprintf(outfile, "ADD #%i\n", var.base_adr);
+			fprintf(outfile, "ADD @2\n");
+			fprintf(outfile, "STORE 3\n");
 			
-			printf("READ\n");
-			printf("STORE @3\n");
+			fprintf(outfile, "READ\n");
+			fprintf(outfile, "STORE @3\n");
 			
 			*ip += 7;
 			break;
@@ -550,14 +552,14 @@ void codegen_nc(asa *p, int *ip) {
 		case TagReadArray: {
 			symbol var = st_find_or_internal_error(p->tag_read_array.identifier);
 			
-			printf("LOAD 1\n");
-			printf("ADD #%i\n", var.base_adr);
-			printf("STORE 3\n");
+			fprintf(outfile, "LOAD 1\n");
+			fprintf(outfile, "ADD #%i\n", var.base_adr);
+			fprintf(outfile, "STORE 3\n");
 			
 			for(int i = 0; i < var.size; ++i) {
-				printf("READ\n");
-				printf("STORE @3\n");
-				printf("INC 3\n");
+				fprintf(outfile, "READ\n");
+				fprintf(outfile, "STORE @3\n");
+				fprintf(outfile, "INC 3\n");
 			}
 			
 			*ip += 3 + var.size * 3;
@@ -566,7 +568,7 @@ void codegen_nc(asa *p, int *ip) {
 		
 		case TagPrint: {
 			codegen_nc(p->tag_print.expr, ip);
-			printf("WRITE\n");
+			fprintf(outfile, "WRITE\n");
 			++(*ip);
 			break;
 		}
@@ -574,14 +576,14 @@ void codegen_nc(asa *p, int *ip) {
 		case TagPrintArray: {
 			symbol var = st_find_or_internal_error(p->tag_print_array.identifier);
 			
-			printf("LOAD 1\n");
-			printf("ADD #%i\n", var.base_adr);
-			printf("STORE 3\n");
+			fprintf(outfile, "LOAD 1\n");
+			fprintf(outfile, "ADD #%i\n", var.base_adr);
+			fprintf(outfile, "STORE 3\n");
 			
 			for(int i = 0; i < var.size; ++i) {
-				printf("LOAD @3\n");
-				printf("WRITE\n");
-				printf("INC 3\n");
+				fprintf(outfile, "LOAD @3\n");
+				fprintf(outfile, "WRITE\n");
+				fprintf(outfile, "INC 3\n");
 			}
 			
 			*ip += 3 + var.size * 3;
@@ -589,9 +591,9 @@ void codegen_nc(asa *p, int *ip) {
 		}
 		
 		case TagBlock: {
-			printf("NOP ; ");
-			print_asa(p->tag_block.stmt);
-			printf("\n");
+			fprintf(outfile, "NOP ; ");
+			fprint_asa(outfile, p->tag_block.stmt);
+			fprintf(outfile, "\n");
 			
 			++(*ip);
 			
@@ -603,33 +605,33 @@ void codegen_nc(asa *p, int *ip) {
 		case TagFn: {
 			st_make_current(p->tag_fn.st);
 			
-			printf("NOP ; ");
-			print_asa(p);
+			fprintf(outfile, "NOP ; ");
+			fprint_asa(outfile, p);
 			
-			printf("\nNOP ; STACK\n");
-			printf("LOAD 1\n");
-			printf("ADD #%i\n", st_temp_offset());
-			printf("STORE 2\n");
+			fprintf(outfile, "\nNOP ; STACK\n");
+			fprintf(outfile, "LOAD 1\n");
+			fprintf(outfile, "ADD #%i\n", st_temp_offset());
+			fprintf(outfile, "STORE 2\n");
 			
-			printf("NOP ; DEBUT\n");
+			fprintf(outfile, "NOP ; DEBUT\n");
 			*ip += 6;
 			
 			codegen_nc(p->tag_fn.body, ip);
-			printf("STOP ; FIN\n");
+			fprintf(outfile, "STOP ; FIN\n");
 			++(*ip);
 			break;
 		}
 		
 		case TagFnCall: {
-			printf("LOAD 1\n");
-			printf("STORE @2\n");
-			printf("INC 2\n");
+			fprintf(outfile, "LOAD 1\n");
+			fprintf(outfile, "STORE @2\n");
+			fprintf(outfile, "INC 2\n");
 			
 			int jmp = *ip + 9 + p->tag_fn_call.args.ninst + (6 * p->tag_fn_call.args.len);
 			add_dyn_jump_adr(jmp);
-			printf("LOAD #%i\n", jmp);
-			printf("STORE @2\n");
-			printf("INC 2\n");
+			fprintf(outfile, "LOAD #%i\n", jmp);
+			fprintf(outfile, "STORE @2\n");
+			fprintf(outfile, "INC 2\n");
 			
 			*ip += 6;
 			
@@ -657,14 +659,14 @@ void codegen_nc(asa *p, int *ip) {
 				
 				for(i = 0; i < args; ++i) {
 					codegen_nc(aargs[i], ip);
-					printf("STORE @2\n");
+					fprintf(outfile, "STORE @2\n");
 					
-					printf("LOAD 2\n");
-					printf("ADD #%i\n", args - i - 1);
-					printf("STORE 3\n");
+					fprintf(outfile, "LOAD 2\n");
+					fprintf(outfile, "ADD #%i\n", args - i - 1);
+					fprintf(outfile, "STORE 3\n");
 					
-					printf("LOAD @2\n");
-					printf("STORE @3\n");
+					fprintf(outfile, "LOAD @2\n");
+					fprintf(outfile, "STORE @3\n");
 					
 					*ip += 6;
 				}
@@ -677,21 +679,21 @@ void codegen_nc(asa *p, int *ip) {
 				exit(1);
 			}
 			
-			printf("LOAD 2\n");
-			printf("STORE 1\n");
+			fprintf(outfile, "LOAD 2\n");
+			fprintf(outfile, "STORE 1\n");
 			
-			printf("JUMP %i\n", fn->adr);
+			fprintf(outfile, "JUMP %i\n", fn->adr);
 			
-			printf("LOAD 2\n");
-			printf("SUB #3\n");
-			printf("STORE 2\n");
+			fprintf(outfile, "LOAD 2\n");
+			fprintf(outfile, "SUB #3\n");
+			fprintf(outfile, "STORE 2\n");
 			
-			printf("LOAD @0\n");
-			printf("STORE 1\n");
+			fprintf(outfile, "LOAD @0\n");
+			fprintf(outfile, "STORE 1\n");
 			
-			printf("LOAD 2\n");
-			printf("ADD #3\n");
-			printf("LOAD @0\n");
+			fprintf(outfile, "LOAD 2\n");
+			fprintf(outfile, "ADD #3\n");
+			fprintf(outfile, "LOAD @0\n");
 			
 			*ip += 11;
 			break;
@@ -702,14 +704,14 @@ void codegen_nc(asa *p, int *ip) {
 				codegen_nc(p->tag_return.expr, ip);
 			}
 			else {
-				printf("LOAD #0\n");
+				fprintf(outfile, "LOAD #0\n");
 				++(*ip);
 			}
 			
-			printf("STORE @2\n");
-			printf("DEC 1\n");
-			printf("LOAD @1\n");
-			printf("JUMP %i\n", dyn_jump_adr);
+			fprintf(outfile, "STORE @2\n");
+			fprintf(outfile, "DEC 1\n");
+			fprintf(outfile, "LOAD @1\n");
+			fprintf(outfile, "JUMP %i\n", dyn_jump_adr);
 			
 			*ip += 4;
 			break;
@@ -858,49 +860,49 @@ static void add_dyn_jump_adr(int adr) {
  * Génère le code pour la fonction de sauts dynamiques.
  */
 static void codegen_dyn_jump() {
-	printf("NOP ; BUILTIN JUMP @0\n");
+	fprintf(outfile, "NOP ; BUILTIN JUMP @0\n");
 	
 	int_list_node *n = dyn_jumps;
 	int sum = 0;
 	
 	while(n) {
-		printf("SUB #%i\n", n->value - sum);
-		printf("JUMZ %i\n", n->value);
+		fprintf(outfile, "SUB #%i\n", n->value - sum);
+		fprintf(outfile, "JUMZ %i\n", n->value);
 		
 		sum += n->value - sum;
 		n = n->next;
 	}
 	
-	printf("STOP ; UNREACHABLE\n");
+	fprintf(outfile, "STOP ; UNREACHABLE\n");
 }
 
 static void print_fn_locations() {
-	printf("{\n");
+	fprintf(outfile, "{\n");
 	
 	fn_location_node *n = &fn_locations;
 	do {
-		printf("\t%s: %i\n", n->value->tag_fn.identifier, n->adr);
+		fprintf(outfile, "\t%s: %i\n", n->value->tag_fn.identifier, n->adr);
 		n = n->next;
 	}
 	while(n);
 	
-	printf("}\n");
+	fprintf(outfile, "}\n");
 }
 
 static void print_int_list(int_list_node *head) {
 	if(!head) {
-		printf("{}\n");
+		fprintf(outfile, "{}\n");
 	}
 	else {
-		printf("{%i", head->value);
+		fprintf(outfile, "{%i", head->value);
 		
 		int_list_node *n = head->next;
 		while(n) {
-			printf(", %i", n->value);
+			fprintf(outfile, ", %i", n->value);
 			n = n->next;
 		}
 		
-		printf("}\n");
+		fprintf(outfile, "}\n");
 	}
 }
 
@@ -919,13 +921,13 @@ static void destroy_fn_space() {
  */
 void codegen(asa_list fns) {
 	if(fns.len == 0) {
-		printf("STOP\n");
+		fprintf(outfile, "STOP\n");
 		fprintf(stderr, "avertissement: le fichier source est vide\n");
 		exit(1);
 	}
 	
-	printf("LOAD #4\n");
-	printf("STORE 1\n");
+	fprintf(outfile, "LOAD #4\n");
+	fprintf(outfile, "STORE 1\n");
 	
 	int ip = 2;
 	

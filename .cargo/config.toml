@@ -2,7 +2,7 @@
 rustflags = [
 	# Written for rustc 1.79.0 (129f3b996 2024-06-10)
 	# Allowed-by-default
-	"-Felided_lifetimes_in_paths", "-Wexplicit_outlives_requirements", "-Fffi_unwind_calls", "-Flet_underscore_drop",
+	"-Felided_lifetimes_in_paths", "-Wexplicit_outlives_requirements", "-Fffi_unwind_calls",
 	"-Wmeta_variable_misuse", "-Fmissing_abi", "-Wmissing_debug_implementations", "-Fnon_ascii_idents", "-Wredundant_lifetimes",
 	"-Wsingle_use_lifetimes", "-Funnameable_types", "-Wunreachable_pub", "-Wunsafe_op_in_unsafe_fn", "-Wunused_extern_crates",
 	"-Wunused_import_braces", "-Wunused_lifetimes", "-Wunused_qualifications",

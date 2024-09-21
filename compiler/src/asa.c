@@ -182,28 +182,28 @@ asa_list asa_list_empty() {
 }
 
 /**
- * Affiche une liste dans la sortie standard.
+ * Affiche une liste dans un fichier.
  */
-void asa_list_print(asa_list l) {
+void asa_list_fprint(FILE *stream, asa_list l) {
 	if(l.is_nop) {
-		printf("NoOp");
+		fprintf(stream, "NoOp");
 	}
 	else if(l.len == 0) {
-		printf("{}");
+		fprintf(stream, "{}");
 	}
 	else {
 		asa_list_node *n = l.head;
-		printf("{ ");
-		print_asa(n->value);
+		fprintf(stream, "{ ");
+		fprint_asa(stream, n->value);
 		
 		while(n->next) {
 			n = n->next;
 			
-			printf(", ");
-			print_asa(n->value);
+			fprintf(stream, ", ");
+			fprint_asa(stream, n->value);
 		}
 		
-		printf(" }");
+		fprintf(stream, " }");
 	}
 }
 
@@ -255,21 +255,21 @@ id_list id_list_empty() {
 /**
  * Affiche une liste dans la sortie standard.
  */
-void id_list_print(id_list l) {
+void id_list_fprint(FILE *stream, id_list l) {
 	if(l.len == 0) {
-		printf("()");
+		fprintf(stream, "()");
 	}
 	else {
 		id_list_node *n = l.head;
-		printf("(%s", n->value);
+		fprintf(stream, "(%s", n->value);
 		
 		while(n->next) {
 			n = n->next;
 			
-			printf(", %s", n->value);
+			fprintf(stream, ", %s", n->value);
 		}
 		
-		printf(")");
+		fprintf(stream, ")");
 	}
 }
 
@@ -323,10 +323,10 @@ asa* create_int_leaf(int value) {
 asa* create_var_leaf(const char id[32]) {
 	symbol var = st_find_or_yyerror(id);
 	if(var.size != SCALAR_SIZE) {
-		extern const char *input;
+		extern const char *infile;
 		extern int yylineno;
 		
-		fprintf(stderr, "%s:%i: indexation requise: '%s' est un tableau, un scalaire était attendu\n", input, yylineno, id);
+		fprintf(stderr, "%s:%i: indexation requise: '%s' est un tableau, un scalaire était attendu\n", infile, yylineno, id);
 		exit(1);
 	}
 	
@@ -345,10 +345,10 @@ asa* create_var_leaf(const char id[32]) {
 asa* create_index_node(const char id[32], asa *index) {
 	symbol var = st_find_or_yyerror(id);
 	if(var.size == SCALAR_SIZE) {
-		extern const char *input;
+		extern const char *infile;
 		extern int yylineno;
 		
-		fprintf(stderr, "%s:%i: indexation impossible: '%s' est un scalaire\n", input, yylineno, id);
+		fprintf(stderr, "%s:%i: indexation impossible: '%s' est un scalaire\n", infile, yylineno, id);
 		exit(1);
 	}
 	else if(var.size == 0) {
@@ -447,10 +447,10 @@ asa* create_unop_node(UnaryOp unop, asa *expr) {
 asa* create_assign_scalar_node(const char id[32], asa *expr) {
 	symbol var = st_find_or_yyerror(id);
 	if(var.size != SCALAR_SIZE) {
-		extern const char *input;
+		extern const char *infile;
 		extern int yylineno;
 		
-		fprintf(stderr, "%s:%i: impossible d'affecter un scalaire à un tableau\n", input, yylineno);
+		fprintf(stderr, "%s:%i: impossible d'affecter un scalaire à un tableau\n", infile, yylineno);
 		exit(1);
 	}
 	else if(expr == NOP) {
@@ -473,10 +473,10 @@ asa* create_assign_scalar_node(const char id[32], asa *expr) {
 asa* create_assign_indexed_node(const char id[32], asa *index, asa *expr) {
 	symbol var = st_find_or_yyerror(id);
 	if(var.size == SCALAR_SIZE) {
-		extern const char *input;
+		extern const char *infile;
 		extern int yylineno;
 		
-		fprintf(stderr, "%s:%i: indexation impossible: '%s' est un scalaire\n", input, yylineno, id);
+		fprintf(stderr, "%s:%i: indexation impossible: '%s' est un scalaire\n", infile, yylineno, id);
 		exit(1);
 	}
 	else if(var.size == 0) {
@@ -506,17 +506,17 @@ asa* create_assign_indexed_node(const char id[32], asa *index, asa *expr) {
 asa* create_assign_int_list_node(const char id[32], asa_list values) {
 	symbol var = st_find_or_yyerror(id);
 	if(var.size == SCALAR_SIZE) {
-		extern const char *input;
+		extern const char *infile;
 		extern int yylineno;
 		
-		fprintf(stderr, "%s:%i: impossible d'affecter un tableau au scalaire '%s'\n", input, yylineno, id);
+		fprintf(stderr, "%s:%i: impossible d'affecter un tableau au scalaire '%s'\n", infile, yylineno, id);
 		exit(1);
 	}
 	else if(var.size != values.len) {
-		extern const char *input;
+		extern const char *infile;
 		extern int yylineno;
 		
-		fprintf(stderr, "%s:%i: affectation impossible: le tableau n'a pas la taille adéquate\n", input, yylineno);
+		fprintf(stderr, "%s:%i: affectation impossible: le tableau n'a pas la taille adéquate\n", infile, yylineno);
 		exit(1);
 	}
 	
@@ -542,24 +542,24 @@ asa* create_assign_array_node(const char dst[32], const char src[32]) {
 	symbol src_var = st_find_or_yyerror(src);
 	
 	if(src_var.size == SCALAR_SIZE) {
-		extern const char *input;
+		extern const char *infile;
 		extern int yylineno;
 		
-		fprintf(stderr, "%s:%i: '%s' doit être un tableau\n", input, yylineno, src);
+		fprintf(stderr, "%s:%i: '%s' doit être un tableau\n", infile, yylineno, src);
 		exit(1);
 	}
 	else if(dst_var.size == SCALAR_SIZE) {
-		extern const char *input;
+		extern const char *infile;
 		extern int yylineno;
 		
-		fprintf(stderr, "%s:%i: impossible d'affecter un tableau à un scalaire\n", input, yylineno);
+		fprintf(stderr, "%s:%i: impossible d'affecter un tableau à un scalaire\n", infile, yylineno);
 		exit(1);
 	}
 	else if(src_var.size != dst_var.size) {
-		extern const char *input;
+		extern const char *infile;
 		extern int yylineno;
 		
-		fprintf(stderr, "%s:%i: affectation impossible: les deux tableaux doivent avoir la même taille\n", input, yylineno);
+		fprintf(stderr, "%s:%i: affectation impossible: les deux tableaux doivent avoir la même taille\n", infile, yylineno);
 		exit(1);
 	}
 	
@@ -646,10 +646,10 @@ asa* create_read_node(const char id[32]) {
 asa* create_read_indexed_node(const char id[32], asa *index) {
 	symbol var = st_find_or_yyerror(id);
 	if(var.size == SCALAR_SIZE) {
-		extern const char *input;
+		extern const char *infile;
 		extern int yylineno;
 		
-		fprintf(stderr, "%s:%i: indexation impossible: '%s' est un scalaire\n", input, yylineno, id);
+		fprintf(stderr, "%s:%i: indexation impossible: '%s' est un scalaire\n", infile, yylineno, id);
 		exit(1);
 	}
 	else if(var.size == 0) {
@@ -675,10 +675,10 @@ asa* create_read_indexed_node(const char id[32], asa *index) {
 asa* create_read_array_node(const char id[32]) {
 	symbol var = st_find_or_yyerror(id);
 	if(var.size == -1) {
-		extern const char *input;
+		extern const char *infile;
 		extern int yylineno;
 		
-		fprintf(stderr, "%s:%i: indexation impossible: '%s' est un scalaire\n", input, yylineno, id);
+		fprintf(stderr, "%s:%i: indexation impossible: '%s' est un scalaire\n", infile, yylineno, id);
 		exit(1);
 	}
 	else if(var.size == 0) {
@@ -717,10 +717,10 @@ asa* create_print_node(asa *expr) {
 asa* create_print_array_node(const char id[32]) {
 	symbol var = st_find_or_internal_error(id);
 	if(var.size == -1) {
-		extern const char *input;
+		extern const char *infile;
 		extern int yylineno;
 		
-		fprintf(stderr, "%s:%i: indexation impossible: '%s' est un scalaire\n", input, yylineno, id);
+		fprintf(stderr, "%s:%i: indexation impossible: '%s' est un scalaire\n", infile, yylineno, id);
 		exit(1);
 	}
 	else if(var.size == 0) {
@@ -808,18 +808,18 @@ asa* create_methodcall_node(const char varname[32], const char methodname[32]) {
 	symbol var = st_find_or_yyerror(varname);
 	
 	if(strcmp(methodname, "len") != 0) {
-		extern const char *input;
+		extern const char *infile;
 		extern int yylineno;
 		
-		fprintf(stderr, "%s:%i: seule la méthode intrinsèque 'len()' est actuellement acceptée\n", input, yylineno);
+		fprintf(stderr, "%s:%i: seule la méthode intrinsèque 'len()' est actuellement acceptée\n", infile, yylineno);
 		exit(1);
 	}
 	
 	if(var.size == SCALAR_SIZE) {
-		extern const char *input;
+		extern const char *infile;
 		extern int yylineno;
 		
-		fprintf(stderr, "%s:%i: 'len()' n'est pas disponible sur les scalaires\n", input, yylineno);
+		fprintf(stderr, "%s:%i: 'len()' n'est pas disponible sur les scalaires\n", infile, yylineno);
 		exit(1);
 	}
 	
@@ -873,146 +873,146 @@ asa* create_return_node(asa *expr) {
 }
 
 /**
- * Affiche le noeud dans la sortie standard.
+ * Affiche le noeud dans un fichier.
  */
-void print_asa(asa *p) {
+void fprint_asa(FILE *stream, asa *p) {
 	if(!p) {
 		return;
 	}
 	
 	if(p == NOP) {
-		printf("NoOp");
+		fprintf(stream, "NoOp");
 		return;
 	}
 	
 	switch(p->tag) {
 		case TagInt:
-			printf("%i", p->tag_int.value);
+			fprintf(stream, "%i", p->tag_int.value);
 			break;
 		
 		case TagVar:
-			printf("%s", p->tag_var.identifier);
+			fprintf(stream, "%s", p->tag_var.identifier);
 			break;
 		
 		case TagIndex:
-			printf("%s[", p->tag_index.identifier);
-			print_asa(p->tag_index.index);
-			printf("]");
+			fprintf(stream, "%s[", p->tag_index.identifier);
+			fprint_asa(stream, p->tag_index.index);
+			fprintf(stream, "]");
 			break;
 		
 		case TagBinaryOp:
 			if(is_leaf(p->tag_binary_op.lhs->tag)) {
-				print_asa(p->tag_binary_op.lhs);
+				fprint_asa(stream, p->tag_binary_op.lhs);
 			}
 			else {
-				printf("(");
-				print_asa(p->tag_binary_op.lhs);
-				printf(")");
+				fprintf(stream, "(");
+				fprint_asa(stream, p->tag_binary_op.lhs);
+				fprintf(stream, ")");
 			}
 			
-			printf(" %s ", binop_symbol(p->tag_binary_op.op));
+			fprintf(stream, " %s ", binop_symbol(p->tag_binary_op.op));
 			
 			if(is_leaf(p->tag_binary_op.rhs->tag)) {
-				print_asa(p->tag_binary_op.rhs);
+				fprint_asa(stream, p->tag_binary_op.rhs);
 			}
 			else {
-				printf("(");
-				print_asa(p->tag_binary_op.rhs);
-				printf(")");
+				fprintf(stream, "(");
+				fprint_asa(stream, p->tag_binary_op.rhs);
+				fprintf(stream, ")");
 			}
 			
 			break;
 		
 		case TagUnaryOp:
-			printf("%s", unop_symbol(p->tag_unary_op.op));
+			fprintf(stream, "%s", unop_symbol(p->tag_unary_op.op));
 			
 			if(is_leaf(p->tag_unary_op.expr->tag)) {
-				print_asa(p->tag_unary_op.expr);
+				fprint_asa(stream, p->tag_unary_op.expr);
 			}
 			else {
-				printf("(");
-				print_asa(p->tag_unary_op.expr);
-				printf(")");
+				fprintf(stream, "(");
+				fprint_asa(stream, p->tag_unary_op.expr);
+				fprintf(stream, ")");
 			}
 			
 			break;
 		
 		case TagAssignScalar:
-			printf("%s := ", p->tag_assign_scalar.identifier);
-			print_asa(p->tag_assign_scalar.expr);
+			fprintf(stream, "%s := ", p->tag_assign_scalar.identifier);
+			fprint_asa(stream, p->tag_assign_scalar.expr);
 			break;
 		
 		case TagAssignIndexed:
-			printf("%s[", p->tag_assign_indexed.identifier);
-			print_asa(p->tag_assign_indexed.index);
-			printf("] := ");
-			print_asa(p->tag_assign_indexed.expr);
+			fprintf(stream, "%s[", p->tag_assign_indexed.identifier);
+			fprint_asa(stream, p->tag_assign_indexed.index);
+			fprintf(stream, "] := ");
+			fprint_asa(stream, p->tag_assign_indexed.expr);
 			break;
 		
 		case TagAssignIntList:
-			printf("%s := ", p->tag_assign_int_list.identifier);
-			asa_list_print(p->tag_assign_int_list.values);
+			fprintf(stream, "%s := ", p->tag_assign_int_list.identifier);
+			asa_list_fprint(stream, p->tag_assign_int_list.values);
 			break;
 		
 		case TagAssignArray:
-			printf("%s := [%s]", p->tag_assign_array.dst, p->tag_assign_array.src);
+			fprintf(stream, "%s := [%s]", p->tag_assign_array.dst, p->tag_assign_array.src);
 			break;
 		
 		case TagTest:
-			printf("SI ");
-			print_asa(p->tag_test.expr);
+			fprintf(stream, "SI ");
+			fprint_asa(stream, p->tag_test.expr);
 			break;
 		
 		case TagWhile:
-			printf("TQ ");
-			print_asa(p->tag_test.expr);
+			fprintf(stream, "TQ ");
+			fprint_asa(stream, p->tag_test.expr);
 			break;
 		
 		case TagRead:
-			printf("LIRE %s", p->tag_read.identifier);
+			fprintf(stream, "LIRE %s", p->tag_read.identifier);
 			break;
 		
 		case TagReadIndexed:
-			printf("LIRE %s[", p->tag_read_indexed.identifier);
-			print_asa(p->tag_read_indexed.index);
-			printf("]");
+			fprintf(stream, "LIRE %s[", p->tag_read_indexed.identifier);
+			fprint_asa(stream, p->tag_read_indexed.index);
+			fprintf(stream, "]");
 			break;
 		
 		case TagReadArray: {
 			symbol var = st_find_or_internal_error(p->tag_read_array.identifier);
 			
-			printf("LIRE[%i] %s", var.size, var.identifier);
+			fprintf(stream, "LIRE[%i] %s", var.size, var.identifier);
 			break;
 		}
 		
 		case TagPrint:
-			printf("AFFICHER ");
-			print_asa(p->tag_print.expr);
+			fprintf(stream, "AFFICHER ");
+			fprint_asa(stream, p->tag_print.expr);
 			break;
 		
 		case TagPrintArray:
-			printf("AFFICHER [%s]", p->tag_print_array.identifier);
+			fprintf(stream, "AFFICHER [%s]", p->tag_print_array.identifier);
 			break;
 		
 		case TagBlock:
-			print_asa(p->tag_block.stmt);
-			printf("\n");
-			print_asa(p->tag_block.next);
+		    fprint_asa(stream, p->tag_block.stmt);
+			fprintf(stream, "\n");
+		    fprint_asa(stream, p->tag_block.next);
 			break;
 		
 		case TagFn:
-			printf("FONCTION %s", p->tag_fn.identifier);
-			id_list_print(p->tag_fn.params);
+			fprintf(stream, "FONCTION %s", p->tag_fn.identifier);
+			id_list_fprint(stream, p->tag_fn.params);
 			break;
 		
 		case TagFnCall:
-			printf("%s", p->tag_fn_call.identifier);
-			asa_list_print(p->tag_fn_call.args);
+			fprintf(stream, "%s", p->tag_fn_call.identifier);
+			asa_list_fprint(stream, p->tag_fn_call.args);
 			break;
 		
 		case TagReturn:
-			printf("RENVOYER ");
-			print_asa(p->tag_return.expr);
+			fprintf(stream, "RENVOYER ");
+			fprint_asa(stream, p->tag_return.expr);
 			break;
 	}
 }

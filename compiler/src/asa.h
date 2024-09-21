@@ -565,9 +565,9 @@ asa_list asa_list_append(asa *head, asa_list next);
 asa_list asa_list_empty();
 
 /**
- * Affiche une liste dans la sortie standard.
+ * Affiche une liste dans un fichier.
  */
-void asa_list_print(asa_list l);
+void asa_list_fprint(FILE *stream, asa_list l);
 
 /**
  * Libère les ressources allouées à une liste.
@@ -585,9 +585,9 @@ id_list id_list_append(const char id[32], id_list next);
 id_list id_list_empty();
 
 /**
- * Affiche une liste dans la sortie standard.
+ * Affiche une liste dans un fichier.
  */
-void id_list_print(id_list l);
+void id_list_fprint(FILE *stream, id_list l);
 
 /**
  * Libère les ressources allouées à une liste.
@@ -700,9 +700,9 @@ asa* create_fncall_node(const char id[32], asa_list args);
 asa* create_return_node(asa *expr);
 
 /**
- * Affiche le noeud dans la sortie standard.
+ * Affiche le noeud dans un fichier.
  */
-void print_asa(asa *p);
+void fprint_asa(FILE *stream, asa *p);
 
 /**
  * Libère les ressources allouées à un noeud.
@@ -710,3 +710,4 @@ void print_asa(asa *p);
 void free_asa(asa *p);
 
 #endif
+

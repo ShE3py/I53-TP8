@@ -59,10 +59,10 @@ static symbol st_create_symbol(symbol_table *st, const char id[32], int size) {
 	else {
 		while(1) {
 			if(strcmp(m->value.identifier, id) == 0) {
-				extern const char *input;
+				extern const char *infile;
 				extern int yylineno;
 				
-				fprintf(stderr, "%s:%i: variable dupliquée: '%s'\n", input, yylineno, id);
+				fprintf(stderr, "%s:%i: variable dupliquée: '%s'\n", infile, yylineno, id);
 				free(n);
 				exit(1);
 			}
@@ -92,10 +92,10 @@ symbol st_create_scalar(const char id[32]) {
  */
 symbol st_create_array(const char id[32], int size) {
 	if(size < 0) {
-		extern const char *input;
+		extern const char *infile;
 		extern int yylineno;
 		
-		fprintf(stderr, "%s:%i: '%s' doit avoir une taille positive\n", input, yylineno, id);
+		fprintf(stderr, "%s:%i: '%s' doit avoir une taille positive\n", infile, yylineno, id);
 		exit(1);
 	}
 	
@@ -131,10 +131,10 @@ symbol st_find_or_create_scalar(const char id[32]) {
 	symbol *s = st_find(id);
 	if(s) {
 		if(s->size != SCALAR_SIZE) {
-			extern const char *input;
+			extern const char *infile;
 			extern int yylineno;
 			
-			fprintf(stderr, "%s:%i: '%s' doit être un scalaire\n", input, yylineno, id);
+			fprintf(stderr, "%s:%i: '%s' doit être un scalaire\n", infile, yylineno, id);
 			exit(1);
 		}
 		
@@ -154,14 +154,14 @@ symbol st_find_or_create_array(const char id[32], int size) {
 	symbol *s = st_find(id);
 	if(s) {
 		if(s->size != size) {
-			extern const char *input;
+			extern const char *infile;
 			extern int yylineno;
 			
 			if(size < 0) {
-				fprintf(stderr, "%s:%i: '%s' doit avoir une taille positive\n", input, yylineno, id);
+				fprintf(stderr, "%s:%i: '%s' doit avoir une taille positive\n", infile, yylineno, id);
 			}
 			else {
-				fprintf(stderr, "%s:%i: '%s' doit être un tableau de taille %i, taille actuelle: %i\n", input, yylineno, id, size, s->size);
+				fprintf(stderr, "%s:%i: '%s' doit être un tableau de taille %i, taille actuelle: %i\n", infile, yylineno, id, size, s->size);
 			}
 			
 			exit(1);
@@ -183,10 +183,10 @@ symbol st_find_or_create_array(const char id[32], int size) {
 symbol st_find_or_yyerror(const char id[32]) {
 	symbol *s = st_find(id);
 	if(!s) {
-		extern const char *input;
+		extern const char *infile;
 		extern int yylineno;
 		
-		fprintf(stderr, "%s:%i: variable inconnue: '%s'\n", input, yylineno, id);
+		fprintf(stderr, "%s:%i: variable inconnue: '%s'\n", infile, yylineno, id);
 		exit(1);
 	}
 	

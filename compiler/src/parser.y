@@ -5,7 +5,8 @@
   extern int yylex();
   extern void yyerror(const char *s);
   
-  const char *input;
+  const char *infile;
+  FILE *outfile;
 %}
 
 %define parse.error verbose
@@ -204,19 +205,20 @@ BoolExpr:
 
 %%
 
-int arc_compile_file(const char *filename) {
+void arc_compile_file(const char *_infile, const char *_outfile) {
     extern FILE *yyin;
     extern int yylex_destroy(void);
 
-    input = filename;
-
-    FILE *f = fopen(input, "r");
+    infile = _infile;
+    outfile = fopen(_outfile, "w");
+    
+    FILE *f = fopen(_infile, "r");
     st_pop_push_empty();
 
     yyin = f;
     yyparse();
     yylex_destroy();
     fclose(f);
-    return 0;
+    fclose(outfile);
 }
 
