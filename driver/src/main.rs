@@ -10,6 +10,7 @@ use std::ops::Neg;
 use std::path::PathBuf;
 use std::process::exit;
 use std::str::FromStr;
+use rame_driver::compile;
 
 #[cfg_attr(feature = "optimizer", doc = "Run, test or optimize a RAM program.")]
 #[cfg_attr(not(feature = "optimizer"), doc = "Run or test a RAM program.")]
@@ -38,6 +39,10 @@ struct Cli {
     #[arg(short = 'o', long = "optimize", value_name = "FILE")]
     #[cfg(feature = "optimizer")]
     optimize: Option<Option<PathBuf>>,
+    
+    /// Compile the program into the specified file.
+    #[arg(short = 'c', long = "compile", value_name = "FILE")]
+    compile: Option<Option<PathBuf>>,
 }
 
 #[derive(ValueEnum, Copy, Clone, Default)]
@@ -51,6 +56,10 @@ enum Bits {
 
 fn main() {
     let cli = Cli::parse();
+    
+    if let Some(path) = cli.compile.as_ref() {
+        compile(&cli.path);
+    }
     
     match cli.bits {
         Bits::Int8 => run::<i8>(cli),
@@ -158,7 +167,13 @@ fn run<T: Integer + Neg<Output = T> + TryFrom<i128, Error: Display> + 'static>(c
 fn run_file<T: Integer + Neg<Output = T> + 'static, I: Iterator<Item = T>>(path: PathBuf, input: impl IntoIterator<IntoIter = I>, output: Option<Vec<T>>, optimize: Optimize) {
     let mut code = match path {
         path if path.to_str().is_some_and(|p| p == "-") => RoCode::<T>::from(Stdin::<Instruction<T>>::new().collect::<Vec<_>>().as_slice()),
-        path =>  RoCode::<T>::parse(path.as_path()),
+        path =>  match RoCode::<T>::parse(path.as_path()) {
+            Ok(code) => code,
+            Err(e) => {
+                eprintln!("error: {}: {e}", path.display());
+                exit(1);
+            },
+        },
     };
     
     #[cfg(feature = "optimizer")]

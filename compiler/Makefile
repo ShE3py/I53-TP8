@@ -6,7 +6,7 @@ OUT = out
 
 OBJS = ts.o asa.o codegen.o parser.o lexer.o
 
-CFLAGS = -Wall -Werror=switch -g -I$(SRC)
+CFLAGS = -Wall -Wextra -Werror=switch -g -I$(SRC)
 LFLAGS = -lfl
 
 mkdirs = $(OUT)/grass
@@ -17,13 +17,19 @@ $(mkdirs):
 	mkdir -p $(OUT)/ram/
 	touch $@
 
-arc: $(addprefix $(OUT)/,$(OBJS))
+arc: $(addprefix $(OUT)/,$(OBJS)) $(OUT)/driver.o
 	$(CC) $^ -o $@ $(LFLAGS)
+
+$(OUT)/libarc.a: $(addprefix $(OUT)/,$(OBJS))
+	ar rcs $@ $^
 
 $(OUT)/%.o: $(SRC)/%.c $(SRC)/%.h
 	$(CC) -c $< $(CFLAGS) -o $@
 
 $(OUT)/%.o: $(OUT)/%.c
+	$(CC) -c $< $(CFLAGS) -o $@
+
+$(OUT)/driver.o: $(SRC)/driver.c
 	$(CC) -c $< $(CFLAGS) -o $@
 
 $(OUT)/parser.c: $(SRC)/parser.y

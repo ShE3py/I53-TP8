@@ -12,7 +12,3 @@ pub(crate) fn format_err(path: &Path, line: &str, line_nb: usize, msg: impl Disp
 pub(crate) fn format_help(path: &Path, line_nb: usize, msg: impl Display) -> String {
     format_err(path, "", line_nb, format!("help: {msg}"))
 }
-
-pub(crate) fn print_err(path: &Path, line: &str, line_nb: usize, msg: impl Display) {
-    eprintln!("{}", format_err(path, line, line_nb, msg));
-}

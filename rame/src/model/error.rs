@@ -1,9 +1,40 @@
 use crate::model::{Integer, Ir};
 use std::any::type_name;
+use std::{fmt, io};
 use std::error::Error;
-use std::fmt;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
+
+/// The error type returned by [`RoCode::parse`](crate::model::RoCode::parse).
+#[derive(Debug)]
+pub enum ParseCodeError<T: Integer> {
+    Io(io::Error),
+    Inst(usize, String, ParseInstructionError<T>),
+}
+
+impl<T: Integer> Display for ParseCodeError<T> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            ParseCodeError::Io(e) => Display::fmt(e, f),
+            ParseCodeError::Inst(i, l, e) => write!(f, "{}: {l:?}: {e}", i + 1),
+        }
+    }
+}
+
+impl<T: Integer> Error for ParseCodeError<T> {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        match self {
+            ParseCodeError::Io(e) => Some(e),
+            ParseCodeError::Inst(_, _, e) => Some(e),
+        }
+    }
+}
+
+impl<T: Integer> From<io::Error> for ParseCodeError<T> {
+    fn from(e: io::Error) -> Self {
+        ParseCodeError::Io(e)
+    }
+}
 
 /// The error type returned by [`Instruction::from_str`](crate::model::Instruction::from_str).
 #[derive(Debug)]

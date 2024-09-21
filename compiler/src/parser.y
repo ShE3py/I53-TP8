@@ -204,23 +204,19 @@ BoolExpr:
 
 %%
 
-int main(int argc, char *argv[]) {
-	extern FILE *yyin;
-	extern int yylex_destroy(void);
-	
-	if(argc == 1) {
-		fprintf(stderr, "%s <input>\n", argv[0]);
-		return 1;
-	}
-	
-	input = argv[1];
-	
-	FILE *f = fopen(input, "r");
-	st_pop_push_empty();
-	
-	yyin = f;
-	yyparse();
-	yylex_destroy();
-	fclose(f);
-	return 0;
+int arc_compile_file(const char *filename) {
+    extern FILE *yyin;
+    extern int yylex_destroy(void);
+
+    input = filename;
+
+    FILE *f = fopen(input, "r");
+    st_pop_push_empty();
+
+    yyin = f;
+    yyparse();
+    yylex_destroy();
+    fclose(f);
+    return 0;
 }
+

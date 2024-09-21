@@ -1,4 +1,4 @@
-use crate::error::print_err;
+use crate::model::error::ParseCodeError;
 use crate::model::{Instruction, Integer, Ir};
 use std::fmt::{self, Display, Formatter};
 use std::fs::File;
@@ -6,7 +6,6 @@ use std::io;
 use std::io::{BufRead, BufReader, BufWriter};
 use std::ops::Deref;
 use std::path::Path;
-use std::process::exit;
 use std::str::FromStr;
 
 /// Represents a read-only code segment.
@@ -18,28 +17,14 @@ pub struct RoCode<T: Integer>(Vec<Instruction<T>>);
 impl<T: Integer> RoCode<T> {
     /// Parses a file.
     /// Blank lines and `; comments` are allowed.
-    pub fn parse<P: AsRef<Path>>(path: P) -> RoCode<T> {
+    pub fn parse<P: AsRef<Path>>(path: P) -> Result<RoCode<T>, ParseCodeError<T>> {
         let path = path.as_ref();
-        let f = match File::open(path) {
-            Ok(f) => f,
-            Err(e) => {
-                eprintln!("error: {path:?}: {e}");
-                exit(1);
-            },
-        };
+        let f = File::open(path)?;
         
         let mut insts = Vec::new();
-        let mut errs = 0;
         
         for (i, l) in BufReader::new(f).lines().enumerate() {
-            let l = match l {
-                Ok(l) => l,
-                Err(e) => {
-                    print_err(path, "<err>", i, e);
-                    errs += 1;
-                    continue;
-                },
-            };
+            let l = l?;
             
             // Remove `; comments` and spaces
             let stripped = match l.split_once(';') {
@@ -53,19 +38,11 @@ impl<T: Integer> RoCode<T> {
             
             match Instruction::from_str(stripped) {
                 Ok(i) => insts.push(i),
-                Err(e) => {
-                    print_err(path, &l, i, e);
-                    errs += 1;
-                    continue;
-                }
+                Err(e) => return Err(ParseCodeError::Inst(i, l, e)),
             }
         }
         
-        if errs != 0 {
-            exit(1);
-        }
-        
-        RoCode(insts)
+        Ok(RoCode(insts))
     }
     
     /// Writes `self` into something.

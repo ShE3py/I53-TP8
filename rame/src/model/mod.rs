@@ -11,7 +11,7 @@ mod ir;
 mod makro;
 mod ro;
 
-pub use error::ParseInstructionError;
+pub use error::{ParseCodeError, ParseInstructionError};
 pub use inst::{Address, Instruction, Loc, Register, RoLoc, RwLoc, Value, WoLoc};
 pub use ir::Ir;
 pub use ro::RoCode;
@@ -20,9 +20,11 @@ pub use ro::RoCode;
 pub trait Integer: PrimInt
     + Debug + Display
     + FromStr<Err: Error + 'static>
-    + TryInto<usize, Error: Error + 'static> {}
+    + TryInto<usize, Error: Error + 'static>
+    + 'static {}
 
 impl<T: PrimInt
     + Debug + Display
     + FromStr<Err: Error + 'static>
-    + TryInto<usize, Error: Error + 'static>> Integer for T {}
+    + TryInto<usize, Error: Error + 'static>
+    + 'static> Integer for T {}
