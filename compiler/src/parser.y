@@ -1,4 +1,5 @@
 %{
+  #include <errno.h>
   #include "ts.h"
   #include "codegen.h"
 
@@ -211,8 +212,17 @@ void arc_compile_file(const char *_infile, const char *_outfile) {
 
     infile = _infile;
     outfile = fopen(_outfile, "w");
+    if(!outfile) {
+        fprintf(stderr, "%s: %s\n", _outfile, strerror(errno));
+        exit(1);
+    }
     
     FILE *f = fopen(_infile, "r");
+    if(!f) {
+        fprintf(stderr, "%s: %s\n", _infile, strerror(errno));
+        exit(1);
+    }
+    
     st_pop_push_empty();
 
     yyin = f;
