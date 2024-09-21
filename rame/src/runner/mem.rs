@@ -1,4 +1,4 @@
-use crate::model::{Address, Instruction, Integer, Ir, Register, Value};
+use crate::model::{self, Address, Instruction, Integer, Ir, Register, RoLoc, WoLoc, Value, RwLoc};
 use crate::runner::{Ram, RunError};
 use std::cell::Cell;
 use std::fmt;
@@ -11,16 +11,30 @@ pub(super) enum Loc<T: Integer> {
 }
 
 #[derive(Clone, Eq, PartialEq, Debug)]
-pub(super) struct LocEntry<'ram, T: Integer> {
-    pub adr: usize,
+pub(super) struct LocEntry<'ram, T: Integer, L: model::Loc> {
+    pub adr: L,
     pub inner: &'ram Cell<Loc<T>>,
 }
 
-impl<T: Integer> LocEntry<'_, T> {
-    pub(super) fn set(&self, v: T) {
-        self.inner.set(Loc::Init(v));
+impl<'ram, T: Integer> From<LocEntry<'ram, T, RwLoc>> for LocEntry<'ram, T, RoLoc> {
+    fn from(loc: LocEntry<'ram, T, RwLoc>) -> Self {
+        LocEntry {
+            adr: RoLoc::from(loc.adr),
+            inner: loc.inner,
+        }
     }
-    
+}
+
+impl<'ram, T: Integer> From<LocEntry<'ram, T, RwLoc>> for LocEntry<'ram, T, WoLoc> {
+    fn from(loc: LocEntry<'ram, T, RwLoc>) -> Self {
+        LocEntry {
+            adr: WoLoc::from(loc.adr),
+            inner: loc.inner,
+        }
+    }
+}
+
+impl<T: Integer> LocEntry<'_, T, RoLoc> {
     pub(super) fn get(&self) -> Result<T, RunError<T>> {
         match self.inner.get() {
             Loc::Uninit => Err(RunError::ReadUninit { adr: self.adr }),
@@ -29,38 +43,56 @@ impl<T: Integer> LocEntry<'_, T> {
     }
 }
 
+impl<T: Integer> LocEntry<'_, T, WoLoc> {
+    pub(super) fn set(&self, v: T) {
+        self.inner.set(Loc::Init(v));
+    }
+}
+
+impl<T: Integer> LocEntry<'_, T, RwLoc> {
+    pub(super) fn read(&self) -> Result<T, RunError<T>> {
+        LocEntry::<'_, T, RoLoc>::from(self.clone()).get()
+    }
+    
+    pub(super) fn write(&self, v: T) {
+        LocEntry::<'_, T, WoLoc>::from(self.clone()).set(v);
+    }
+}
+
 impl<T: Integer> Value<T> {
     /// Fetches the value.
     pub fn get<I: Iterator<Item = T>>(&self, ram: &Ram<T, I>) -> Result<T, RunError<T>> {
         match self {
             Value::Constant(n) => Ok(*n),
-            Value::Register(reg) => reg.get(ram),
+            Value::Register(reg) => reg.loc(ram)?.get(),
         }
     }
 }
 
-impl Register {
-    pub(super) fn loc<'ram, T: Integer, I: Iterator<Item = T>>(&self, ram: &'ram Ram<T, I>) -> Result<LocEntry<'ram, T>, RunError<T>> {
+impl<L: model::Loc> Register<L> {
+    pub(super) fn loc<'ram, T: Integer, I: Iterator<Item = T>>(&self, ram: &'ram Ram<T, I>) -> Result<LocEntry<'ram, T, L>, RunError<T>> {
         match *self {
             Register::Direct(n) => Ok(ram.loc(n)),
             Register::Indirect(n) => {
                 let adr = ram.loc(n).get()?;
                 
                 match adr.try_into() {
-                    Ok(adr) => Ok(ram.loc(adr)),
+                    Ok(adr) => Ok(ram.loc(L::from(adr))),
                     Err(err) => Err(RunError::InvalidAddress { adr, err }),
                 }
             }
         }
     }
-    
-    /// Fetches the value.
-    pub fn get<T: Integer, I: Iterator<Item = T>>(&self, ram: &Ram<T, I>) -> Result<T, RunError<T>> {
+}
+
+impl Register<RoLoc> {
+    pub fn get<T: Integer, I: Iterator<Item = T>>(&self, ram: &'_ Ram<T, I>) -> Result<T, RunError<T>> {
         self.loc(ram)?.get()
     }
-    
-    /// Sets the value.
-    pub fn set<T: Integer, I: Iterator<Item = T>>(&self, v: T, ram: &Ram<T, I>) -> Result<(), RunError<T>> {
+}
+
+impl Register<WoLoc> {
+    pub fn set<T: Integer, I: Iterator<Item = T>>(&self, v: T, ram: &'_ Ram<T, I>) -> Result<(), RunError<T>> {
         self.loc(ram)?.set(v);
         Ok(())
     }
@@ -95,7 +127,7 @@ impl<T: Integer> Display for Loc<T> {
     }
 }
 
-impl<T: Integer> Display for LocEntry<'_, T> {
+impl<T: Integer, L: model::Loc> Display for LocEntry<'_, T, L> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "R{} = {}", self.adr, self.inner.get())
     }

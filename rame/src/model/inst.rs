@@ -3,6 +3,7 @@ use std::fmt;
 use std::fmt::{Display, Formatter, Write};
 use std::num::ParseIntError;
 use std::str::FromStr;
+use sealed::sealed;
 
 /// Represents an instruction.
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug, Default)]
@@ -10,9 +11,9 @@ pub enum Instruction<T: Integer> {
     Read,
     Write,
     Load(Value<T>),
-    Store(Register),
-    Increment(Register),
-    Decrement(Register),
+    Store(Register<WoLoc>),
+    Increment(Register<RwLoc>),
+    Decrement(Register<RwLoc>),
     Add(Value<T>),
     Sub(Value<T>),
     Mul(Value<T>),
@@ -31,17 +32,39 @@ pub enum Instruction<T: Integer> {
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
 pub enum Value<T: Integer> {
     Constant(T),
-    Register(Register),
+    Register(Register<RoLoc>),
+}
+
+/// Read-only memory location.
+#[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
+#[repr(transparent)]
+pub struct RoLoc(usize);
+
+/// Write-only memory location.
+#[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
+#[repr(transparent)]
+pub struct WoLoc(usize);
+
+/// Read-write memory location.
+#[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
+#[repr(transparent)]
+pub struct RwLoc(usize);
+
+/// A memory location.
+#[sealed]
+pub trait Loc: From<usize> + Copy + Display {
+    /// The raw address.
+    fn raw(self) -> usize;
 }
 
 /// The value of a register.
 /// Read-write memory access.
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
-pub enum Register {
+pub enum Register<L: Loc> {
     /// The value is read/wrote directly into the register.
-    Direct(usize),
+    Direct(L),
     /// The value is read/wrote from the register this register points to.
-    Indirect(usize),
+    Indirect(RoLoc),
 }
 
 /// Where the instructions can jump to.
@@ -54,12 +77,15 @@ pub enum Address {
     /// A constant address.
     Constant(Ir),
     /// The value of a register.
-    Register(usize),
+    Register(RoLoc),
 }
 
 impl<T: Integer> Instruction<T> {
-    /// Returns the address targeted by this instruction, if any.
-    pub const fn register(&self) -> Option<Register> {
+    /// Returns the first address read by this instruction, if any.
+    ///
+    /// Write-only registers (e.g. [`Instruction::Store`]) are *not* returned.
+    #[cfg_attr(feature = "dynamic_jumps", doc = "Indirect jumps registers *are* returned.")]
+    pub fn register(&self) -> Option<Register<RoLoc>> {
         match *self {
             Instruction::Read | Instruction::Write | Instruction::Stop | Instruction::Nop => None,
             
@@ -68,7 +94,9 @@ impl<T: Integer> Instruction<T> {
                 Value::Register(reg) => Some(reg),
             },
             
-            Instruction::Store(reg) | Instruction::Increment(reg) | Instruction::Decrement(reg) => Some(reg),
+            Instruction::Store(_) => None /* write-only */,
+            
+            Instruction::Increment(reg) | Instruction::Decrement(reg) => Some(reg.downgrade()),
             
             #[cfg(not(feature = "dynamic_jumps"))]
             Instruction::Jump(_) | Instruction::JumpZero(_) | Instruction::JumpLtz(_) | Instruction::JumpGtz(_) => None,
@@ -219,7 +247,54 @@ impl<T: Integer> Display for Value<T> {
     }
 }
 
-impl FromStr for Register {
+#[sealed]
+impl Loc for RoLoc {
+    fn raw(self) -> usize { self.0 }
+}
+
+#[sealed]
+impl Loc for WoLoc {
+    fn raw(self) -> usize { self.0 }
+}
+
+#[sealed]
+impl Loc for RwLoc {
+    fn raw(self) -> usize { self.0 }
+}
+
+impl From<usize> for RoLoc {
+    fn from(loc: usize) -> Self { RoLoc(loc) }
+}
+
+impl From<usize> for WoLoc {
+    fn from(loc: usize) -> Self { WoLoc(loc) }
+}
+
+impl From<usize> for RwLoc {
+    fn from(loc: usize) -> Self { RwLoc(loc) }
+}
+
+impl From<RwLoc> for RoLoc {
+    fn from(loc: RwLoc) -> Self { RoLoc(loc.0) }
+}
+
+impl From<RwLoc> for WoLoc {
+    fn from(loc: RwLoc) -> Self { WoLoc(loc.0) }
+}
+
+impl Display for RoLoc {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result { Display::fmt(&self.0, f) }
+}
+
+impl Display for WoLoc {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result { Display::fmt(&self.0, f) }
+}
+
+impl Display for RwLoc {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result { Display::fmt(&self.0, f) }
+}
+
+impl<L: Loc> FromStr for Register<L> {
     type Err = ParseIntError;
     
     fn from_str(mut s: &str) -> Result<Self, Self::Err> {
@@ -229,28 +304,30 @@ impl FromStr for Register {
         }
         
         let n = usize::from_str(s)?;
-        Ok(if at { Register::Indirect(n) } else { Register::Direct(n) })
+        Ok(if at { Register::Indirect(RoLoc::from(n)) } else { Register::Direct(L::from(n)) })
     }
 }
 
-impl Display for Register {
+impl<L: Loc> Display for Register<L> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         if let Register::Indirect(_) = self {
             f.write_char('@')?;
         }
         
         match self {
-            Register::Direct(n) | Register::Indirect(n) => Display::fmt(n, f),
+            Register::Direct(loc) => Display::fmt(loc, f),
+            Register::Indirect(loc) => Display::fmt(loc, f),
         }
     }
 }
 
-impl Register {
-    /// Returns the address of the register.
+impl Register<RwLoc> {
+    /// Downgrades this register to read-only.
     #[must_use]
-    pub const fn adr(&self) -> usize {
-        match *self {
-            Register::Direct(n) | Register::Indirect(n) => n,
+    pub fn downgrade(self) -> Register<RoLoc> {
+        match self {
+            Register::Direct(loc) => Register::Direct(RoLoc::from(loc)),
+            Register::Indirect(loc) => Register::Indirect(loc),
         }
     }
 }
@@ -266,7 +343,7 @@ impl FromStr for Address {
         }
         
         Ok(if at {
-            Address::Register(usize::from_str(s)?)
+            Address::Register(RoLoc::from(usize::from_str(s)?))
         } else {
             Address::Constant(Ir::from_str(s)?)
         })

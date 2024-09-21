@@ -1,4 +1,4 @@
-use crate::model::Integer;
+use crate::model::{Integer, RoLoc};
 use std::error::Error;
 use std::fmt;
 use std::fmt::{Display, Formatter};
@@ -10,7 +10,7 @@ pub enum RunError<T: Integer> {
     ReadEof,
     
     /// An unitialized memory location was read.
-    ReadUninit { adr: usize },
+    ReadUninit { adr: RoLoc },
     
     /// A [`Register::Indirect`](crate::model::Register::Indirect) read/write was attempted,
     /// but the intermediate register's value wasn't a valid address.
@@ -23,9 +23,9 @@ pub enum RunError<T: Integer> {
     InexistentJump,
     
     /// An [`Address::Register`] jump was attempted,
-    /// but the register's value wasn't a valid [`Ir`].
+    /// but the register's value wasn't a valid [`Ir`](crate::model::Ir).
     #[cfg(feature = "dynamic_jumps")]
-    InvalidJump { err: <T as TryInto<Ir>>::Error },
+    InvalidJump { err: <T as TryInto<usize>>::Error },
     
     /// [`Ram::step`](crate::runner::Ram::step) was called, even though there's no
     /// instruction left to execute.
@@ -69,8 +69,8 @@ impl<T: Integer> Display for RunError<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
             RunError::ReadEof => f.write_str("nothing left to read"),
-            RunError::ReadUninit { adr } => write!(f, "reading uninitialized memory R{adr}"),
-            RunError::InvalidAddress { adr, err } => write!(f, "invalid address R{adr}: {err}"),
+            RunError::ReadUninit { ref adr } => write!(f, "reading uninitialized memory R{adr}"),
+            RunError::InvalidAddress { ref adr, err } => write!(f, "invalid address R{adr}: {err}"),
             RunError::IntegerOverfow => f.write_str("integer overflow"),
             RunError::InexistentJump => f.write_str("jumping to an inexistent location"),
             #[cfg(feature = "dynamic_jumps")]  RunError::InvalidJump { err } => write!(f, "jumping to an invalid location: {err}"),

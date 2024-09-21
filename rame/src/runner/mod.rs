@@ -1,7 +1,7 @@
 //! An emulator for RAM programs.
 
 use crate::error::{format_err, format_help};
-use crate::model::{Address, Instruction, Integer, Ir, Register, RoCode, Value};
+use crate::model::{self, Address, Instruction, Integer, Ir, Register, RoCode, RoLoc, RwLoc, Value};
 use crate::runner::mem::{Loc, LocEntry};
 use std::cell::{Cell, UnsafeCell};
 use std::hint::assert_unchecked;
@@ -150,10 +150,10 @@ impl<T: Integer, I: Iterator<Item = T>> Ram<T, I> {
     }
     
     /// Either `INC` or `DEC`.
-    fn unop<F: Fn(&T, &T) -> Option<T>>(&self, reg: Register, f: F) -> Result<(), RunError<T>> {
+    fn unop<F: Fn(&T, &T) -> Option<T>>(&self, reg: Register<RwLoc>, f: F) -> Result<(), RunError<T>> {
         let loc = reg.loc(self)?;
-        let v = loc.get()?;
-        f(&v, &T::one()).map(|r| loc.set(r)).ok_or(RunError::IntegerOverfow)
+        let v = loc.read()?;
+        f(&v, &T::one()).map(|r| loc.write(r)).ok_or(RunError::IntegerOverfow)
     }
     
     /// Arithmetic instructions on ACC.
@@ -197,7 +197,7 @@ impl<T: Integer, I: Iterator<Item = T>> Ram<T, I> {
                 // Show ACC value
                 if inst.should_print_acc() {
                     err.push('\n');
-                    err.push_str(&format_help(path, ir.inner(), format!("ACC = {}", self.acc().inner.get())));
+                    err.push_str(&format_help(path, ir.inner(), format!("ACC = {}", self.acc::<RoLoc>().inner.get())));
                 }
                 
                 // Show register value
@@ -211,7 +211,7 @@ impl<T: Integer, I: Iterator<Item = T>> Ram<T, I> {
                     Some(Register::Indirect(adr)) => {
                         let val = self.loc(adr).get().unwrap();
                         let loc = match val.try_into() {
-                            Ok(adr) => Ok(self.loc(adr)),
+                            Ok(adr) => Ok(self.loc(RoLoc::from(adr))),
                             Err(err) => Err(RunError::InvalidAddress { adr: val, err }),
                         };
                         
@@ -248,35 +248,36 @@ impl<T: Integer, I: Iterator<Item = T>> Ram<T, I> {
         &self.output
     }
     
-    fn loc(&self, adr: usize) -> LocEntry<'_, T> {
+    fn loc<L: model::Loc>(&self, adr: L) -> LocEntry<'_, T, L> {
         // SAFETY: this function is the only one that uses `self.memory`,
         //  we don't call code that could call this function a 2nd time,
         //  so there's no references that point to our emulated memory.
         let memory = unsafe { &mut *self.memory.get() };
         
-        if adr >= memory.len() {
+        let raw_adr = adr.raw();
+        if raw_adr >= memory.len() {
             #[cold]
             #[inline(never)]
             fn resize_mem<T: Integer>(memory: &mut Vec<Cell<Loc<T>>>, new_len: usize) {
                 memory.resize(new_len, Cell::new(Loc::Uninit));
             }
             
-            resize_mem(memory, adr + 1);
+            resize_mem(memory, raw_adr + 1);
         };
         
         // SAFETY: if `adr >= memory.len()`, we resize so that `memory.len() == adr + 1`,
         //  so `memory.len() > adr`.
-        unsafe { assert_unchecked(adr < memory.len()) };
+        unsafe { assert_unchecked(raw_adr < memory.len()) };
         
         LocEntry {
             adr,
-            inner: &memory[adr],
+            inner: &memory[raw_adr],
         }
     }
     
     #[inline]
-    fn acc(&self) -> LocEntry<'_, T> {
-        self.loc(0)
+    fn acc<L: model::Loc>(&self) -> LocEntry<'_, T, L> {
+        self.loc(L::from(0))
     }
     
     /// Returns `self`'s source code.

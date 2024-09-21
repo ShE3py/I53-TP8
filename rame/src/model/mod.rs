@@ -12,7 +12,7 @@ mod makro;
 mod ro;
 
 pub use error::ParseInstructionError;
-pub use inst::{Address, Instruction, Register, Value};
+pub use inst::{Address, Instruction, Loc, Register, RoLoc, RwLoc, Value, WoLoc};
 pub use ir::Ir;
 pub use ro::RoCode;
 
