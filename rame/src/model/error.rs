@@ -1,11 +1,11 @@
-use crate::model::{Instruction, Integer, Ir};
+use crate::model::{Integer, Ir};
 use std::any::type_name;
 use std::error::Error;
 use std::fmt;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 
-/// The error type returned by [`Instruction::from_str`].
+/// The error type returned by [`Instruction::from_str`](crate::model::Instruction::from_str).
 #[derive(Debug)]
 pub enum ParseInstructionError<T: Integer> {
     /// The opcode was not recognized.

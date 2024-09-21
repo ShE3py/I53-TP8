@@ -1,7 +1,5 @@
 use crate::error::print_err;
 use crate::model::{Instruction, Integer, Ir};
-use crate::optimizer::SeqRewriter;
-use crate::runner::Ram;
 use std::fmt::{self, Display, Formatter};
 use std::fs::File;
 use std::io;
@@ -13,7 +11,7 @@ use std::str::FromStr;
 
 /// Represents a read-only code segment.
 ///
-/// It may be executed with [`Ram`], and modified with [`SeqRewriter`].
+/// It may be executed with [`Ram`](crate::runner::Ram), and modified with [`SeqRewriter`](crate::optimizer::SeqRewriter).
 #[derive(Clone, Eq, PartialEq, Hash, Debug)]
 pub struct RoCode<T: Integer>(Vec<Instruction<T>>);
 

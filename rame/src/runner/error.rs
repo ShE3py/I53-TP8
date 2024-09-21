@@ -1,26 +1,25 @@
-use crate::model::{Instruction, Integer, Ir, Register};
-use crate::runner::Ram;
+use crate::model::Integer;
 use std::error::Error;
 use std::fmt;
 use std::fmt::{Display, Formatter};
 
-/// The error type returned by [`Ram::step`].
+/// The error type returned by [`Ram::step`](crate::runner::Ram::step).
 #[derive(Debug)]
 pub enum RunError<T: Integer> {
-    /// A [`Instruction::Read`] was issued, but nothing was left to read.
+    /// A [`Instruction::Read`](crate::model::Instruction::Read) was issued, but nothing was left to read.
     ReadEof,
     
     /// An unitialized memory location was read.
     ReadUninit { adr: usize },
     
-    /// A [`Register::Indirect`] read/write was attempted,
+    /// A [`Register::Indirect`](crate::model::Register::Indirect) read/write was attempted,
     /// but the intermediate register's value wasn't a valid address.
     InvalidAddress { adr: T, err: <T as TryInto<usize>>::Error },
     
     /// An arithmetic instruction overflowed.
     IntegerOverfow,
     
-    /// A jump instruction jumped to an inexistent [`Ir`].
+    /// A jump instruction jumped to an inexistent [`Ir`](crate::model::Ir).
     InexistentJump,
     
     /// An [`Address::Register`] jump was attempted,
@@ -28,7 +27,7 @@ pub enum RunError<T: Integer> {
     #[cfg(feature = "dynamic_jumps")]
     InvalidJump { err: <T as TryInto<Ir>>::Error },
     
-    /// [`Ram::step`] was called, even though there's no
+    /// [`Ram::step`](crate::runner::Ram::step) was called, even though there's no
     /// instruction left to execute.
     Eof,
 }
