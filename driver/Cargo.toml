@@ -1,5 +1,5 @@
 [package]
-name = "rame"
+name = "rame_driver"
 version = "0.0.0"
 authors = ["Lieselotte"]
 repository = "https://github.com/ShE3py/I53-TP8/"
@@ -11,16 +11,18 @@ rust-version = "1.81"
 publish = false
 
 [features]
-default = ["optimizer"]
+default = ["optimizer", "rame/default"]
 
 # feat: allow `JUMP @n`, but we can't optimize such code.
-dynamic_jumps = []
+dynamic_jumps = ["rame/dynamic_jumps"]
 
 # feat: enable to optimizer.
-optimizer = []
+optimizer = ["rame/optimizer"]
 
-[dependencies.num-traits]
-version = "0.2.19"
+[dependencies.rame]
+path = "../rame"
+default-features = false
 
-[dependencies.sealed]
-version = "0.6.0-rc3"
+[dependencies.clap]
+version = "4.5.17"
+features = ["derive"]

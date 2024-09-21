@@ -1,5 +1,6 @@
 [workspace]
 members = [
     "rame",
+    "driver",
 ]
 resolver = "2"

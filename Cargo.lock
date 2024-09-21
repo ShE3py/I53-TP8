@@ -146,9 +146,16 @@ dependencies = [
 name = "rame"
 version = "0.0.0"
 dependencies = [
- "clap",
  "num-traits",
  "sealed",
+]
+
+[[package]]
+name = "rame_driver"
+version = "0.0.0"
+dependencies = [
+ "clap",
+ "rame",
 ]
 
 [[package]]
