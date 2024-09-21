@@ -6,7 +6,8 @@ OUT = out
 
 OBJS = ts.o asa.o codegen.o parser.o lexer.o
 
-CFLAGS = -Wall -Wextra -Werror=switch -g -I$(SRC)
+OPT_LEVEL ?= 0
+CFLAGS = -Wall -Wextra -Werror=switch -g -O$(OPT_LEVEL) -I$(SRC)
 LFLAGS = -lfl
 
 mkdirs = $(OUT)/grass
