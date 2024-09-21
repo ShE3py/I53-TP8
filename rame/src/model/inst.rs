@@ -81,39 +81,43 @@ pub enum Address {
 }
 
 impl<T: Integer> Instruction<T> {
-    /// Returns the first address read by this instruction, if any.
-    ///
-    /// Write-only registers (e.g. [`Instruction::Store`]) are *not* returned.
+    /// Returns the value read by this instruction, if any.
+    #[must_use] #[inline]
+    pub const fn value(self) -> Option<Value<T>> {
+        match self {
+            Instruction::Load(v) | Instruction::Add(v) | Instruction::Sub(v) | Instruction::Mul(v) | Instruction::Div(v) | Instruction::Mod(v) => Some(v),
+            _ => None,
+        }
+    }
+    
+    /// Returns the first register read by this instruction, if any.
     #[cfg_attr(feature = "dynamic_jumps", doc = "Indirect jumps registers *are* returned.")]
-    pub fn register(&self) -> Option<Register<RoLoc>> {
-        match *self {
-            Instruction::Read | Instruction::Write | Instruction::Stop | Instruction::Nop => None,
-            
+    #[must_use] #[inline]
+    pub const fn register(self) -> Option<Register<RoLoc>> {
+        match self {
             Instruction::Load(v) | Instruction::Add(v) | Instruction::Sub(v) | Instruction::Mul(v) | Instruction::Div(v) | Instruction::Mod(v) => match v {
                 Value::Constant(_) => None,
                 Value::Register(reg) => Some(reg),
             },
             
-            Instruction::Store(_) => None /* write-only */,
-            
             Instruction::Increment(reg) | Instruction::Decrement(reg) => Some(reg.downgrade()),
-            
-            #[cfg(not(feature = "dynamic_jumps"))]
-            Instruction::Jump(_) | Instruction::JumpZero(_) | Instruction::JumpLtz(_) | Instruction::JumpGtz(_) => None,
             
             #[cfg(feature = "dynamic_jumps")]
             Instruction::Jump(adr) | Instruction::JumpZero(adr) | Instruction::JumpLtz(adr) | Instruction::JumpGtz(adr) => match adr {
                 Address::Constant(_) => None,
                 Address::Register(reg) => Some(Register::Direct(reg)),
             },
+            
+            _ => None,
         }
     }
     
-    /// Returns if this instruction is a jump.
-    pub const fn is_jump(&self) -> bool {
-        match *self {
-            Instruction::Jump(_) | Instruction::JumpZero(_) | Instruction::JumpLtz(_) | Instruction::JumpGtz(_) => true,
-            Instruction::Read | Instruction::Write | Instruction::Load(_) | Instruction::Add(_) | Instruction::Sub(_) | Instruction::Mul(_) | Instruction::Div(_) | Instruction::Mod(_) | Instruction::Store(_) | Instruction::Increment(_) | Instruction::Decrement(_) | Instruction::Stop | Instruction::Nop => false,
+    /// Returns the address this instruction jumps to, if any.
+    #[must_use] #[inline]
+    pub const fn jump(self) -> Option<Address> {
+        match self {
+            Instruction::Jump(adr) | Instruction::JumpZero(adr) | Instruction::JumpLtz(adr) | Instruction::JumpGtz(adr) => Some(adr),
+            _ => None,
         }
     }
 }
@@ -278,6 +282,10 @@ impl From<RwLoc> for RoLoc {
     fn from(loc: RwLoc) -> Self { RoLoc(loc.0) }
 }
 
+impl RoLoc {
+    const fn from_const(loc: RwLoc) -> Self { RoLoc(loc.0) }
+}
+
 impl From<RwLoc> for WoLoc {
     fn from(loc: RwLoc) -> Self { WoLoc(loc.0) }
 }
@@ -324,9 +332,9 @@ impl<L: Loc> Display for Register<L> {
 impl Register<RwLoc> {
     /// Downgrades this register to read-only.
     #[must_use]
-    pub fn downgrade(self) -> Register<RoLoc> {
+    pub const fn downgrade(self) -> Register<RoLoc> {
         match self {
-            Register::Direct(loc) => Register::Direct(RoLoc::from(loc)),
+            Register::Direct(loc) => Register::Direct(RoLoc::from_const(loc)),
             Register::Indirect(loc) => Register::Indirect(loc),
         }
     }
