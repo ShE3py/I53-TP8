@@ -391,23 +391,17 @@ void codegen_nc(asa *p, int *ip) {
 		case TagAssignScalar: {
 			symbol var = st_find_or_internal_error(p->tag_assign_scalar.identifier);
 			
-			fprintf(outfile, "LOAD 1\n");
-			fprintf(outfile, "ADD #%i\n", var.base_adr);
-			fprintf(outfile, "STORE @2 ; &%s\n", var.identifier);
-			fprintf(outfile, "INC 2\n");
-			*ip += 4;
-			
 			codegen_nc(p->tag_assign_scalar.expr, ip);
 			
 			fprintf(outfile, "STORE @2\n");
-			fprintf(outfile, "DEC 2\n");
-			fprintf(outfile, "LOAD @2\n");
+			fprintf(outfile, "LOAD 1\n");
+			fprintf(outfile, "ADD #%i\n", var.base_adr);
 			fprintf(outfile, "STORE 3\n");
-			fprintf(outfile, "INC 2\n");
 			fprintf(outfile, "LOAD @2\n");
-			fprintf(outfile, "STORE @3 ; %s\n", var.identifier);
-			fprintf(outfile, "DEC 2\n");
-			*ip += 8;
+			fprintf(outfile, "STORE @3 ; %s := ", var.identifier);
+			fprint_asa(outfile, p->tag_assign_scalar.expr);
+			fprintf(outfile, "\n");
+			*ip += 6;
 			break;
 		}
 		
@@ -471,9 +465,9 @@ void codegen_nc(asa *p, int *ip) {
 			for(int i = 0; i < dst.size; ++i) {
 				fprintf(outfile, "LOAD 1\n");
 				fprintf(outfile, "ADD #%i\n", src.base_adr + i);
-				fprintf(outfile, "LOAD @0 ; %s[%d]\n", src.identifier);
+				fprintf(outfile, "LOAD @0 ; %s[%d]\n", src.identifier, i);
 				
-				fprintf(outfile, "STORE @3 ; %s[%d]\n", dst.identifier);
+				fprintf(outfile, "STORE @3 ; %s[%d]\n", dst.identifier, i);
 				fprintf(outfile, "INC 3\n");
 			}
 			

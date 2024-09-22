@@ -460,7 +460,7 @@ asa* create_assign_scalar_node(const char id[32], asa *expr) {
 	asa *p = checked_malloc();
 	
 	p->tag = TagAssignScalar;
-	p->ninst = expr->ninst + 12;
+	p->ninst = expr->ninst + 6;
 	strcpy(&p->tag_assign_scalar.identifier[0], &id[0]);
 	p->tag_assign_scalar.expr = expr;
 	
@@ -512,7 +512,7 @@ asa* create_assign_int_list_node(const char id[32], asa_list values) {
 		fprintf(stderr, "%s:%i: impossible d'affecter un tableau au scalaire '%s'\n", infile, yylineno, id);
 		exit(1);
 	}
-	else if(var.size != values.len) {
+	else if((size_t) var.size != values.len) {
 		extern const char *infile;
 		extern int yylineno;
 		
