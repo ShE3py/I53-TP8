@@ -206,20 +206,21 @@ BoolExpr:
 
 %%
 
-void arc_compile_file(const char *_infile, const char *_outfile) {
+// Private entry point
+void arc_compile_yy(const char *_infile, const char *_outpath, FILE *_outfile) {
     extern FILE *yyin;
     extern int yylex_destroy(void);
 
     infile = _infile;
-    outfile = fopen(_outfile, "w");
-    if(!outfile) {
-        fprintf(stderr, "%s: %s\n", _outfile, strerror(errno));
-        exit(1);
-    }
-    
     FILE *f = fopen(_infile, "r");
     if(!f) {
         fprintf(stderr, "%s: %s\n", _infile, strerror(errno));
+        exit(1);
+    }
+    
+    outfile = _outfile;
+    if(!_outfile) {
+        fprintf(stderr, "%s: %s\n", _outpath, strerror(errno));
         exit(1);
     }
     
@@ -230,5 +231,15 @@ void arc_compile_file(const char *_infile, const char *_outfile) {
     yylex_destroy();
     fclose(f);
     fclose(outfile);
+}
+
+// Called by the Rust driver
+void arc_compile_file_fd(const char *_infile, const char *_outpath, int _outfd) {
+    arc_compile_yy(_infile, _outpath, fdopen(_outfd, "w"));
+}
+
+// Called by the Rust & C driver
+void arc_compile_file(const char *_infile, const char *_outfile) {
+    arc_compile_yy(_infile, _outfile, fopen(_outfile, "w"));
 }
 

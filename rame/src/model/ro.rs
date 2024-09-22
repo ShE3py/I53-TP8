@@ -17,10 +17,7 @@ pub struct RoCode<T: Integer>(Vec<Instruction<T>>);
 impl<T: Integer> RoCode<T> {
     /// Parses a file.
     /// Blank lines and `; comments` are allowed.
-    pub fn parse<P: AsRef<Path>>(path: P) -> Result<RoCode<T>, ParseCodeError<T>> {
-        let path = path.as_ref();
-        let f = File::open(path)?;
-        
+    pub fn parse(f: File) -> Result<RoCode<T>, ParseCodeError<T>> {
         let mut insts = Vec::new();
         
         for (i, l) in BufReader::new(f).lines().enumerate() {

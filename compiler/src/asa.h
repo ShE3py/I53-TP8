@@ -552,7 +552,7 @@ typedef struct asa {
  * Un noeud qui ne génèrera aucune instruction.
  * `NOP` est contagieux ; `x + NOP` produira un `NOP`.
  */
-static asa *const NOP = (asa *const) 1;  // le code vérifie que `malloc()` ne renvoit pas `NOP` pour un noeud
+static asa *const NOP = (asa *const) sizeof(asa);
 
 /**
  * Créer une nouvelle liste à partir de son premier élément et des éléments suivants.

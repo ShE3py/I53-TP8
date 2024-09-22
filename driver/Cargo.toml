@@ -10,6 +10,18 @@ edition = "2021"
 rust-version = "1.81"
 publish = false
 
+[[bin]]
+name = "rame-cc"
+path = "src/bin/cc.rs"
+
+[[bin]]
+name = "rame-run"
+path = "src/main.rs"
+
+[[bin]]
+name = "rame-opt"
+path = "src/bin/opt.rs"
+
 [features]
 default = ["optimizer", "rame/default"]
 
@@ -26,3 +38,6 @@ default-features = false
 [dependencies.clap]
 version = "4.5.17"
 features = ["derive"]
+
+[dependencies.libc]
+version = "0.2.158"

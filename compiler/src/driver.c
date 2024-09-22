@@ -29,6 +29,6 @@ int main(int argc, char *argv[]) {
     }
     
     const char *infile = argv[optind];
-	return arc_compile_file(infile, outfile);
+	arc_compile_file(infile, outfile);
 }
 
