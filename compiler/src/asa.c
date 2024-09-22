@@ -363,7 +363,7 @@ asa* create_index_node(const char id[32], asa *index) {
 	asa *p = checked_malloc();
 	
 	p->tag = TagIndex;
-	p->ninst = index->tag == TagInt ? 3 : index->ninst + 5;
+	p->ninst = 3 + (index->tag != TagInt ? index->ninst : 0);
 	strcpy(&p->tag_index.identifier[0], &id[0]);
 	p->tag_index.index = index;
 	

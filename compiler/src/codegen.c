@@ -129,22 +129,17 @@ void codegen_nc(asa *p, int *ip) {
 				fprintf(outfile, "LOAD 1\n");
 				fprintf(outfile, "ADD #%i\n", var.base_adr + p->tag_index.index->tag_int.value);
 				fprintf(outfile, "LOAD @0 ; %s[%i]\n", var.identifier, p->tag_index.index->tag_int.value);
-				
-				*ip += 3;
 			}
 			else {
 				codegen_nc(p->tag_index.index, ip);
-				fprintf(outfile, "STORE @2\n");
-				fprintf(outfile, "LOAD 1\n");
-				fprintf(outfile, "ADD @2\n");
+				fprintf(outfile, "ADD 1\n");
 				fprintf(outfile, "ADD #%i\n", var.base_adr);
 				fprintf(outfile, "LOAD @0 ; %s[", var.identifier);
 				fprint_asa(outfile, p->tag_index.index);
 				fprintf(outfile, "]\n");
-				
-				*ip += 5;
 			}
 			
+			*ip += 3;
 			break;
 		}
 		
