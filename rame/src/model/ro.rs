@@ -39,7 +39,12 @@ impl<T: Integer> RoCode<T> {
             }
         }
         
-        Ok(RoCode(insts))
+        if insts.is_empty() {
+            Err(ParseCodeError::NoInst)
+        }
+        else {
+            Ok(RoCode(insts))
+        }
     }
     
     /// Writes `self` into something.

@@ -2,6 +2,7 @@ use rame::model::RoCode;
 use rame::optimizer::SeqRewriter;
 use std::ffi::{c_char, c_int, CString, OsStr};
 use std::fs::File;
+use std::io::{self, Seek};
 use std::os::fd::{FromRawFd, IntoRawFd, OwnedFd, RawFd};
 use std::os::unix::ffi::OsStrExt;
 use std::path::Path;
@@ -56,6 +57,17 @@ pub fn compile<P: AsRef<Path>, Q: AsRef<Path>>(infile: P, outfile: Q, optimize: 
             )
         };
         
+        if fd == -1 {
+            panic!("mkstemps: {}", io::Error::last_os_error());
+        }
+        
+        // SAFETY: inherently safe.
+        unsafe {
+            libc::unlink(
+                template.as_ptr() as *const c_char,
+            );
+        }
+        
         // SAFETY: the fd is ours.
         let fd = unsafe { OwnedFd::from_raw_fd(fd) };
         
@@ -63,7 +75,9 @@ pub fn compile<P: AsRef<Path>, Q: AsRef<Path>>(infile: P, outfile: Q, optimize: 
         unsafe { arc_compile_file_fd(c_infile.as_ptr(), c_outfile.as_ptr(), fd.try_clone().expect("failed to clone fd").into_raw_fd()) };
         
         // Optimize the artifact.
-        crate::optimize(File::from(fd), infile, Some(outfile));
+        let mut f = File::from(fd);
+        f.rewind().expect("rewind");
+        crate::optimize(f, &*String::from_utf8_lossy(&template), Some(outfile));
     }
 }
 

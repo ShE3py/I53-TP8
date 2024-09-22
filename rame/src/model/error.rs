@@ -10,6 +10,7 @@ use std::str::FromStr;
 pub enum ParseCodeError<T: Integer> {
     Io(io::Error),
     Inst(usize, String, ParseInstructionError<T>),
+    NoInst,
 }
 
 impl<T: Integer> Display for ParseCodeError<T> {
@@ -17,6 +18,7 @@ impl<T: Integer> Display for ParseCodeError<T> {
         match self {
             ParseCodeError::Io(e) => Display::fmt(e, f),
             ParseCodeError::Inst(i, l, e) => write!(f, "{}: {l:?}: {e}", i + 1),
+            ParseCodeError::NoInst => f.write_str("empty instruction table"),
         }
     }
 }
@@ -26,6 +28,7 @@ impl<T: Integer> Error for ParseCodeError<T> {
         match self {
             ParseCodeError::Io(e) => Some(e),
             ParseCodeError::Inst(_, _, e) => Some(e),
+            ParseCodeError::NoInst => None,
         }
     }
 }
