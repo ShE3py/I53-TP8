@@ -22,10 +22,6 @@ path = "src/bin/opt.rs"
 name = "rame-run"
 path = "src/bin/run.rs"
 
-[[bin]]
-name = "rame"
-path = "src/main.rs"
-
 [dependencies.rame]
 path = "../rame"
 

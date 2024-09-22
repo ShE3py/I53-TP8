@@ -1,8 +1,5 @@
-#![cfg(feature = "optimizer")]
-
 use clap::{Parser, ValueHint};
 use rame_driver::{open, optimize};
-use std::fs::File;
 use std::path::PathBuf;
 
 /// Optimize a RAM program.

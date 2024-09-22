@@ -25,6 +25,12 @@ impl<T> Stdin<T> {
     }
 }
 
+impl<T> Default for Stdin<T> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<T: FromStr<Err: Display> + 'static> Iterator for Stdin<T> {
     type Item = T;
     
