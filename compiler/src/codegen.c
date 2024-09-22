@@ -116,7 +116,7 @@ void codegen_nc(asa *p, int *ip) {
 			
 			fprintf(outfile, "LOAD 1\n");
 			fprintf(outfile, "ADD #%i\n", var.base_adr);
-			fprintf(outfile, "LOAD @0\n");
+			fprintf(outfile, "LOAD @0 ; %s\n", var.identifier);
 			*ip += 3;
 			
 			break;
@@ -128,7 +128,7 @@ void codegen_nc(asa *p, int *ip) {
 			if(p->tag_index.index->tag == TagInt) {
 				fprintf(outfile, "LOAD 1\n");
 				fprintf(outfile, "ADD #%i\n", var.base_adr + p->tag_index.index->tag_int.value);
-				fprintf(outfile, "LOAD @0\n");
+				fprintf(outfile, "LOAD @0 ; %s[%i]\n", var.identifier, p->tag_index.index->tag_int.value);
 				
 				*ip += 3;
 			}
@@ -138,7 +138,9 @@ void codegen_nc(asa *p, int *ip) {
 				fprintf(outfile, "LOAD 1\n");
 				fprintf(outfile, "ADD @2\n");
 				fprintf(outfile, "ADD #%i\n", var.base_adr);
-				fprintf(outfile, "LOAD @0\n");
+				fprintf(outfile, "LOAD @0 ; %s[", var.identifier);
+				fprint_asa(outfile, p->tag_index.index);
+				fprintf(outfile, "]\n");
 				
 				*ip += 5;
 			}
@@ -396,7 +398,7 @@ void codegen_nc(asa *p, int *ip) {
 			
 			fprintf(outfile, "LOAD 1\n");
 			fprintf(outfile, "ADD #%i\n", var.base_adr);
-			fprintf(outfile, "STORE @2\n");
+			fprintf(outfile, "STORE @2 ; &%s\n", var.identifier);
 			fprintf(outfile, "INC 2\n");
 			*ip += 4;
 			
@@ -408,7 +410,7 @@ void codegen_nc(asa *p, int *ip) {
 			fprintf(outfile, "STORE 3\n");
 			fprintf(outfile, "INC 2\n");
 			fprintf(outfile, "LOAD @2\n");
-			fprintf(outfile, "STORE @3\n");
+			fprintf(outfile, "STORE @3 ; %s\n", var.identifier);
 			fprintf(outfile, "DEC 2\n");
 			*ip += 8;
 			break;
@@ -420,7 +422,9 @@ void codegen_nc(asa *p, int *ip) {
 			codegen_nc(p->tag_assign_indexed.index, ip);
 			fprintf(outfile, "ADD 1\n");
 			fprintf(outfile, "ADD #%i\n", var.base_adr);
-			fprintf(outfile, "STORE @2\n");
+			fprintf(outfile, "STORE @2 ; &%s[", var.identifier);
+			fprint_asa(outfile, p->tag_assign_indexed.index);
+			fprintf(outfile, "]\n");
 			fprintf(outfile, "INC 2\n");
 			
 			*ip += 4;
@@ -431,7 +435,9 @@ void codegen_nc(asa *p, int *ip) {
 			fprintf(outfile, "STORE 3\n");
 			fprintf(outfile, "INC 2\n");
 			fprintf(outfile, "LOAD @2\n");
-			fprintf(outfile, "STORE @3\n");
+			fprintf(outfile, "STORE @3 ; %s[", var.identifier);
+			fprint_asa(outfile, p->tag_assign_indexed.index);
+			fprintf(outfile, "]\n");
 			fprintf(outfile, "DEC 2\n");
 			
 			*ip += 8;
@@ -450,7 +456,7 @@ void codegen_nc(asa *p, int *ip) {
 				fprintf(outfile, "ADD #%i\n", var.base_adr + i);
 				fprintf(outfile, "STORE 3\n");
 				fprintf(outfile, "LOAD @2\n");
-				fprintf(outfile, "STORE @3\n");
+				fprintf(outfile, "STORE @3 ; %s[%i]\n", var.identifier, i);
 				
 				*ip += 6;
 				n = n->next;
@@ -465,14 +471,14 @@ void codegen_nc(asa *p, int *ip) {
 			
 			fprintf(outfile, "LOAD 1\n");
 			fprintf(outfile, "ADD #%i\n", dst.base_adr);
-			fprintf(outfile, "STORE 3\n");
+			fprintf(outfile, "STORE 3 ; &%s[0]\n", dst.identifier);
 			
 			for(int i = 0; i < dst.size; ++i) {
 				fprintf(outfile, "LOAD 1\n");
 				fprintf(outfile, "ADD #%i\n", src.base_adr + i);
-				fprintf(outfile, "LOAD @0\n");
+				fprintf(outfile, "LOAD @0 ; %s[%d]\n", src.identifier);
 				
-				fprintf(outfile, "STORE @3\n");
+				fprintf(outfile, "STORE @3 ; %s[%d]\n", dst.identifier);
 				fprintf(outfile, "INC 3\n");
 			}
 			
@@ -522,10 +528,10 @@ void codegen_nc(asa *p, int *ip) {
 			
 			fprintf(outfile, "LOAD 1\n");
 			fprintf(outfile, "ADD #%i\n", var.base_adr);
-			fprintf(outfile, "STORE 3\n");
+			fprintf(outfile, "STORE 3 ; &%s\n", var.identifier);
 			
 			fprintf(outfile, "READ\n");
-			fprintf(outfile, "STORE @3\n");
+			fprintf(outfile, "STORE @3 ; %s\n", var.identifier);
 			
 			*ip += 5;
 			break;
@@ -540,10 +546,14 @@ void codegen_nc(asa *p, int *ip) {
 			fprintf(outfile, "LOAD 1\n");
 			fprintf(outfile, "ADD #%i\n", var.base_adr);
 			fprintf(outfile, "ADD @2\n");
-			fprintf(outfile, "STORE 3\n");
+			fprintf(outfile, "STORE 3 ; &%s[", var.identifier);
+			fprint_asa(outfile, p->tag_read_indexed.index);
+			fprintf(outfile, "]\n");
 			
 			fprintf(outfile, "READ\n");
-			fprintf(outfile, "STORE @3\n");
+			fprintf(outfile, "STORE @3 %s[", var.identifier);
+			fprint_asa(outfile, p->tag_read_indexed.index);
+			fprintf(outfile, "]\n");
 			
 			*ip += 7;
 			break;
@@ -554,11 +564,11 @@ void codegen_nc(asa *p, int *ip) {
 			
 			fprintf(outfile, "LOAD 1\n");
 			fprintf(outfile, "ADD #%i\n", var.base_adr);
-			fprintf(outfile, "STORE 3\n");
+			fprintf(outfile, "STORE 3 ; &%s[0]\n", var.identifier);
 			
 			for(int i = 0; i < var.size; ++i) {
 				fprintf(outfile, "READ\n");
-				fprintf(outfile, "STORE @3\n");
+				fprintf(outfile, "STORE @3 ; %s[%d]\n", var.identifier, i);
 				fprintf(outfile, "INC 3\n");
 			}
 			
@@ -578,10 +588,10 @@ void codegen_nc(asa *p, int *ip) {
 			
 			fprintf(outfile, "LOAD 1\n");
 			fprintf(outfile, "ADD #%i\n", var.base_adr);
-			fprintf(outfile, "STORE 3\n");
+			fprintf(outfile, "STORE 3 ; &%s[0]\n", var.identifier);
 			
 			for(int i = 0; i < var.size; ++i) {
-				fprintf(outfile, "LOAD @3\n");
+				fprintf(outfile, "LOAD @3 ; %s[%d]\n", var.identifier, i);
 				fprintf(outfile, "WRITE\n");
 				fprintf(outfile, "INC 3\n");
 			}
