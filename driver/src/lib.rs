@@ -1,6 +1,8 @@
-use rame::model::RoCode;
+use clap::ValueEnum;
+use rame::model::{Integer, RoCode};
 use rame::optimizer::SeqRewriter;
 use std::ffi::{c_char, c_int, CString, OsStr};
+use std::fmt::Display;
 use std::fs::File;
 use std::io::{self, Seek};
 use std::os::fd::{FromRawFd, IntoRawFd, OwnedFd, RawFd};
@@ -17,6 +19,7 @@ extern "C" {
     fn arc_compile_file_fd(infile: *const c_char, outpath: *const c_char, outfile: RawFd);
 }
 
+/// Compiles the algo program `infile` into `outfile`.
 pub fn compile<P: AsRef<Path>, Q: AsRef<Path>>(infile: P, outfile: Q, optimize: bool) {
     let outfile = outfile.as_ref();
     let c_infile = CString::new(infile.as_ref().as_os_str().as_bytes()).expect("infile");
@@ -77,19 +80,13 @@ pub fn compile<P: AsRef<Path>, Q: AsRef<Path>>(infile: P, outfile: Q, optimize: 
         // Optimize the artifact.
         let mut f = File::from(fd);
         f.rewind().expect("rewind");
-        crate::optimize(f, &*String::from_utf8_lossy(&template), Some(outfile));
+        crate::optimize(f, Path::new(&*String::from_utf8_lossy(&template)), Some(outfile));
     }
 }
 
-pub fn optimize<P: AsRef<Path>, Q: AsRef<Path>>(infile: File, inpath: P, outfile: Option<Q>) -> RoCode<i64> {
-    let incode = match RoCode::<i64>::parse(infile) {
-        Ok(code) => code,
-        Err(e) => {
-            eprintln!("error: {}: {e}", inpath.as_ref().display());
-            exit(1);
-        }
-    };
-    
+/// Optimize the RAM program `infile` into `outfile`.
+pub fn optimize<Q: AsRef<Path>>(infile: File, inpath: &Path, outfile: Option<Q>) -> RoCode<i64> {
+    let incode = parse::<i64>(infile, inpath);
     let outcode = SeqRewriter::from(&incode).optimize().rewritten();
     
     if let Some(outfile) = outfile {
@@ -100,4 +97,79 @@ pub fn optimize<P: AsRef<Path>, Q: AsRef<Path>>(infile: File, inpath: P, outfile
     }
     
     outcode
+}
+
+/// Open a file, handling potential errors.
+#[must_use]
+pub fn open(inpath: &Path) -> File {
+    match File::open(inpath) {
+        Ok(f) => f,
+        Err(e) => {
+            eprintln!("{}: {e}", &inpath.display());
+            exit(1);
+        },
+    }
+}
+
+/// Parse a RAM program, handling potential errors.
+#[must_use]
+pub fn parse<T: Integer>(infile: File, inpath: &Path) -> RoCode<T> {
+    match RoCode::<T>::parse(infile) {
+        Ok(code) => code,
+        Err(e) => {
+            eprintln!("{}: {e}", inpath.display());
+            exit(1);
+        }
+    }
+}
+
+/// How many bits should the program be run with.
+#[derive(ValueEnum, Copy, Clone, Debug, Default)]
+pub enum Bits {
+    #[clap(name = "8")] Int8,
+    #[clap(name = "16")] #[default] Int16,
+    #[clap(name = "32")] Int32,
+    #[clap(name = "64")] Int64,
+    #[clap(name = "128")] Int128,
+}
+
+pub fn cvt<T: Integer + TryFrom<i128, Error: Display>>(args: Vec<i128>, _ty: &RoCode<T>) -> Vec<T> {
+    args.into_iter().map(|v| match T::try_from(v) {
+        Ok(v) => v,
+        Err(e) => {
+            eprintln!("invalid integer {v}: {e}");
+            exit(1);
+        }
+    }).collect()
+}
+
+#[macro_export]
+macro_rules! monomorphize {
+    ($inpath:expr, $bits:expr, $code:ident, $body:tt) => {
+        let inpath: &::std::path::Path = $inpath;
+        let infile = $crate::open(inpath);
+        
+        match $bits {
+            Bits::Int8 => {
+                let $code = $crate::parse::<i8>(infile, inpath);
+                $body
+            },
+            Bits::Int16 => {
+                let $code = $crate::parse::<i8>(infile, inpath);
+                $body
+            },
+            Bits::Int32 => {
+                let $code = $crate::parse::<i8>(infile, inpath);
+                $body
+            },
+            Bits::Int64 => {
+                let $code = $crate::parse::<i8>(infile, inpath);
+                $body
+            },
+            Bits::Int128 => {
+                let $code = $crate::parse::<i8>(infile, inpath);
+                $body
+            },
+        }
+    };
 }

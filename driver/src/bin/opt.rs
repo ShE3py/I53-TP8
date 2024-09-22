@@ -1,10 +1,9 @@
 #![cfg(feature = "optimizer")]
 
 use clap::{Parser, ValueHint};
-use rame_driver::optimize;
+use rame_driver::{open, optimize};
 use std::fs::File;
 use std::path::PathBuf;
-use std::process::exit;
 
 /// Optimize a RAM program.
 #[derive(Parser)]
@@ -22,13 +21,6 @@ struct Cli {
 fn main() {
     let cli = Cli::parse();
     
-    let infile = match File::open(&cli.infile) {
-        Ok(f) => f,
-        Err(e) => {
-            eprintln!("{}: {e}", &cli.infile.display());
-            exit(1);
-        },
-    };
-    
+    let infile = open(&cli.infile);
     optimize(infile, &cli.infile, Some(&cli.outfile));
 }

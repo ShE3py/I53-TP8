@@ -15,25 +15,19 @@ name = "rame-cc"
 path = "src/bin/cc.rs"
 
 [[bin]]
-name = "rame-run"
-path = "src/main.rs"
-
-[[bin]]
 name = "rame-opt"
 path = "src/bin/opt.rs"
 
-[features]
-default = ["optimizer", "rame/default"]
+[[bin]]
+name = "rame-run"
+path = "src/bin/run.rs"
 
-# feat: allow `JUMP @n`, but we can't optimize such code.
-dynamic_jumps = ["rame/dynamic_jumps"]
-
-# feat: enable to optimizer.
-optimizer = ["rame/optimizer"]
+[[bin]]
+name = "rame"
+path = "src/main.rs"
 
 [dependencies.rame]
 path = "../rame"
-default-features = false
 
 [dependencies.clap]
 version = "4.5.17"

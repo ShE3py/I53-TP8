@@ -2,7 +2,7 @@ use clap::{Parser, ValueHint};
 use rame_driver::compile;
 use std::path::PathBuf;
 
-/// Compiles an algo program into a RAM program.
+/// Compiles an algorithmic program into a RAM one.
 #[derive(Parser)]
 #[command(version, arg_required_else_help = true)]
 struct Cli {
