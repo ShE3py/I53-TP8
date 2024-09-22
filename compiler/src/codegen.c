@@ -408,28 +408,22 @@ void codegen_nc(asa *p, int *ip) {
 		case TagAssignIndexed: {
 			symbol var = st_find_or_internal_error(p->tag_assign_indexed.identifier);
 			
+			codegen_nc(p->tag_assign_indexed.expr, ip);
+			fprintf(outfile, "STORE @2 ; expr\n");
+			fprintf(outfile, "INC 2\n");
+			
+			*ip += 2;
 			codegen_nc(p->tag_assign_indexed.index, ip);
+			fprintf(outfile, "DEC 2\n");
 			fprintf(outfile, "ADD 1\n");
 			fprintf(outfile, "ADD #%i\n", var.base_adr);
-			fprintf(outfile, "STORE @2 ; &%s[", var.identifier);
-			fprint_asa(outfile, p->tag_assign_indexed.index);
-			fprintf(outfile, "]\n");
-			fprintf(outfile, "INC 2\n");
-			
-			*ip += 4;
-			codegen_nc(p->tag_assign_indexed.expr, ip);
-			fprintf(outfile, "STORE @2\n");
-			fprintf(outfile, "DEC 2\n");
-			fprintf(outfile, "LOAD @2\n");
 			fprintf(outfile, "STORE 3\n");
-			fprintf(outfile, "INC 2\n");
 			fprintf(outfile, "LOAD @2\n");
-			fprintf(outfile, "STORE @3 ; %s[", var.identifier);
-			fprint_asa(outfile, p->tag_assign_indexed.index);
-			fprintf(outfile, "]\n");
-			fprintf(outfile, "DEC 2\n");
+			fprintf(outfile, "STORE @3\n ; ");
+			fprint_asa(outfile, p);
+			fprintf(outfile, "\n");
 			
-			*ip += 8;
+			*ip += 6;
 			break;
 		}
 		

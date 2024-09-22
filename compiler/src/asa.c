@@ -492,7 +492,7 @@ asa* create_assign_indexed_node(const char id[32], asa *index, asa *expr) {
 	asa *p = checked_malloc();
 	
 	p->tag = TagAssignIndexed;
-	p->ninst = index->ninst + expr->ninst + 12;
+	p->ninst = index->ninst + expr->ninst + 8;
 	strcpy(&p->tag_assign_indexed.identifier[0], &id[0]);
 	p->tag_assign_indexed.index = index;
 	p->tag_assign_indexed.expr = expr;
