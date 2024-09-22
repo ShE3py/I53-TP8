@@ -876,6 +876,21 @@ static void codegen_dyn_jump() {
 	fprintf(outfile, "STOP ; UNREACHABLE\n");
 }
 
+/**
+ * Libère la liste des sauts dynamiques.
+ */
+static void destroy_dyn_jumps() {
+    int_list_node *n = dyn_jumps;
+    while(n) {
+        int_list_node *m = n->next;
+        free(n);
+        
+        n = m;
+    }
+    
+    dyn_jumps = NULL;
+}
+
 static void print_fn_locations() {
 	fprintf(outfile, "{\n");
 	
@@ -941,5 +956,7 @@ void codegen(asa_list fns) {
 	}
 	
 	codegen_dyn_jump();
+	destroy_dyn_jumps();
 	destroy_fn_space();
 }
+
