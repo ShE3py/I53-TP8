@@ -88,7 +88,7 @@ pub fn compile<P: AsRef<Path>, Q: AsRef<Path>>(infile: P, outfile: Q, optimize: 
         
         // Optimize the artifact.
         f.rewind().expect("rewind");
-        crate::optimize(f, OsStr::from_bytes(c_intermediate.as_bytes()).as_ref(), Some(outfile));
+        crate::optimize(f, OsStr::from_bytes(c_intermediate.as_bytes_with_nul()).as_ref(), Some(outfile));
     }
 }
 
