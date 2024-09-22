@@ -1,3 +1,7 @@
+# TEST: [0] => [0]
+# TEST: [10] => [55]
+# TEST: [15] => [610]
+# TEST: [30] => [832040]
 FONCTION fibo(i)
 DÉBUT
 	SI i <= 1 ALORS
@@ -9,6 +13,6 @@ FIN
 
 FONCTION main()
 DÉBUT
-	# l'algorithme récursif est un chouilla lent.
-	AFFICHER fibo(5);
+	LIRE n;
+	AFFICHER fibo(n);
 FIN

@@ -1,21 +1,22 @@
-use clap::{Parser, ValueHint};
+use clap::Parser;
 use rame::model::{Integer, RoCode};
 use rame::optimizer::SeqRewriter;
 use rame::runner::Ram;
 use rame_driver::compile_tmp;
+use std::{fs, io};
 use std::fs::File;
-use std::io::{BufRead, BufReader};
+use std::io::{BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
 use std::process::exit;
 use std::str::FromStr;
 
 /// Run an algorithmic or RAM program.
 #[derive(Parser)]
-#[command(version, arg_required_else_help = true)]
+#[command(version)]
 struct Cli {
-    /// The program to run.
-    #[arg(value_name = "infile", value_hint = ValueHint::FilePath)]
-    infile: PathBuf,
+    /// The files to test.
+    #[arg(value_name = "infile", default_value = "tests", allow_hyphen_values = true)]
+    infiles: Vec<PathBuf>,
 }
 
 struct UnitTest<T: Integer> {
@@ -81,29 +82,42 @@ fn parse_vec<T: FromStr>(s: &str) -> Result<Vec<T>, T::Err> {
     
     let mut v = Vec::with_capacity(iter.size_hint().0);
     for elem in iter {
-        v.push(T::from_str(elem)?);
+        v.push(T::from_str(elem.trim())?);
     }
     
     Ok(v)
 }
 
-fn main(){
-    let cli = Cli::parse();
+fn scan_file(p: &Path) {
+    if fs::metadata(p).unwrap().is_dir() {
+        for entry in fs::read_dir(p).unwrap() {
+            scan_file(&entry.unwrap().path());
+        }
+        
+        return;
+    }
     
-    let tests = parse_headers::<i16>(&cli.infile);
+    let tests = parse_headers::<i32>(p);
     if tests.is_empty() {
-        eprintln!("{}: no test", cli.infile.display());
+        eprintln!("{}: no test", p.display());
         exit(1);
     }
     
-    let (f, _) = compile_tmp(&cli.infile);
-    let code = RoCode::<i16>::parse(f).unwrap();
+    let (f, _) = compile_tmp(p);
+    let code = RoCode::<i32>::parse(f).unwrap();
+    let _ = io::stdout().flush();
     let opt = SeqRewriter::from(&code).optimize().rewritten();
     
-    print!("{}... ", cli.infile.display());
+    print!("{}... ", p.display());
+    let _ = io::stdout().flush();
     for test in tests {
         test.run(code.clone());
         test.run(opt.clone());
     }
     println!("ok");
+}
+
+fn main(){
+    let cli = Cli::parse();
+    cli.infiles.iter().for_each(|p| scan_file(&p));
 }

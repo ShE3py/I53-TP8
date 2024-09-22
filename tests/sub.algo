@@ -1,7 +1,9 @@
+# TEST: [2] => [-1]
+# TEST: [0] => [1]
+# TEST: [-1] => [2]
 FONCTION main()
 DÉBUT
-	VAR x := 2;
-	
+	LIRE x;
 	AFFICHER sub(1, x);
 FIN
 

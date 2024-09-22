@@ -1,0 +1,21 @@
+# TEST: [1, 2, 3, 4, 5] => [5]
+# TEST: [1, 0, 0, 1, 1] => [1]
+# TEST: [6, -1, 4, 5, 5] => [6]
+# TEST: [-1, -1, -2, -4, -3] => [-1]
+FONCTION main()
+DÉBUT
+	LIRE[5] t;
+	
+	VAR max := t[0];
+	
+	VAR i := 1;
+	TQ i < t.len() FAIRE
+		SI t[i] > max ALORS
+			max := t[i];
+		FSI
+		
+		i := i + 1;
+	FTQ
+	
+	AFFICHER max;
+FIN
