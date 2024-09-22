@@ -409,7 +409,7 @@ void codegen_nc(asa *p, int *ip) {
 			symbol var = st_find_or_internal_error(p->tag_assign_indexed.identifier);
 			
 			codegen_nc(p->tag_assign_indexed.expr, ip);
-			fprintf(outfile, "STORE @2 ; expr\n");
+			fprintf(outfile, "STORE @2\n");
 			fprintf(outfile, "INC 2\n");
 			
 			*ip += 2;
@@ -430,18 +430,21 @@ void codegen_nc(asa *p, int *ip) {
 		case TagAssignIntList: {
 			symbol var = st_find_or_internal_error(p->tag_assign_int_list.identifier);
 			
+			fprintf(outfile, "LOAD 1\n");
+			fprintf(outfile, "ADD #%i\n", var.base_adr);
+			fprintf(outfile, "STORE 3 ; &%s[0]\n", var.identifier);
+			*ip += 3;
+			
 			asa_list_node *n = p->tag_assign_int_list.values.head;
 			
 			for(int i = 0; i < var.size; ++i) {
 				codegen_nc(n->value, ip);
-				fprintf(outfile, "STORE @2\n");
-				fprintf(outfile, "LOAD 1\n");
-				fprintf(outfile, "ADD #%i\n", var.base_adr + i);
-				fprintf(outfile, "STORE 3\n");
-				fprintf(outfile, "LOAD @2\n");
-				fprintf(outfile, "STORE @3 ; %s[%i]\n", var.identifier, i);
+				fprintf(outfile, "STORE @3 ; %s[%i] = ", var.identifier, i);
+				fprint_asa(outfile, n->value);
+				fprintf(outfile, "\n");
+				fprintf(outfile, "INC 3\n");
 				
-				*ip += 6;
+				*ip += 2;
 				n = n->next;
 			}
 			

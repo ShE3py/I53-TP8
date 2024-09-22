@@ -527,7 +527,7 @@ asa* create_assign_int_list_node(const char id[32], asa_list values) {
 	asa *p = checked_malloc();
 	
 	p->tag = TagAssignIntList;
-	p->ninst = values.ninst + values.len * 6;
+	p->ninst = 3 + values.ninst + values.len * 2;
 	strcpy(&p->tag_assign_int_list.identifier[0], &id[0]);
 	p->tag_assign_int_list.values = values;
 	
