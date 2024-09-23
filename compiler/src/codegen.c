@@ -469,18 +469,18 @@ void codegen_nc(asa *p, int *ip) {
 			
 			fprintf(outfile, "LOAD 1\n");
 			fprintf(outfile, "ADD #%i\n", dst.base_adr);
-			fprintf(outfile, "STORE 3 ; &%s[0]\n", dst.identifier);
-			fprintf(outfile, "LOAD 1\n");
-			fprintf(outfile, "ADD #%i\n", src.base_adr);
+			fprintf(outfile, "STORE 3\n");
 			
 			for(int i = 0; i < dst.size; ++i) {
-				fprintf(outfile, "LOAD @0 ; %s[%d]\n", src.identifier, i);
-				fprintf(outfile, "ADD #1\n");
-				fprintf(outfile, "STORE @3 ; %1$s[%3$d] = %2$s[%3$d]\n", dst.identifier, src.identifier, i);
+				fprintf(outfile, "LOAD 1\n");
+				fprintf(outfile, "ADD #%i\n", src.base_adr + i);
+				fprintf(outfile, "LOAD @0\n");
+				
+				fprintf(outfile, "STORE @3\n");
 				fprintf(outfile, "INC 3\n");
 			}
 			
-			*ip += 4 + dst.size * 4;
+			*ip += 3 + dst.size * 5;
 			break;
 		}
 		

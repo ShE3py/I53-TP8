@@ -1,0 +1,14 @@
+# TEST: [1,  2] => [12,  2,  3, -1]
+## TEST: [1, -3] => [12,  3, -3, -1]
+## TEST: [3,  0] => [12,  2,  3,  0]
+FONCTION main()
+DÉBUT
+	VAR x := { 9 + 3, 4, 3, -1 };
+
+	LIRE i;
+	LIRE v;
+	x[i] := v;
+
+	x := [x];
+	AFFICHER [x];
+FIN

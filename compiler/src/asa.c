@@ -566,7 +566,7 @@ asa* create_assign_array_node(const char dst[32], const char src[32]) {
 	asa *p = checked_malloc();
 	
 	p->tag = TagAssignArray;
-	p->ninst = 4 + dst_var.size * 4;
+	p->ninst = 3 + dst_var.size * 5;
 	strcpy(&p->tag_assign_array.dst[0], &dst[0]);
 	strcpy(&p->tag_assign_array.src[0], &src[0]);
 	
