@@ -540,11 +540,9 @@ void codegen_nc(asa *p, int *ip) {
 			
 			codegen_nc(p->tag_read_indexed.index, ip);
 			
-			fprintf(outfile, "ADD 1 ; x\n");
+			fprintf(outfile, "ADD 1\n");
 			fprintf(outfile, "ADD #%i\n", var.base_adr);
-			fprintf(outfile, "STORE 3 ; &%s[", var.identifier);
-			fprint_asa(outfile, p->tag_read_indexed.index);
-			fprintf(outfile, "]\n");
+			fprintf(outfile, "STORE 3\n");
 			
 			fprintf(outfile, "READ\n");
 			fprintf(outfile, "STORE @3 ; %s[", var.identifier);
@@ -630,23 +628,24 @@ void codegen_nc(asa *p, int *ip) {
 		}
 		
 		case TagFnCall: {
-			fprintf(outfile, "LOAD 1\n");
-			fprintf(outfile, "STORE @2\n");
-			fprintf(outfile, "INC 2\n");
-			
-			int jmp = *ip + 9 + p->tag_fn_call.args.ninst + (6 * p->tag_fn_call.args.len);
-			add_dyn_jump_adr(jmp);
-			fprintf(outfile, "LOAD #%i\n", jmp);
-			fprintf(outfile, "STORE @2\n");
-			fprintf(outfile, "INC 2\n");
-			
-			*ip += 6;
-			
-			fn_location_node *fn = get_fn(p->tag_fn_call.identifier);
+		    fn_location_node *fn = get_fn(p->tag_fn_call.identifier);
 			if(fn->value->tag_fn.params.len != p->tag_fn_call.args.len) {
 				fprintf(stderr, "'%s()': %lu paramètres attendus, %lu paramètres donnés\n", p->tag_fn_call.identifier, fn->value->tag_fn.params.len, p->tag_fn_call.args.len);
 				exit(1);
 			}
+		    
+		    fprintf(outfile, "NOP ; CALL %s\n", fn->value->tag_fn.identifier);
+			fprintf(outfile, "LOAD 1\n");
+			fprintf(outfile, "STORE @2 ; push stack\n");
+			fprintf(outfile, "INC 2\n");
+			
+			int jmp = *ip + 10 + p->tag_fn_call.args.ninst + (6 * p->tag_fn_call.args.len);
+			add_dyn_jump_adr(jmp);
+			fprintf(outfile, "LOAD #%i\n", jmp);
+			fprintf(outfile, "STORE @2 ; push ir\n");
+			fprintf(outfile, "INC 2\n");
+			
+			*ip += 7;
 			
 			int args = p->tag_fn_call.args.len;
 			if(args > 0) {
@@ -664,6 +663,7 @@ void codegen_nc(asa *p, int *ip) {
 					n = n->next;
 				}
 				
+				id_list_node *param = fn->value->tag_fn.params.head;
 				for(i = 0; i < args; ++i) {
 					codegen_nc(aargs[i], ip);
 					fprintf(outfile, "STORE @2\n");
@@ -673,9 +673,12 @@ void codegen_nc(asa *p, int *ip) {
 					fprintf(outfile, "STORE 3\n");
 					
 					fprintf(outfile, "LOAD @2\n");
-					fprintf(outfile, "STORE @3\n");
+					fprintf(outfile, "STORE @3 ; arg %s = ", param->value);
+					fprint_asa(outfile, aargs[i]);
+					fprintf(outfile, "\n");
 					
 					*ip += 6;
+					param = param->next;
 				}
 				
 				free(aargs);
@@ -687,20 +690,20 @@ void codegen_nc(asa *p, int *ip) {
 			}
 			
 			fprintf(outfile, "LOAD 2\n");
-			fprintf(outfile, "STORE 1\n");
+			fprintf(outfile, "STORE 1 ; update stack\n");
 			
-			fprintf(outfile, "JUMP %i\n", fn->adr);
+			fprintf(outfile, "JUMP %i ; invoke %s\n", fn->adr, fn->value->tag_fn.identifier);
 			
 			fprintf(outfile, "LOAD 2\n");
 			fprintf(outfile, "SUB #3\n");
 			fprintf(outfile, "STORE 2\n");
 			
 			fprintf(outfile, "LOAD @0\n");
-			fprintf(outfile, "STORE 1\n");
+			fprintf(outfile, "STORE 1 ; update stack\n");
 			
 			fprintf(outfile, "LOAD 2\n");
 			fprintf(outfile, "ADD #3\n");
-			fprintf(outfile, "LOAD @0\n");
+			fprintf(outfile, "LOAD @0 ; load ret\n");
 			
 			*ip += 11;
 			break;
@@ -715,10 +718,10 @@ void codegen_nc(asa *p, int *ip) {
 				++(*ip);
 			}
 			
-			fprintf(outfile, "STORE @2\n");
+			fprintf(outfile, "STORE @2 ; push ret\n");
 			fprintf(outfile, "DEC 1\n");
-			fprintf(outfile, "LOAD @1\n");
-			fprintf(outfile, "JUMP %i\n", dyn_jump_adr);
+			fprintf(outfile, "LOAD @1 ; pop ir\n");
+			fprintf(outfile, "JUMP %i ; RETURN\n", dyn_jump_adr);
 			
 			*ip += 4;
 			break;

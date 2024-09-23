@@ -1,0 +1,13 @@
+# TEST: [0, 0] => [0, 0, 0]
+# TEST: [0, 1] => [0, 1, 1]
+# TEST: [1, 0] => [0, 1, 1]
+# TEST: [1, 1] => [1, 1, 0]
+FONCTION main()
+DÉBUT
+	LIRE a;
+	LIRE b;
+
+	AFFICHER (a != 0) ET (b != 0);
+	AFFICHER (a != 0) OU (b != 0);
+	AFFICHER (a != 0) OU EXCLUSIF (b != 0);
+FIN

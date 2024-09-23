@@ -860,7 +860,7 @@ asa* create_fncall_node(const char id[32], asa_list args) {
 	asa *p = checked_malloc();
 	
 	p->tag = TagFnCall;
-	p->ninst = 17 + args.ninst + args.len * 6;
+	p->ninst = 18 + args.ninst + args.len * 6;
 	strcpy(&p->tag_fn_call.identifier[0], &id[0]);
 	p->tag_fn_call.args = args;
 	
