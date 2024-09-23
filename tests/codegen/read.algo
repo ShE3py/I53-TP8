@@ -1,0 +1,12 @@
+# TEST: [-4, 3, 2] => [2, -4, 3]
+FONCTION main()
+DÉBUT
+	VAR x := { 0, 0 };
+	LIRE x[1];
+
+	LIRE[2] y;
+	x[0] := y[1];
+
+	AFFICHER [x];
+	AFFICHER y[0];
+FIN

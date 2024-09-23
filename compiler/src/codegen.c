@@ -431,7 +431,7 @@ void codegen_nc(asa *p, int *ip) {
 			fprintf(outfile, "ADD #%i\n", var.base_adr);
 			fprintf(outfile, "STORE 3\n");
 			fprintf(outfile, "LOAD @2\n");
-			fprintf(outfile, "STORE @3\n ; ");
+			fprintf(outfile, "STORE @3 ; ");
 			fprint_asa(outfile, p);
 			fprintf(outfile, "\n");
 			
@@ -476,7 +476,7 @@ void codegen_nc(asa *p, int *ip) {
 				fprintf(outfile, "ADD #%i\n", src.base_adr + i);
 				fprintf(outfile, "LOAD @0\n");
 				
-				fprintf(outfile, "STORE @3\n");
+				fprintf(outfile, "STORE @3 ; %1$s[%3$d] = %2$s[%3$d]\n", dst.identifier, src.identifier, i);
 				fprintf(outfile, "INC 3\n");
 			}
 			
@@ -510,12 +510,12 @@ void codegen_nc(asa *p, int *ip) {
 		case TagWhile: {
 			codegen_nc(p->tag_while.expr, ip);
 			
-			fprintf(outfile, "JUMZ %i\n", *ip + p->tag_while.body->ninst + 2);
+			fprintf(outfile, "JUMZ %i ; BREAK\n", *ip + p->tag_while.body->ninst + 2);
 			++(*ip);
 			
 			codegen_nc(p->tag_while.body, ip);
 			
-			fprintf(outfile, "JUMP %i\n", before_codegen_ip);
+			fprintf(outfile, "JUMP %i ; LOOP\n", before_codegen_ip);
 			++(*ip);
 			
 			break;
@@ -540,20 +540,18 @@ void codegen_nc(asa *p, int *ip) {
 			
 			codegen_nc(p->tag_read_indexed.index, ip);
 			
-			fprintf(outfile, "STORE @2\n");
-			fprintf(outfile, "LOAD 1\n");
+			fprintf(outfile, "ADD 1 ; x\n");
 			fprintf(outfile, "ADD #%i\n", var.base_adr);
-			fprintf(outfile, "ADD @2\n");
 			fprintf(outfile, "STORE 3 ; &%s[", var.identifier);
 			fprint_asa(outfile, p->tag_read_indexed.index);
 			fprintf(outfile, "]\n");
 			
 			fprintf(outfile, "READ\n");
-			fprintf(outfile, "STORE @3 %s[", var.identifier);
+			fprintf(outfile, "STORE @3 ; %s[", var.identifier);
 			fprint_asa(outfile, p->tag_read_indexed.index);
 			fprintf(outfile, "]\n");
 			
-			*ip += 7;
+			*ip += 5;
 			break;
 		}
 		

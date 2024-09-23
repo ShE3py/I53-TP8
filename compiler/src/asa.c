@@ -662,7 +662,7 @@ asa* create_read_indexed_node(const char id[32], asa *index) {
 	asa *p = checked_malloc();
 	
 	p->tag = TagReadIndexed;
-	p->ninst = index->ninst + 7;
+	p->ninst = index->ninst + 5;
 	strcpy(&p->tag_read_indexed.identifier[0], &id[0]);
 	p->tag_read_indexed.index = index;
 	
@@ -764,7 +764,7 @@ asa* make_block_node(asa *p, asa *q) {
 	    extern const char *infile;
 		extern int yylineno;
 		
-		fprintf(stderr, "%s:%i: erreur: test d'égalité inutilisé\n", infile, yylineno);
+		fprintf(stderr, "%s:%i: erreur: test d'égalité ignoré\n", infile, yylineno);
 		exit(1);
 	}
 	
