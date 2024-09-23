@@ -434,7 +434,7 @@ asa* create_unop_node(UnaryOp unop, asa *expr) {
 	asa *p = checked_malloc();
 	
 	p->tag = TagUnaryOp;
-	p->ninst = expr->ninst + 3;
+	p->ninst = expr->ninst + (unop == OpNeg ? 3 : 4);
 	p->tag_unary_op.op = unop;
 	p->tag_unary_op.expr = expr;
 	

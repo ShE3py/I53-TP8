@@ -378,13 +378,25 @@ void codegen_nc(asa *p, int *ip) {
 		}
 		
 		case TagUnaryOp: {
-			codegen_nc(p->tag_unary_op.expr, ip);
+		    codegen_nc(p->tag_unary_op.expr, ip);
+		    
+		    switch(p->tag_unary_op.op) {
+		        case OpNeg:
+			        fprintf(outfile, "STORE @2\n");
+			        fprintf(outfile, "LOAD #0\n");
+			        fprintf(outfile, "SUB @2\n");
+			        *ip += 3;
+			        break;
+			    
+			    case OpNot:
+			        fprintf(outfile, "JUMZ %d\n", *ip + 3);
+			        fprintf(outfile, "LOAD #0\n");
+			        fprintf(outfile, "JUMP %d\n", *ip + 4);
+			        fprintf(outfile, "LOAD #1\n");
+			        *ip += 4;
+			        break;
+		    }
 			
-			fprintf(outfile, "STORE @2\n");
-			fprintf(outfile, "LOAD #0\n");
-			fprintf(outfile, "SUB @2\n");
-			
-			*ip += 3;
 			break;
 		}
 		
@@ -432,7 +444,7 @@ void codegen_nc(asa *p, int *ip) {
 			
 			fprintf(outfile, "LOAD 1\n");
 			fprintf(outfile, "ADD #%i\n", var.base_adr);
-			fprintf(outfile, "STORE 3 ; &%s[0]\n", var.identifier);
+			fprintf(outfile, "STORE 3\n");
 			*ip += 3;
 			
 			asa_list_node *n = p->tag_assign_int_list.values.head;
@@ -514,7 +526,7 @@ void codegen_nc(asa *p, int *ip) {
 			
 			fprintf(outfile, "LOAD 1\n");
 			fprintf(outfile, "ADD #%i\n", var.base_adr);
-			fprintf(outfile, "STORE 3 ; &%s\n", var.identifier);
+			fprintf(outfile, "STORE 3\n");
 			
 			fprintf(outfile, "READ\n");
 			fprintf(outfile, "STORE @3 ; %s\n", var.identifier);
