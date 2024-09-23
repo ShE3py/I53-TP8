@@ -1,6 +1,8 @@
 #ifndef TS_H
 #define TS_H
 
+#include <stdio.h>
+
 #define SCALAR_SIZE -1
 
 /**
@@ -112,12 +114,12 @@ int st_temp_offset();
 /**
  * Affiche la table de symboles actuelle.
  */
-void st_print_current();
+void st_fprint_current(FILE *stream);
 
 /**
  * Affiche une table de symboles.
  */
-void st_print(symbol_table *st);
+void st_fprint(FILE *stream, symbol_table *st);
 
 /**
  * Libère la mémoire allouée à la table de symboles courante.
@@ -130,3 +132,4 @@ void st_destroy_current();
 void st_destroy(symbol_table *st);
 
 #endif
+

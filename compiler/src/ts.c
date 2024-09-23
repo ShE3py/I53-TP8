@@ -222,32 +222,32 @@ int st_temp_offset() {
 /**
  * Affiche la table de symboles actuelle.
  */
-void st_print_current() {
-	st_print(cst);
+void st_fprint_current(FILE *stream) {
+	st_fprint(stream, cst);
 }
 
 /**
  * Affiche une table de symboles.
  */
-void st_print(symbol_table *st) {
+void st_fprint(FILE *stream, symbol_table *st) {
 	if(!st) {
-		printf("NULL\n");
+		fprintf(stream, "NULL\n");
 	}
 	else {
 		symbol_table_node *n = st->head;
 		if(!n) {
-			printf("{ }\n");
+			fprintf(stream, "{ }\n");
 		}
 		else {
-			printf("{ %s", n->value.identifier);
+			fprintf(stream, "R%d <= { %s +%d", st->mem_offset, n->value.identifier, n->value.base_adr);
 			
 			while(n->next) {
 				n = n->next;
 				
-				printf(", %s", n->value.identifier);
+				fprintf(stream, ", %s +%d", n->value.identifier, n->value.base_adr);
 			}
 			
-			printf(" }\n");
+			fprintf(stream, " } < R%d\n", st->mem_offset * 2);
 		}
 	}
 }

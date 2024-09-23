@@ -616,7 +616,8 @@ void codegen_nc(asa *p, int *ip) {
 			fprintf(outfile, "NOP ; ");
 			fprint_asa(outfile, p);
 			
-			fprintf(outfile, "\nNOP ; STACK\n");
+			fprintf(outfile, "\nNOP ; STACK ");
+			st_fprint_current(outfile);
 			fprintf(outfile, "LOAD 1\n");
 			fprintf(outfile, "ADD #%i\n", st_temp_offset());
 			fprintf(outfile, "STORE 2\n");
