@@ -760,6 +760,14 @@ asa* make_block_node(asa *p, asa *q) {
 	
 	// p is now nonnull
 	
+	if(p->tag == TagBinaryOp && p->tag_binary_op.op == OpEq) {
+	    extern const char *infile;
+		extern int yylineno;
+		
+		fprintf(stderr, "%s:%i: erreur: test d'égalité inutilisé\n", infile, yylineno);
+		exit(1);
+	}
+	
 	asa *qBlock = NULL;
 	if(q) {
 		if(q->tag == TagBlock) {
