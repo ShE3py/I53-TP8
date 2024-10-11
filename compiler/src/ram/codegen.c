@@ -1,4 +1,4 @@
-#include "codegen_ram.h"
+#include "codegen.h"
 
 #pragma GCC diagnostic ignored "-Wmain"
 #pragma GCC diagnostic ignored "-Wunused-function"

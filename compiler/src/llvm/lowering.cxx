@@ -1,0 +1,106 @@
+#include "lowering.hxx"
+
+#include <iostream>
+
+#pragma GCC diagnostic ignored "-Wc99-designator"
+
+namespace hir {
+
+/**
+ * Returns a new integer node.
+ */
+std::unique_ptr<asa> asa::Int(uint64_t v) {
+    return std::unique_ptr<asa>(new asa { .tag = TagInt, .p.tag_int.value = v });
+}
+
+/**
+ * Returns a new variable node.
+ */
+std::unique_ptr<asa> asa::Var(std::string identifier) {
+    return std::unique_ptr<asa>(new asa { .tag = TagVar, .p.tag_var.identifier = identifier });
+}
+
+asa::NodePayload::~NodePayload() {}
+
+/**
+ * Lowers an AST node to a HIR node.
+ */
+std::unique_ptr<asa> lower(ast::asa *p) {
+    if(!p || p == ast::NOP) {
+        return std::unique_ptr<asa>(nullptr);
+    }
+
+    switch(p->tag) {
+	    case ast::TagInt: {
+	        return asa::Int(static_cast<uint64_t>(p->tag_int.value));
+	    }
+	    
+	    case ast::TagVar: {
+	        return asa::Var(p->tag_var.identifier);
+	    }
+	    
+	    case ast::TagBinaryOp: {
+	        return std::unique_ptr<asa>(new asa {
+	            .tag = TagBinaryOp,
+	            .p.tag_binary_op.op = p->tag_binary_op.op,
+	            .p.tag_binary_op.lhs = lower(p->tag_binary_op.lhs),
+	            .p.tag_binary_op.rhs = lower(p->tag_binary_op.rhs),
+	        });
+	    }
+	    
+	    case ast::TagRead: {
+	        return std::unique_ptr<asa>(new asa {
+	            .tag = TagRead,
+	            .p.tag_read.identifier = p->tag_read.identifier,
+	        });
+	    }
+	    
+	    case ast::TagPrint: {
+	        return std::unique_ptr<asa>(new asa {
+	            .tag = TagPrint,
+	            .p.tag_print.expr = lower(p->tag_print.expr),
+	        });
+	    }
+	    
+	    case ast::TagBlock: {
+	        std::vector<std::unique_ptr<asa>> body;
+	        ast::asa *b = p;
+	        
+	        do {
+	            body.push_back(lower(b->tag_block.stmt));
+	            b = b->tag_block.next;
+	        }
+	        while(b);
+	        
+	        return std::unique_ptr<asa>(new asa {
+	            .tag = TagBlock,
+	            .p.tag_block.body = std::move(body),
+	        });
+        }
+	    
+	    case ast::TagFn: {
+	        std::vector<std::string> params(p->tag_fn.params.len);
+	        ast::id_list_node *param = p->tag_fn.params.head;
+	        
+	        while(param) {
+	            params.push_back(param->value);
+	            param = param->next;
+	        }
+	    
+	        return std::unique_ptr<asa>(new asa {
+	            .tag = TagFn,
+	            .p.tag_fn.identifier = p->tag_fn.identifier,
+	            .p.tag_fn.params = params,
+	            .p.tag_fn.body = lower(p->tag_fn.body),
+	            .p.tag_fn.st = p->tag_fn.st,
+	        });
+        }
+	    
+	    default:
+	        std::cerr << "warning: unimplemented tag lowering: " << ast::tag_name(p->tag) << std::endl;
+	        return asa::Int(0);
+    }
+}
+
+}
+

@@ -1,5 +1,5 @@
-#ifndef CODEGEN_RAM_H
-#define CODEGEN_RAM_H
+#ifndef RAM_CODEGEN_H
+#define RAM_CODEGEN_H
 
 #include "asa.h"
 
@@ -8,5 +8,5 @@
  */
 void codegen_ram(asa_list fns);
 
-#endif // CODEGEN_RAM_H
+#endif // RAM_CODEGEN_H
 

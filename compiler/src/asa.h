@@ -7,6 +7,11 @@
 
 #include "ts.h"
 
+#ifdef __cplusplus
+namespace ast {
+    extern "C" {
+#endif
+
 /**
  * Les valeurs possibles d'un noeud.
  */
@@ -117,6 +122,11 @@ typedef enum {
  * renvoie `0`.
  */
 int is_leaf(NodeTag tag);
+
+/**
+ * Renvoie l'identifiant C de l'étiquette spécifiée.
+ */
+const char* tag_name(NodeTag tag);
 
 
 /**
@@ -709,5 +719,10 @@ void fprint_asa(FILE *stream, asa *p);
  */
 void free_asa(asa *p);
 
+#ifdef __cplusplus
+    }
+}
 #endif
+
+#endif // ASA_H
 

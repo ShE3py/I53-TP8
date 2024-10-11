@@ -89,12 +89,18 @@ fn parse_vec<T: FromStr>(s: &str) -> Result<Vec<T>, T::Err> {
 }
 
 fn scan_file(p: &Path) {
-    if fs::metadata(p).unwrap().is_dir() {
-        for entry in fs::read_dir(p).unwrap() {
-            scan_file(&entry.unwrap().path());
-        }
-        
-        return;
+    match fs::metadata(p) {
+        Ok(m) => if m.is_dir() {
+            for entry in fs::read_dir(p).unwrap() {
+                scan_file(&entry.unwrap().path());
+            }
+            
+            return;
+        },
+        Err(e) => {
+            eprintln!("{}: {e}", p.display());
+            exit(1);
+        },
     }
     
     let tests = parse_headers::<i32>(p);

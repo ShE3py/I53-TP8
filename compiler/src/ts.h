@@ -5,6 +5,10 @@
 
 #define SCALAR_SIZE -1
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * L'enregistrement d'une variable.
  */
@@ -131,5 +135,9 @@ void st_destroy_current();
  */
 void st_destroy(symbol_table *st);
 
+#ifdef __cplusplus
+}
 #endif
+
+#endif // TS_H
 

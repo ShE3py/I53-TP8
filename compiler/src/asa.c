@@ -36,6 +36,37 @@ int is_leaf(NodeTag tag) {
 }
 
 /**
+ * Renvoie l'identifiant C de l'étiquette spécifiée.
+ */
+const char* tag_name(NodeTag tag) {
+    switch(tag) {
+		case TagInt: return "TagInt";
+		case TagVar: return "TagVar";
+		case TagIndex: return "TagIndex";
+		case TagBinaryOp: return "TagBinaryOp";
+		case TagUnaryOp: return "TagUnaryOp";
+		case TagAssignScalar: return "TagAssignAscalar";
+		case TagAssignIndexed: return "TagAssignIndexed";
+		case TagAssignIntList: return "TagAssignIntList";
+		case TagAssignArray: return "TagAssignArray";
+		case TagTest: return "TagTest";
+		case TagWhile: return "TagWhile";
+		case TagRead: return "TagRead";
+		case TagReadIndexed: return "TagReadIndexed";
+		case TagReadArray: return "TagReadArray";
+		case TagPrint: return "TagPrint";
+		case TagPrintArray: return "TagPrintArray";
+		case TagBlock: return "TagBlock";
+		case TagFn: return "TagFn";
+		case TagFnCall: return "TagFnCall";
+		case TagReturn: return "TagReturn";
+	}
+	
+	fprintf(stderr, "entered unreachable code\n");
+	exit(1);
+}
+
+/**
  * Renvoie le symbole associé à un opérateur binaire.
  */
 const char* binop_symbol(BinaryOp binop) {
