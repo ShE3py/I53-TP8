@@ -50,15 +50,20 @@ std::unique_ptr<asa> lower(ast::asa *p) {
 	    
 	    case ast::TagRead: {
 	        return std::unique_ptr<asa>(new asa {
-	            .tag = TagRead,
-	            .p.tag_read.identifier = p->tag_read.identifier,
+	            .tag = TagFnCall,
+	            .p.tag_fn_call.identifier = "intrinsics.READ",
+	            .p.tag_fn_call.args = std::vector<std::unique_ptr<asa>>(),
 	        });
 	    }
 	    
 	    case ast::TagPrint: {
+	        std::vector<std::unique_ptr<asa>> arg;
+	        arg.push_back(lower(p->tag_print.expr));
+	    
 	        return std::unique_ptr<asa>(new asa {
-	            .tag = TagPrint,
-	            .p.tag_print.expr = lower(p->tag_print.expr),
+	            .tag = TagFnCall,
+	            .p.tag_fn_call.identifier = "intrinsics.WRITE",
+	            .p.tag_fn_call.args = std::move(arg),
 	        });
 	    }
 	    

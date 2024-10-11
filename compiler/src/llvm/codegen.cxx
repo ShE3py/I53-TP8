@@ -29,7 +29,7 @@ static llvm::IntegerType *ty;
 static llvm::Function *WRITE, *READ;
 
 // Variables
-static std::map<std::string, llvm::Value*> locals;
+static std::map<std::string, llvm::AllocaInst*> locals;
 
 llvm::Value* codegen_nc(const hir::asa &p) {
     switch(p.tag) {
@@ -38,14 +38,13 @@ llvm::Value* codegen_nc(const hir::asa &p) {
 	    }
 	    
 	    case hir::TagVar: {
-	        symbol *var = st_find(p.p.tag_var.identifier.c_str());
-	        llvm::Value *l;
-	        if(!var || !(l = locals[var->identifier])) {
+	        llvm::AllocaInst *A;
+	        if(!(A = locals[p.p.tag_var.identifier.c_str()])) {
 	            std::cerr << "illegal state: '" << p.p.tag_var.identifier << "' should exists at this stage but it does not" << std::endl;
 		        exit(1);
 	        }
 	        
-	        return l;
+	        return llvmIrBuilder->CreateLoad(ty, A, p.p.tag_var.identifier);
 	    }
 	    
 	    case hir::TagBinaryOp: {
@@ -75,20 +74,11 @@ llvm::Value* codegen_nc(const hir::asa &p) {
 	        exit(1);
         }
         
-        case hir::TagRead: {
-            llvm::Value *ret = llvmIrBuilder->CreateCall(READ, std::nullopt, p.p.tag_read.identifier);
-            locals[p.p.tag_read.identifier] = ret;
-            return llvm::PoisonValue::get(ty);
-        }
-        
-        case hir::TagPrint: {
-            llvm::Value *expr = codegen_nc(*p.p.tag_print.expr);
-            return llvmIrBuilder->CreateCall(WRITE, expr);
-        }
-        
         case hir::TagBlock: {
             llvm::BasicBlock *bb = llvm::BasicBlock::Create(*llvmContext);
             llvmIrBuilder->SetInsertPoint(bb);
+            
+            locals.clear();
             
             for(const std::unique_ptr<hir::asa> &q : p.p.tag_block.body) {
                 codegen_nc(*q);
@@ -104,16 +94,24 @@ llvm::Value* codegen_nc(const hir::asa &p) {
                 exit(1);
             }
 	        
-	        st_make_current(p.p.tag_fn.st);
+	        llvm::BasicBlock *bb = llvm::BasicBlock::Create(*llvmContext, F->getName(), F);
+            llvmIrBuilder->SetInsertPoint(bb);
+	        
 	        locals.clear();
 	        
 	        for(size_t i = 0; i < p.p.tag_fn.params.size(); ++i) {
-	            locals[p.p.tag_fn.params[i]] = F->getArg(i);
+	            locals[p.p.tag_fn.params[i]] = llvmIrBuilder->CreateAlloca(ty, nullptr, p.p.tag_fn.params[i]);
 	        }
 	        
-	        if(llvm::BasicBlock *body = llvm::dyn_cast<llvm::BasicBlock>(codegen_nc(*p.p.tag_fn.body))) {
-	            body->insertInto(F);
+	        symbol_table_node *n = p.p.tag_fn.st->head;
+	        while(n) {
+	            locals[n->value.identifier] = llvmIrBuilder->CreateAlloca(ty, nullptr, n->value.identifier);
+	            n = n->next;
 	        }
+	        
+	        for(const std::unique_ptr<hir::asa> &q : p.p.tag_fn.body->p.tag_block.body) {
+                codegen_nc(*q);
+            }
 	        
 	        if(p.p.tag_fn.body->p.tag_block.body.back()->tag != hir::TagReturn)
 	            llvmIrBuilder->CreateRet(llvm::ConstantInt::get(ty, 0, true));
@@ -141,7 +139,7 @@ llvm::Value* codegen_nc(const hir::asa &p) {
 			std::vector<llvm::Value*> args;
 			args.reserve(F->arg_size());
 			for(const std::unique_ptr<hir::asa> &arg : p.p.tag_fn_call.args) {
-			    args.push_back(codegen_nc(*arg));
+			    args.push_back(llvmIrBuilder->CreateIntCast(codegen_nc(*arg), ty, true));
 			}
 			
 			return llvmIrBuilder->CreateCall(F, args);
@@ -169,10 +167,10 @@ extern "C" {
             
             // Instrincts starts with `0` as users can't define identifiers startings with a digit.
 	        llvm::FunctionType *FT = llvm::FunctionType::get(llvm::Type::getVoidTy(*llvmContext), ty, false);
-	        WRITE = llvm::Function::Create(FT, llvm::Function::ExternalLinkage, "0WRITE", *llvmModule);
+	        WRITE = llvm::Function::Create(FT, llvm::Function::ExternalLinkage, "intrinsics.WRITE", *llvmModule);
 	        
 	        FT = llvm::FunctionType::get(ty, false);
-	        READ = llvm::Function::Create(FT, llvm::Function::ExternalLinkage, "0READ", *llvmModule);
+	        READ = llvm::Function::Create(FT, llvm::Function::ExternalLinkage, "intrinsics.READ", *llvmModule);
             
             // Creating all functions
             std::vector<std::unique_ptr<hir::asa>> funs;

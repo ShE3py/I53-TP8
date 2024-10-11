@@ -31,16 +31,6 @@ enum NodeTag {
     TagBinaryOp,
     
     /**
-     * The `READ` intrinsic.
-     */
-    TagRead,
-    
-    /**
-     * The `WRITE` instrinsic.
-     */
-    TagPrint,
-    
-    /**
      * A code block.
      */
     TagBlock,
