@@ -1,4 +1,4 @@
-#include "codegen.h"
+#include "codegen_ram.h"
 
 #pragma GCC diagnostic ignored "-Wmain"
 #pragma GCC diagnostic ignored "-Wunused-function"
@@ -944,7 +944,7 @@ static void destroy_fn_space() {
 /**
  * Génère le code pour la machine RAM correspondant au programme spécifié.
  */
-void codegen(asa_list fns) {
+void codegen_ram(asa_list fns) {
 	if(fns.len == 0) {
 		fprintf(outfile, "STOP\n");
 		fprintf(stderr, "avertissement: le fichier source est vide\n");

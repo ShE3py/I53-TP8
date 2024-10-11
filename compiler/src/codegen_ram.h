@@ -1,11 +1,12 @@
-#ifndef CODEGEN_H
-#define CODEGEN_H
+#ifndef CODEGEN_RAM_H
+#define CODEGEN_RAM_H
 
 #include "asa.h"
 
 /**
  * Génère le code pour la machine RAM correspondant au programme spécifié.
  */
-void codegen(asa_list fns);
+void codegen_ram(asa_list fns);
 
-#endif // CODEGEN_H
+#endif // CODEGEN_RAM_H
+

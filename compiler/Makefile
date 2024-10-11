@@ -4,7 +4,7 @@ CC = gcc
 SRC = src
 OUT = out
 
-OBJS = ts.o asa.o codegen.o parser.o lexer.o
+OBJS = ts.o asa.o codegen_ram.o parser.o lexer.o
 
 OPT_LEVEL ?= 0
 CFLAGS = -Wall -Wextra -Werror -g -O$(OPT_LEVEL) -I$(SRC)
