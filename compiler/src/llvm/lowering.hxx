@@ -49,6 +49,16 @@ enum NodeTag {
      * A function body.
      */
     TagFn,
+    
+    /**
+     * A function call.
+     */
+    TagFnCall,
+    
+    /**
+     * A function return.
+     */
+    TagReturn,
 };
 
 /**
@@ -155,6 +165,31 @@ struct asa {
              */
             symbol_table *st;
         } tag_fn;
+        
+        /**
+         * The payload of a `TagFnCall` node.
+         */
+        struct {
+            /**
+             * The function name.
+             */
+            std::string identifier;
+            
+            /**
+             * The function arguments.
+             */
+            std::vector<std::unique_ptr<asa>> args;
+        } tag_fn_call;
+        
+        /**
+		 * The payload of a `TagReturn` node.
+		 */
+		struct {
+			/**
+			 * The expression to return.
+			 */
+			 std::unique_ptr<asa> expr;
+		} tag_return;
         
         ~NodePayload();
     } p;

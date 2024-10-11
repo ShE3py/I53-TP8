@@ -79,7 +79,8 @@ std::unique_ptr<asa> lower(ast::asa *p) {
         }
 	    
 	    case ast::TagFn: {
-	        std::vector<std::string> params(p->tag_fn.params.len);
+	        std::vector<std::string> params;
+	        params.reserve(p->tag_fn.params.len);
 	        ast::id_list_node *param = p->tag_fn.params.head;
 	        
 	        while(param) {
@@ -95,6 +96,30 @@ std::unique_ptr<asa> lower(ast::asa *p) {
 	            .p.tag_fn.st = p->tag_fn.st,
 	        });
         }
+        
+        case ast::TagFnCall: {
+            std::vector<std::unique_ptr<asa>> args;
+            args.reserve(p->tag_fn_call.args.len);
+	        ast::asa_list_node *arg = p->tag_fn_call.args.head;
+	        
+	        while(arg) {
+	            args.push_back(lower(arg->value));
+	            arg = arg->next;
+	        }
+	    
+	        return std::unique_ptr<asa>(new asa {
+	            .tag = TagFnCall,
+	            .p.tag_fn_call.identifier = p->tag_fn_call.identifier,
+	            .p.tag_fn_call.args = std::move(args),
+	        });
+        }
+        
+        case ast::TagReturn: {
+	        return std::unique_ptr<asa>(new asa {
+	            .tag = TagReturn,
+	            .p.tag_return.expr = lower(p->tag_return.expr),
+	        });
+	    }
 	    
 	    default:
 	        std::cerr << "warning: unimplemented tag lowering: " << ast::tag_name(p->tag) << std::endl;
