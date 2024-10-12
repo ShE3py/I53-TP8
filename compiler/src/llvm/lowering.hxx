@@ -12,19 +12,21 @@
 // High-level Intermediate Representation
 namespace hir {
 
-struct TagInt;
-struct TagVar;
-struct TagBinaryOp;
-struct TagAssignScalar;
-struct TagBlock;
-struct TagFn;
-struct TagFnCall;
-struct TagReturn;
+struct TagInt;           // 0
+struct TagVar;           // 1
+struct TagIndex;         // 2
+struct TagBinaryOp;      // 3
+struct TagAssignScalar;  // 4
+struct TagAssignIndexed; // 5
+struct TagBlock;         // 6
+struct TagFn;            // 7
+struct TagFnCall;        // 8
+struct TagReturn;        // 9
 
 /**
  * An abstract syntax tree node.
  */
-using asa = std::variant<TagInt, TagVar, TagBinaryOp, TagAssignScalar, TagBlock, TagFn, TagFnCall, TagReturn>;
+using asa = std::variant<TagInt, TagVar, TagIndex, TagBinaryOp, TagAssignScalar, TagAssignIndexed, TagBlock, TagFn, TagFnCall, TagReturn>;
 
 /**
  * An integer.
@@ -37,13 +39,28 @@ struct TagInt {
 };
 
 /**
- * A variable.
+ * The value of a scalar variable.
  */
 struct TagVar {
     /**
      * The variable identifier.
      */
     std::string identifier;
+};
+
+/**
+ * The value of a array variable.
+ */
+struct TagIndex {
+    /**
+     * The variable identifier.
+     */
+    std::string identifier;
+    
+    /**
+     * The index;
+     */
+    std::unique_ptr<asa> index;
 };
 
 /**
@@ -82,7 +99,27 @@ struct TagAssignScalar {
 };
 
 /**
- * A code block.
+ * Scalar-to-indexed-scalar assignment.
+ */
+struct TagAssignIndexed {
+    /**
+     * The var the be modified.
+     */
+    std::string identifier;
+    
+    /**
+     * The index to be modified.
+     */
+    std::unique_ptr<asa> index;
+    
+    /**
+     * The value to be assigned.
+     */
+    std::unique_ptr<asa> expr;
+};
+
+/**
+ * A code block. NOT a `llvm::BasicBlock`!
  */
 struct TagBlock {
     /**

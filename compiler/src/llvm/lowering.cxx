@@ -23,6 +23,13 @@ std::unique_ptr<asa> lower(ast::asa *p) {
 	        return std::make_unique<asa>(TagVar { .identifier = p->tag_var.identifier });
 	    }
 	    
+	    case ast::TagIndex: {
+	        return std::make_unique<asa>(TagIndex {
+	            .identifier = p->tag_index.identifier,
+	            .index = lower(p->tag_index.index),
+            });
+	    }
+	    
 	    case ast::TagBinaryOp: {
 	        return std::make_unique<asa>(TagBinaryOp {
 	            .op = p->tag_binary_op.op,
@@ -38,6 +45,61 @@ std::unique_ptr<asa> lower(ast::asa *p) {
 	        });
 	    }
 	    
+	    case ast::TagAssignIndexed: {
+	        return std::make_unique<asa>(TagAssignIndexed {
+	            .identifier = p->tag_assign_indexed.identifier,
+	            .index = lower(p->tag_assign_indexed.index),
+	            .expr = lower(p->tag_assign_indexed.expr),
+	        });
+	    }
+	    
+	    case ast::TagAssignIntList: {
+	        symbol s = st_find_or_internal_error(p->tag_assign_int_list.identifier);
+	        
+	        std::vector<std::unique_ptr<asa>> elems;
+	        ast::asa_list_node *it = p->tag_assign_int_list.values.head;
+	        for(size_t i = 0; i < (size_t) s.size; ++i) {
+	            elems.push_back(std::make_unique<asa>(TagAssignIndexed {
+	                .identifier = s.identifier,
+                    .index = std::make_unique<asa>(TagInt {
+                        .value = i
+                    }),
+                    .expr = lower(it->value),
+	            }));
+	            
+	            it = it->next;
+	        }
+	    
+	        return std::make_unique<asa>(TagBlock {
+	            .body = std::move(elems),
+	        });
+	    }
+	    
+	    case ast::TagAssignArray: {
+	        symbol src = st_find_or_internal_error(p->tag_assign_array.src);
+	        symbol dst = st_find_or_internal_error(p->tag_assign_array.dst);
+	        
+	        std::vector<std::unique_ptr<asa>> elems;
+	        for(size_t i = 0; i < (size_t) src.size; ++i) {
+	            elems.push_back(std::make_unique<asa>(TagAssignIndexed {
+	                .identifier = src.identifier,
+                    .index = std::make_unique<asa>(TagInt {
+                        .value = i
+                    }),
+                    .expr = std::make_unique<asa>(TagIndex {
+	                    .identifier = dst.identifier,
+	                    .index = std::make_unique<asa>(TagInt {
+                            .value = i
+                        }),
+                    }),
+	            }));
+	        }
+	    
+	        return std::make_unique<asa>(TagBlock {
+	            .body = std::move(elems),
+	        });
+	    }
+	    
 	    case ast::TagRead: {
 	        return std::make_unique<asa>(TagAssignScalar {
 	            .identifier = p->tag_read.identifier,
@@ -48,6 +110,39 @@ std::unique_ptr<asa> lower(ast::asa *p) {
 	        });
 	    }
 	    
+	    case ast::TagReadIndexed: {
+	        return std::make_unique<asa>(TagAssignIndexed {
+	            .identifier = p->tag_read_indexed.identifier,
+	            .index = lower(p->tag_read_indexed.index),
+	            .expr = std::make_unique<asa>(TagFnCall {
+	                .identifier = "intrinsics.READ",
+	                .args = {},
+	            })
+	        });
+	    }
+	    
+	    case ast::TagReadArray: {
+	        symbol s = st_find_or_internal_error(p->tag_read_array.identifier);
+	        
+	        std::vector<std::unique_ptr<asa>> elems;
+	        for(size_t i = 0; i < (size_t) s.size; ++i) {
+	            elems.push_back(std::make_unique<asa>(TagAssignIndexed {
+	                .identifier = s.identifier,
+                    .index = std::make_unique<asa>(TagInt {
+                        .value = i
+                    }),
+                    .expr = std::make_unique<asa>(TagFnCall {
+                        .identifier = "intrinsics.READ",
+                        .args = {},
+	                }),
+	            }));
+	        }
+	    
+	        return std::make_unique<asa>(TagBlock {
+	            .body = std::move(elems),
+	        });
+	    }
+	    
 	    case ast::TagPrint: {
 	        std::vector<std::unique_ptr<asa>> arg;
 	        arg.push_back(lower(p->tag_print.expr));
@@ -55,6 +150,30 @@ std::unique_ptr<asa> lower(ast::asa *p) {
 	        return std::make_unique<asa>(TagFnCall {
 	            .identifier = "intrinsics.WRITE",
 	            .args = std::move(arg),
+	        });
+	    }
+	    
+	    case ast::TagPrintArray: {
+	        symbol s = st_find_or_internal_error(p->tag_print_array.identifier);
+	        
+	        std::vector<std::unique_ptr<asa>> elems;
+	        for(size_t i = 0; i < (size_t) s.size; ++i) {
+	            std::vector<std::unique_ptr<asa>> arg;
+	            arg.push_back(std::make_unique<asa>(TagIndex {
+	                .identifier = s.identifier,
+	                .index = std::make_unique<asa>(TagInt {
+	                    .value = i,
+                    }),
+                }));
+	            
+	            elems.push_back(std::make_unique<asa>(TagFnCall {
+	                .identifier = "intrinsics.WRITE",
+	                .args = std::move(arg),
+	            }));
+	        }
+	    
+	        return std::make_unique<asa>(TagBlock {
+	            .body = std::move(elems),
 	        });
 	    }
 	    
@@ -73,7 +192,7 @@ std::unique_ptr<asa> lower(ast::asa *p) {
 	        });
         }
 	    
-	    case ast::TagFn: {
+	    case ast::TagFn: {    
 	        std::vector<std::string> params;
 	        params.reserve(p->tag_fn.params.len);
 	        ast::id_list_node *param = p->tag_fn.params.head;
@@ -82,6 +201,9 @@ std::unique_ptr<asa> lower(ast::asa *p) {
 	            params.push_back(param->value);
 	            param = param->next;
 	        }
+	        
+	        // for body lowering
+	        st_make_current(p->tag_fn.st);
 	    
 	        return std::make_unique<asa>(TagFn {
 	            .identifier = p->tag_fn.identifier,

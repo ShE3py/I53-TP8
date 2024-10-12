@@ -17,12 +17,22 @@
 #include <llvm/Target/TargetOptions.h>
 #include <llvm/IR/LegacyPassManager.h>
 #include <llvm/IR/Verifier.h>
+#include <llvm/Analysis/LoopAnalysisManager.h>
+#include <llvm/Analysis/CGSCCPassManager.h>
+#include <llvm/Passes/StandardInstrumentations.h>
+#include <llvm/Passes/PassBuilder.h>
+#include <llvm/Transforms/InstCombine/InstCombine.h>
+#include <llvm/Transforms/Scalar/GVN.h>
+#include <llvm/Transforms/Scalar/Reassociate.h>
+#include <llvm/Transforms/Scalar/SimplifyCFG.h>
 
 #include "lowering.hxx"
 
 static std::unique_ptr<llvm::LLVMContext> llvmContext;
 static std::unique_ptr<llvm::IRBuilder<>> llvmIrBuilder;
 static std::unique_ptr<llvm::Module> llvmModule;
+static std::unique_ptr<llvm::FunctionPassManager> llvmFpm;
+static std::unique_ptr<llvm::FunctionAnalysisManager> llvmFam;
 static llvm::IntegerType *ty;
 
 // Intrinsics
@@ -46,7 +56,20 @@ llvm::Value* codegen_nc(const hir::asa &p) {
 		        exit(1);
 	        }
 	        
-	        return llvmIrBuilder->CreateLoad(ty, A, node.identifier);
+	        return llvmIrBuilder->CreateLoad(ty, A);
+	    }
+	    
+	    case hir::tag_index_v<hir::TagIndex>: {
+	        auto const &node = std::get<hir::TagIndex>(p);
+	        
+	        llvm::AllocaInst *A;
+	        if(!(A = locals[node.identifier.c_str()])) {
+	            std::cerr << "illegal state: '" << node.identifier << "' should exists at this stage but it does not" << std::endl;
+		        exit(1);
+	        }
+	        
+	        llvm::Value *index = llvmIrBuilder->CreateGEP(ty, A, codegen_nc(*node.index));
+	        return llvmIrBuilder->CreateLoad(ty, index);
 	    }
 	    
 	    case hir::tag_index_v<hir::TagBinaryOp>: {
@@ -89,19 +112,27 @@ llvm::Value* codegen_nc(const hir::asa &p) {
 	        return llvmIrBuilder->CreateStore(codegen_nc(*node.expr), A);
         }
         
+        case hir::tag_index_v<hir::TagAssignIndexed>: {
+	        auto const &node = std::get<hir::TagAssignIndexed>(p);
+	        
+            llvm::AllocaInst *A;
+	        if(!(A = locals[node.identifier.c_str()])) {
+	            std::cerr << "illegal state: '" << node.identifier << "' should exists at this stage but it does not" << std::endl;
+		        exit(1);
+	        }
+	        
+	        llvm::Value *index = llvmIrBuilder->CreateGEP(ty, A, codegen_nc(*node.index));
+	        return llvmIrBuilder->CreateStore(codegen_nc(*node.expr), index);
+        }
+        
         case hir::tag_index_v<hir::TagBlock>: {
 	        auto const &node = std::get<hir::TagBlock>(p);
-	        
-            llvm::BasicBlock *bb = llvm::BasicBlock::Create(*llvmContext);
-            llvmIrBuilder->SetInsertPoint(bb);
-            
-            locals.clear();
             
             for(const std::unique_ptr<hir::asa> &q : node.body) {
                 codegen_nc(*q);
             }
             
-            return bb;
+            return nullptr;
         }
 	    
 	    case hir::tag_index_v<hir::TagFn>: {
@@ -116,15 +147,17 @@ llvm::Value* codegen_nc(const hir::asa &p) {
 	        llvm::BasicBlock *bb = llvm::BasicBlock::Create(*llvmContext, F->getName(), F);
             llvmIrBuilder->SetInsertPoint(bb);
 	        
-	        locals.clear();
-	        
 	        for(const std::string &param : node.params) {
 	            locals[param] = llvmIrBuilder->CreateAlloca(ty, nullptr, param);
 	        }
 	        
 	        symbol_table_node *n = node.st->head;
 	        while(n) {
-	            locals[n->value.identifier] = llvmIrBuilder->CreateAlloca(ty, nullptr, n->value.identifier);
+	            llvm::Type *Ty = (n->value.size == SCALAR_SIZE) ?
+	                (llvm::Type*) ty :
+	                (llvm::Type*) llvm::ArrayType::get(ty, n->value.size);
+	            
+	            locals[n->value.identifier] = llvmIrBuilder->CreateAlloca(Ty, nullptr, n->value.identifier);
 	            n = n->next;
 	        }
 	        
@@ -141,6 +174,7 @@ llvm::Value* codegen_nc(const hir::asa &p) {
                 exit(1);
 	        }
 	        
+	        llvmFpm->run(*F, *llvmFam);
 	        return F;
         }
         
@@ -187,6 +221,26 @@ extern "C" {
             llvmContext = std::make_unique<llvm::LLVMContext>();
             llvmModule = std::make_unique<llvm::Module>("", *llvmContext);
             llvmIrBuilder = std::make_unique<llvm::IRBuilder<>>(*llvmContext);
+            
+            llvmFpm = std::make_unique<llvm::FunctionPassManager>();
+            auto TheLAM = std::make_unique<llvm::LoopAnalysisManager>();
+            llvmFam = std::make_unique<llvm::FunctionAnalysisManager>();
+            auto TheCGAM = std::make_unique<llvm::CGSCCAnalysisManager>();
+            auto TheMAM = std::make_unique<llvm::ModuleAnalysisManager>();
+            auto ThePIC = std::make_unique<llvm::PassInstrumentationCallbacks>();
+            auto TheSI = std::make_unique<llvm::StandardInstrumentations>(*llvmContext, true);
+            TheSI->registerCallbacks(*ThePIC, TheMAM.get());
+            
+            llvmFpm->addPass(llvm::InstCombinePass());
+            llvmFpm->addPass(llvm::ReassociatePass());
+            llvmFpm->addPass(llvm::GVNPass());
+            llvmFpm->addPass(llvm::SimplifyCFGPass());
+            
+            llvm::PassBuilder PB;
+            PB.registerModuleAnalyses(*TheMAM);
+            PB.registerFunctionAnalyses(*llvmFam);
+            PB.crossRegisterProxies(*TheLAM, *llvmFam, *TheCGAM, *TheMAM);
+            
             ty = llvm::IntegerType::get(*llvmContext, 16);
             
             // Instrincts starts with `0` as users can't define identifiers startings with a digit.
