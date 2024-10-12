@@ -2,9 +2,9 @@
 #define RAME_LLVM_LOWERING_H
 
 #include <cstdint>
+#include <memory>
 #include <string>
 #include <vector>
-#include <memory>
 
 #include "asa.h"
 

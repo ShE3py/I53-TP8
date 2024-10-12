@@ -1,9 +1,7 @@
 #ifndef ASA_H
 #define ASA_H
 
-#include <string.h>
 #include <stdio.h>
-#include <stdlib.h>
 
 #include "ts.h"
 

@@ -1,5 +1,7 @@
 %{
   #include <errno.h>
+  #include <stdlib.h>
+  #include <string.h>
   #include "ts.h"
   #include "llvm/codegen.h"
 

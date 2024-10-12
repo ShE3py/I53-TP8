@@ -1,5 +1,8 @@
 #include "asa.h"
 
+#include <stdlib.h>
+#include <string.h>
+
 /**
  * Renvoie `1` si l'étiquette spécifiée est une feuille, sinon
  * renvoie `0`.

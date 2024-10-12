@@ -1,5 +1,8 @@
 #include "codegen.h"
 
+#include <stdlib.h>
+#include <string.h>
+
 #pragma GCC diagnostic ignored "-Wmain"
 #pragma GCC diagnostic ignored "-Wunused-function"
 
