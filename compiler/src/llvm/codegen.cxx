@@ -32,26 +32,29 @@ static llvm::Function *WRITE, *READ;
 static std::map<std::string, llvm::AllocaInst*> locals;
 
 llvm::Value* codegen_nc(const hir::asa &p) {
-    switch(p.tag) {
-	    case hir::TagInt: {
-	        return llvm::ConstantInt::get(ty, p.p.tag_int.value, true);
+    switch(p.index()) {
+	    case hir::tag_index_v<hir::TagInt>: {
+	        return llvm::ConstantInt::get(ty, std::get<hir::TagInt>(p).value, true);
 	    }
 	    
-	    case hir::TagVar: {
+	    case hir::tag_index_v<hir::TagVar>: {
+	        auto node = std::get<hir::TagVar>(p);
+	        
 	        llvm::AllocaInst *A;
-	        if(!(A = locals[p.p.tag_var.identifier.c_str()])) {
-	            std::cerr << "illegal state: '" << p.p.tag_var.identifier << "' should exists at this stage but it does not" << std::endl;
+	        if(!(A = locals[node.identifier.c_str()])) {
+	            std::cerr << "illegal state: '" << node.identifier << "' should exists at this stage but it does not" << std::endl;
 		        exit(1);
 	        }
 	        
-	        return llvmIrBuilder->CreateLoad(ty, A, p.p.tag_var.identifier);
+	        return llvmIrBuilder->CreateLoad(ty, A, node.identifier);
 	    }
 	    
-	    case hir::TagBinaryOp: {
-	        llvm::Value *lhs = codegen_nc(*p.p.tag_binary_op.lhs);
-	        llvm::Value *rhs = codegen_nc(*p.p.tag_binary_op.rhs);
+	    case hir::tag_index_v<hir::TagBinaryOp>: {
+	        auto const &node = std::get<hir::TagBinaryOp>(p);
+	        llvm::Value *lhs = codegen_nc(*node.lhs);
+	        llvm::Value *rhs = codegen_nc(*node.rhs);
 	        
-	        switch(p.p.tag_binary_op.op) {
+	        switch(node.op) {
 	            case ast::OpAdd: return llvmIrBuilder->CreateAdd(lhs, rhs);
 	            case ast::OpSub: return llvmIrBuilder->CreateSub(lhs, rhs);
 	            case ast::OpMul: return llvmIrBuilder->CreateMul(lhs, rhs);
@@ -74,33 +77,39 @@ llvm::Value* codegen_nc(const hir::asa &p) {
 	        exit(1);
         }
         
-        case hir::TagAssignScalar: {
+        case hir::tag_index_v<hir::TagAssignScalar>: {
+	        auto const &node = std::get<hir::TagAssignScalar>(p);
+	        
             llvm::AllocaInst *A;
-	        if(!(A = locals[p.p.tag_assign_scalar.identifier.c_str()])) {
-	            std::cerr << "illegal state: '" << p.p.tag_assign_scalar.identifier << "' should exists at this stage but it does not" << std::endl;
+	        if(!(A = locals[node.identifier.c_str()])) {
+	            std::cerr << "illegal state: '" << node.identifier << "' should exists at this stage but it does not" << std::endl;
 		        exit(1);
 	        }
 	        
-	        return llvmIrBuilder->CreateStore(codegen_nc(*p.p.tag_assign_scalar.expr), A);
+	        return llvmIrBuilder->CreateStore(codegen_nc(*node.expr), A);
         }
         
-        case hir::TagBlock: {
+        case hir::tag_index_v<hir::TagBlock>: {
+	        auto const &node = std::get<hir::TagBlock>(p);
+	        
             llvm::BasicBlock *bb = llvm::BasicBlock::Create(*llvmContext);
             llvmIrBuilder->SetInsertPoint(bb);
             
             locals.clear();
             
-            for(const std::unique_ptr<hir::asa> &q : p.p.tag_block.body) {
+            for(const std::unique_ptr<hir::asa> &q : node.body) {
                 codegen_nc(*q);
             }
             
             return bb;
         }
 	    
-	    case hir::TagFn: {
-	        llvm::Function *F = llvmModule->getFunction(p.p.tag_fn.identifier);
+	    case hir::tag_index_v<hir::TagFn>: {
+	        auto const &node = std::get<hir::TagFn>(p);
+	        
+	        llvm::Function *F = llvmModule->getFunction(node.identifier);
 	         if(!F) {
-                llvm::errs() << "internal error: " << p.p.tag_fn_call.identifier << " was not created\n";
+                llvm::errs() << "internal error: " << node.identifier << " was not created\n";
                 exit(1);
             }
 	        
@@ -109,21 +118,22 @@ llvm::Value* codegen_nc(const hir::asa &p) {
 	        
 	        locals.clear();
 	        
-	        for(size_t i = 0; i < p.p.tag_fn.params.size(); ++i) {
-	            locals[p.p.tag_fn.params[i]] = llvmIrBuilder->CreateAlloca(ty, nullptr, p.p.tag_fn.params[i]);
+	        for(const std::string &param : node.params) {
+	            locals[param] = llvmIrBuilder->CreateAlloca(ty, nullptr, param);
 	        }
 	        
-	        symbol_table_node *n = p.p.tag_fn.st->head;
+	        symbol_table_node *n = node.st->head;
 	        while(n) {
 	            locals[n->value.identifier] = llvmIrBuilder->CreateAlloca(ty, nullptr, n->value.identifier);
 	            n = n->next;
 	        }
 	        
-	        for(const std::unique_ptr<hir::asa> &q : p.p.tag_fn.body->p.tag_block.body) {
+	        auto const &block = std::get<hir::TagBlock>(*node.body);
+	        for(const std::unique_ptr<hir::asa> &q : block.body) {
                 codegen_nc(*q);
             }
 	        
-	        if(p.p.tag_fn.body->p.tag_block.body.back()->tag != hir::TagReturn)
+	        if(block.body.back()->index() != hir::tag_index_v<hir::TagReturn>)
 	            llvmIrBuilder->CreateRet(llvm::ConstantInt::get(ty, 0, true));
 	        
 	        if(llvm::verifyFunction(*F, &llvm::errs())) {
@@ -134,21 +144,23 @@ llvm::Value* codegen_nc(const hir::asa &p) {
 	        return F;
         }
         
-        case hir::TagFnCall: {
-            llvm::Function *F = llvmModule->getFunction(p.p.tag_fn_call.identifier);
+        case hir::tag_index_v<hir::TagFnCall>: {
+	        auto const &node = std::get<hir::TagFnCall>(p);
+	        
+            llvm::Function *F = llvmModule->getFunction(node.identifier);
             if(!F) {
-                llvm::errs() << "unknown function: " << p.p.tag_fn_call.identifier << "\n";
+                llvm::errs() << "unknown function: " << node.identifier << "\n";
                 exit(1);
             }
             
-            if(F->arg_size() != p.p.tag_fn_call.args.size()) {
-				fprintf(stderr, "'%s()': %lu paramètres attendus, %lu paramètres donnés\n", p.p.tag_fn_call.identifier.c_str(), F->arg_size(), p.p.tag_fn_call.args.size());
+            if(F->arg_size() != node.args.size()) {
+				fprintf(stderr, "'%s()': %lu paramètres attendus, %lu paramètres donnés\n", node.identifier.c_str(), F->arg_size(), node.args.size());
 				exit(1);
 			}
 			
 			std::vector<llvm::Value*> args;
 			args.reserve(F->arg_size());
-			for(const std::unique_ptr<hir::asa> &arg : p.p.tag_fn_call.args) {
+			for(const std::unique_ptr<hir::asa> &arg : node.args) {
 			    // promote i1 to ty
 			    args.push_back(llvmIrBuilder->CreateIntCast(codegen_nc(*arg), ty, true));
 			}
@@ -156,8 +168,9 @@ llvm::Value* codegen_nc(const hir::asa &p) {
 			return llvmIrBuilder->CreateCall(F, args);
         }
         
-        case hir::TagReturn: {
-            return llvmIrBuilder->CreateRet(codegen_nc(*p.p.tag_return.expr));
+        case hir::tag_index_v<hir::TagReturn>: {
+	        auto const &node = std::get<hir::TagReturn>(p);
+            return llvmIrBuilder->CreateRet(codegen_nc(*node.expr));
         }
     }
     
@@ -193,9 +206,9 @@ extern "C" {
             }
             
             for(const std::unique_ptr<hir::asa> &fun : funs) {
-                if(fun->tag == hir::TagFn) {
-                    llvm::FunctionType *FT = llvm::FunctionType::get(ty, std::vector<llvm::Type*>(fun->p.tag_fn.params.size(), ty), false);
-	                llvm::Function::Create(FT, llvm::Function::ExternalLinkage, fun->p.tag_fn.identifier, *llvmModule);
+                if(const hir::TagFn *fn = std::get_if<hir::TagFn>(&*fun)) {
+                    llvm::FunctionType *FT = llvm::FunctionType::get(ty, std::vector<llvm::Type*>(fn->params.size(), ty), false);
+	                llvm::Function::Create(FT, llvm::Function::ExternalLinkage, fn->identifier, *llvmModule);
                 }
             }
             

@@ -9,7 +9,7 @@ OBJS = ts.o asa.o llvm/lowering.o llvm/codegen.o ram/codegen.o parser.o lexer.o
 
 OPT_LEVEL ?= 0
 CFLAGS = -Wall -Wextra -Werror -g -O$(OPT_LEVEL) -I$(SRC)
-CXXFLAGS = $(shell llvm-config --cppflags)
+CXXFLAGS = -std=c++20 $(shell llvm-config --cppflags)
 LFLAGS = -lfl -lLLVM-18
 
 mkdirs = $(OUT)/grass

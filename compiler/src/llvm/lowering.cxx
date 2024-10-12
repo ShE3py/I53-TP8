@@ -7,63 +7,43 @@
 namespace hir {
 
 /**
- * Returns a new integer node.
- */
-std::unique_ptr<asa> asa::Int(uint64_t v) {
-    return std::unique_ptr<asa>(new asa { .tag = TagInt, .p.tag_int.value = v });
-}
-
-/**
- * Returns a new variable node.
- */
-std::unique_ptr<asa> asa::Var(std::string identifier) {
-    return std::unique_ptr<asa>(new asa { .tag = TagVar, .p.tag_var.identifier = identifier });
-}
-
-asa::NodePayload::~NodePayload() {}
-
-/**
  * Lowers an AST node to a HIR node.
  */
 std::unique_ptr<asa> lower(ast::asa *p) {
     if(!p || p == ast::NOP) {
-        return std::unique_ptr<asa>(nullptr);
+        return std::make_unique<asa>();
     }
 
     switch(p->tag) {
 	    case ast::TagInt: {
-	        return asa::Int(static_cast<uint64_t>(p->tag_int.value));
+	        return std::make_unique<asa>(TagInt { .value = static_cast<uint64_t>(p->tag_int.value) });
 	    }
 	    
 	    case ast::TagVar: {
-	        return asa::Var(p->tag_var.identifier);
+	        return std::make_unique<asa>(TagVar { .identifier = p->tag_var.identifier });
 	    }
 	    
 	    case ast::TagBinaryOp: {
-	        return std::unique_ptr<asa>(new asa {
-	            .tag = TagBinaryOp,
-	            .p.tag_binary_op.op = p->tag_binary_op.op,
-	            .p.tag_binary_op.lhs = lower(p->tag_binary_op.lhs),
-	            .p.tag_binary_op.rhs = lower(p->tag_binary_op.rhs),
+	        return std::make_unique<asa>(TagBinaryOp {
+	            .op = p->tag_binary_op.op,
+	            .lhs = lower(p->tag_binary_op.lhs),
+	            .rhs = lower(p->tag_binary_op.rhs),
 	        });
 	    }
 	    
 	    case ast::TagAssignScalar: {
-	        return std::unique_ptr<asa>(new asa {
-	            .tag = TagAssignScalar,
-	            .p.tag_assign_scalar.identifier = p->tag_assign_scalar.identifier,
-	            .p.tag_assign_scalar.expr = lower(p->tag_assign_scalar.expr),
+	        return std::make_unique<asa>(TagAssignScalar {
+	            .identifier = p->tag_assign_scalar.identifier,
+	            .expr = lower(p->tag_assign_scalar.expr),
 	        });
 	    }
 	    
 	    case ast::TagRead: {
-	        return std::unique_ptr<asa>(new asa {
-	            .tag = TagAssignScalar,
-	            .p.tag_assign_scalar.identifier = p->tag_read.identifier,
-	            .p.tag_assign_scalar.expr = std::unique_ptr<asa>(new asa {
-	                .tag = TagFnCall,
-	                .p.tag_fn_call.identifier = "intrinsics.READ",
-	                .p.tag_fn_call.args = std::vector<std::unique_ptr<asa>>(),
+	        return std::make_unique<asa>(TagAssignScalar {
+	            .identifier = p->tag_read.identifier,
+	            .expr = std::make_unique<asa>(TagFnCall {
+	                .identifier = "intrinsics.READ",
+	                .args = {},
 	            })
 	        });
 	    }
@@ -72,10 +52,9 @@ std::unique_ptr<asa> lower(ast::asa *p) {
 	        std::vector<std::unique_ptr<asa>> arg;
 	        arg.push_back(lower(p->tag_print.expr));
 	    
-	        return std::unique_ptr<asa>(new asa {
-	            .tag = TagFnCall,
-	            .p.tag_fn_call.identifier = "intrinsics.WRITE",
-	            .p.tag_fn_call.args = std::move(arg),
+	        return std::make_unique<asa>(TagFnCall {
+	            .identifier = "intrinsics.WRITE",
+	            .args = std::move(arg),
 	        });
 	    }
 	    
@@ -89,9 +68,8 @@ std::unique_ptr<asa> lower(ast::asa *p) {
 	        }
 	        while(b);
 	        
-	        return std::unique_ptr<asa>(new asa {
-	            .tag = TagBlock,
-	            .p.tag_block.body = std::move(body),
+	        return std::make_unique<asa>(TagBlock {
+	            .body = std::move(body),
 	        });
         }
 	    
@@ -105,12 +83,11 @@ std::unique_ptr<asa> lower(ast::asa *p) {
 	            param = param->next;
 	        }
 	    
-	        return std::unique_ptr<asa>(new asa {
-	            .tag = TagFn,
-	            .p.tag_fn.identifier = p->tag_fn.identifier,
-	            .p.tag_fn.params = params,
-	            .p.tag_fn.body = lower(p->tag_fn.body),
-	            .p.tag_fn.st = p->tag_fn.st,
+	        return std::make_unique<asa>(TagFn {
+	            .identifier = p->tag_fn.identifier,
+	            .params = std::move(params),
+	            .body = lower(p->tag_fn.body),
+	            .st = p->tag_fn.st,
 	        });
         }
         
@@ -124,25 +101,23 @@ std::unique_ptr<asa> lower(ast::asa *p) {
 	            arg = arg->next;
 	        }
 	    
-	        return std::unique_ptr<asa>(new asa {
-	            .tag = TagFnCall,
-	            .p.tag_fn_call.identifier = p->tag_fn_call.identifier,
-	            .p.tag_fn_call.args = std::move(args),
+	        return std::make_unique<asa>(TagFnCall {
+	            .identifier = p->tag_fn_call.identifier,
+	            .args = std::move(args),
 	        });
         }
         
         case ast::TagReturn: {
-	        return std::unique_ptr<asa>(new asa {
-	            .tag = TagReturn,
-	            .p.tag_return.expr = lower(p->tag_return.expr),
+	        return std::make_unique<asa>(TagReturn {
+	            .expr = lower(p->tag_return.expr),
 	        });
 	    }
 	    
 	    default:
 	        std::cerr << "warning: unimplemented tag lowering: " << ast::tag_name(p->tag) << std::endl;
-	        return asa::Int(0);
+	        return std::make_unique<asa>(TagInt {});
     }
-}
+} // namespace hir
 
 }
 
