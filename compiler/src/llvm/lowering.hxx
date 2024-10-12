@@ -31,6 +31,11 @@ enum NodeTag {
     TagBinaryOp,
     
     /**
+	 * Scalar-to-scalar assignment.
+	 */
+	TagAssignScalar,
+    
+    /**
      * A code block.
      */
     TagBlock,
@@ -102,24 +107,19 @@ struct asa {
         } tag_binary_op;
         
         /**
-		 * The payload of a `TagRead` node.
-		 */
-		struct {
-			/**
-			 * The var to be modified.
-			 */
-			std::string identifier;
-		} tag_read;
-		
-		/**
-		 * The payload of a `TagPrint` node.
-		 */
-		struct {
-			/**
-			 * The expression to print.
-			 */
-			 std::unique_ptr<asa> expr;
-		} tag_print;
+         * The payload of a `TagAssignScalar` node.
+         */
+        struct {
+            /**
+             * The var the be modified.
+             */
+            std::string identifier;
+            
+            /**
+             * The value to be assigned.
+             */
+            std::unique_ptr<asa> expr;
+        } tag_assign_scalar;
         
         /**
          * The payload of a `TagBlock` node.

@@ -48,11 +48,23 @@ std::unique_ptr<asa> lower(ast::asa *p) {
 	        });
 	    }
 	    
+	    case ast::TagAssignScalar: {
+	        return std::unique_ptr<asa>(new asa {
+	            .tag = TagAssignScalar,
+	            .p.tag_assign_scalar.identifier = p->tag_assign_scalar.identifier,
+	            .p.tag_assign_scalar.expr = lower(p->tag_assign_scalar.expr),
+	        });
+	    }
+	    
 	    case ast::TagRead: {
 	        return std::unique_ptr<asa>(new asa {
-	            .tag = TagFnCall,
-	            .p.tag_fn_call.identifier = "intrinsics.READ",
-	            .p.tag_fn_call.args = std::vector<std::unique_ptr<asa>>(),
+	            .tag = TagAssignScalar,
+	            .p.tag_assign_scalar.identifier = p->tag_read.identifier,
+	            .p.tag_assign_scalar.expr = std::unique_ptr<asa>(new asa {
+	                .tag = TagFnCall,
+	                .p.tag_fn_call.identifier = "intrinsics.READ",
+	                .p.tag_fn_call.args = std::vector<std::unique_ptr<asa>>(),
+	            })
 	        });
 	    }
 	    

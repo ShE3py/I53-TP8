@@ -74,6 +74,16 @@ llvm::Value* codegen_nc(const hir::asa &p) {
 	        exit(1);
         }
         
+        case hir::TagAssignScalar: {
+            llvm::AllocaInst *A;
+	        if(!(A = locals[p.p.tag_assign_scalar.identifier.c_str()])) {
+	            std::cerr << "illegal state: '" << p.p.tag_assign_scalar.identifier << "' should exists at this stage but it does not" << std::endl;
+		        exit(1);
+	        }
+	        
+	        return llvmIrBuilder->CreateStore(codegen_nc(*p.p.tag_assign_scalar.expr), A);
+        }
+        
         case hir::TagBlock: {
             llvm::BasicBlock *bb = llvm::BasicBlock::Create(*llvmContext);
             llvmIrBuilder->SetInsertPoint(bb);
@@ -139,6 +149,7 @@ llvm::Value* codegen_nc(const hir::asa &p) {
 			std::vector<llvm::Value*> args;
 			args.reserve(F->arg_size());
 			for(const std::unique_ptr<hir::asa> &arg : p.p.tag_fn_call.args) {
+			    // promote i1 to ty
 			    args.push_back(llvmIrBuilder->CreateIntCast(codegen_nc(*arg), ty, true));
 			}
 			
