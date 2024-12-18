@@ -2,6 +2,8 @@
 
 #include <iostream>
 
+#include "intrinsics.hxx"
+
 #pragma GCC diagnostic ignored "-Wc99-designator"
 
 namespace hir {
@@ -104,7 +106,7 @@ std::unique_ptr<asa> lower(ast::asa *p) {
 	        return std::make_unique<asa>(TagAssignScalar {
 	            .identifier = p->tag_read.identifier,
 	            .expr = std::make_unique<asa>(TagFnCall {
-	                .identifier = "intrinsics.READ",
+	                .identifier = intrinsics::READ,
 	                .args = {},
 	            })
 	        });
@@ -115,7 +117,7 @@ std::unique_ptr<asa> lower(ast::asa *p) {
 	            .identifier = p->tag_read_indexed.identifier,
 	            .index = lower(p->tag_read_indexed.index),
 	            .expr = std::make_unique<asa>(TagFnCall {
-	                .identifier = "intrinsics.READ",
+	                .identifier = intrinsics::READ,
 	                .args = {},
 	            })
 	        });
@@ -132,7 +134,7 @@ std::unique_ptr<asa> lower(ast::asa *p) {
                         .value = i
                     }),
                     .expr = std::make_unique<asa>(TagFnCall {
-                        .identifier = "intrinsics.READ",
+                        .identifier = intrinsics::READ,
                         .args = {},
 	                }),
 	            }));
@@ -148,7 +150,7 @@ std::unique_ptr<asa> lower(ast::asa *p) {
 	        arg.push_back(lower(p->tag_print.expr));
 	    
 	        return std::make_unique<asa>(TagFnCall {
-	            .identifier = "intrinsics.WRITE",
+	            .identifier = intrinsics::WRITE,
 	            .args = std::move(arg),
 	        });
 	    }
@@ -167,7 +169,7 @@ std::unique_ptr<asa> lower(ast::asa *p) {
                 }));
 	            
 	            elems.push_back(std::make_unique<asa>(TagFnCall {
-	                .identifier = "intrinsics.WRITE",
+	                .identifier = intrinsics::WRITE,
 	                .args = std::move(arg),
 	            }));
 	        }

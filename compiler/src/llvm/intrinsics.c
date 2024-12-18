@@ -2,9 +2,9 @@
 #include <stdint.h>
 #include <inttypes.h>
 
-static size_t i = 0;
-
 int16_t _Z50READ() {
+    static size_t i = 0;
+
     printf("E%zu = ", i);
     fflush(stdout);
     ++i;
@@ -23,4 +23,3 @@ extern int16_t _Z4main();
 int main() {
     return _Z4main();
 }
-

@@ -27,6 +27,7 @@
 #include <llvm/Transforms/Scalar/SimplifyCFG.h>
 
 #include "lowering.hxx"
+#include "intrinsics.hxx"
 
 static std::unique_ptr<llvm::LLVMContext> llvmContext;
 static std::unique_ptr<llvm::IRBuilder<>> llvmIrBuilder;
@@ -242,14 +243,13 @@ extern "C" {
             PB.crossRegisterProxies(*TheLAM, *llvmFam, *TheCGAM, *TheMAM);
             
             ty = llvm::IntegerType::get(*llvmContext, 16);
-            
-            // Instrincts starts with `0` as users can't define identifiers startings with a digit.
-	        llvm::FunctionType *FT = llvm::FunctionType::get(llvm::Type::getVoidTy(*llvmContext), ty, false);
-	        WRITE = llvm::Function::Create(FT, llvm::Function::ExternalLinkage, "intrinsics.WRITE", *llvmModule);
-	        
-	        FT = llvm::FunctionType::get(ty, false);
-	        READ = llvm::Function::Create(FT, llvm::Function::ExternalLinkage, "intrinsics.READ", *llvmModule);
-            
+
+            llvm::FunctionType *FT = llvm::FunctionType::get(llvm::Type::getVoidTy(*llvmContext), ty, false);
+            WRITE = llvm::Function::Create(FT, llvm::Function::ExternalLinkage, intrinsics::WRITE, *llvmModule);
+
+            FT = llvm::FunctionType::get(ty, false);
+            READ = llvm::Function::Create(FT, llvm::Function::ExternalLinkage, intrinsics::READ, *llvmModule);
+
             // Creating all functions
             std::vector<std::unique_ptr<hir::asa>> funs;
             funs.reserve(fns.len);
