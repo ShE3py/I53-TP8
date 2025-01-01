@@ -11,12 +11,16 @@ rust-version = "1.81"
 publish = false
 
 [features]
+default = ["compiler", "optimizer"]
+
+compiler = []
 optimizer = ["rame/optimizer"]
 indirect_jumps = ["rame/indirect_jumps"]
 
 [[bin]]
 name = "rame-cc"
 path = "src/bin/cc.rs"
+required-features = ["compiler"]
 
 [[bin]]
 name = "rame-opt"
@@ -30,6 +34,7 @@ path = "src/bin/run.rs"
 [[bin]]
 name = "rame-test"
 path = "src/bin/test.rs"
+required-features = ["compiler", "optimizer"]
 
 [dependencies.rame]
 path = "../rame"

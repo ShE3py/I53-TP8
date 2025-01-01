@@ -9,7 +9,7 @@ use std::path::{Path, PathBuf};
 use std::process::exit;
 use std::str::FromStr;
 
-/// Run an algorithmic or RAM program.
+/// Test an algorithmic program.
 #[derive(Parser)]
 #[command(version)]
 struct Cli {

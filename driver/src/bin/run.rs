@@ -26,6 +26,7 @@ struct Cli {
     
     /// Compile the algorithmic program as a first step.
     #[arg(short = 'c', default_value_t = false)]
+    #[cfg(feature = "compiler")]
     compile: bool,
 }
 

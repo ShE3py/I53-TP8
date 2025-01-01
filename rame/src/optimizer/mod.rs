@@ -1,3 +1,5 @@
+#![cfg(not(feature = "indirect_jumps"))]
+
 use crate::model::{Address, Instruction, Integer, Ir, RoCode, Value};
 use std::cmp::Ordering;
 use std::collections::HashMap;

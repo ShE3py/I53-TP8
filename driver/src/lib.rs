@@ -1,18 +1,27 @@
 use clap::ValueEnum;
 use rame::model::{Integer, RoCode};
-use std::ffi::{c_char, c_int, CString, OsStr, OsString};
+use std::ffi::{c_char, c_int, CString, OsStr};
 use std::fmt::Display;
 use std::fs::File;
-use std::io::{self, Seek};
-use std::os::fd::{FromRawFd, IntoRawFd, OwnedFd, RawFd};
+use std::io;
+use std::os::fd::{FromRawFd, OwnedFd};
 use std::os::unix::ffi::OsStrExt;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::process::exit;
+
+#[cfg(feature = "compiler")]
+use std::{
+    ffi::OsString,
+    io::Seek,
+    os::fd::{RawFd, IntoRawFd},
+    path::PathBuf
+};
 
 mod stdin;
 
 pub use stdin::Stdin;
 
+#[cfg(feature = "compiler")]
 extern "C" {
     pub fn arc_compile_file(infile: *const c_char, outfile: *const c_char);
     pub fn arc_compile_file_fd(infile: *const c_char, outpath: *const c_char, outfile: RawFd);
@@ -71,6 +80,7 @@ pub fn create_temp_out(model: &Path) -> (File, CString) {
 }
 
 /// Compiles the algorithmic program `infile` into `outfile`.
+#[cfg(feature = "compiler")]
 pub fn compile<P: AsRef<Path>, Q: AsRef<Path>>(infile: P, outfile: Q, optimize: bool) {
     let outfile = outfile.as_ref();
     let c_infile = CString::new(infile.as_ref().as_os_str().as_bytes()).expect("infile");
@@ -92,6 +102,7 @@ pub fn compile<P: AsRef<Path>, Q: AsRef<Path>>(infile: P, outfile: Q, optimize: 
 }
 
 /// Compiles the algorithmic program `infile` into a tempfile.
+#[cfg(feature = "compiler")]
 pub fn compile_tmp<P: AsRef<Path>>(infile: P) -> (File, PathBuf) {
     let infile = infile.as_ref();
     let c_infile = CString::new(OsStrExt::as_bytes(infile.as_os_str())).expect("infile");
@@ -191,15 +202,21 @@ pub fn cvt<T: Integer + TryFrom<i128, Error: Display>>(args: Vec<i128>, _ty: &Ro
 macro_rules! monomorphize {
     ($inpath:expr, $compile:expr, $bits:expr, $code:ident, $body:tt) => {
         let inpath: &::std::path::Path = $inpath;
-        
-        let (infile, inpath) = if $compile {
-            let (tmpfile, tmppath) = $crate::compile_tmp(inpath);
-            (tmpfile, ::std::borrow::Cow::Owned(tmppath))
-        }
-        else {
+
+        let (infile, inpath) = {
+            #[cfg(feature = "compiler")]
+            if $compile {
+                let (tmpfile, tmppath) = $crate::compile_tmp(inpath);
+                (tmpfile, ::std::borrow::Cow::Owned(tmppath))
+            }
+            else {
+                ($crate::open(inpath), ::std::borrow::Cow::Borrowed(inpath))
+            }
+
+            #[cfg(not(feature = "compiler"))]
             ($crate::open(inpath), ::std::borrow::Cow::Borrowed(inpath))
         };
-        
+
         match $bits {
             Bits::Int8 => {
                 let $code = $crate::parse::<i8>(infile, &*inpath);

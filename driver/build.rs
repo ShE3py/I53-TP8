@@ -3,6 +3,10 @@ use std::io::ErrorKind;
 use std::process::{Command, ExitCode};
 
 fn main() -> ExitCode {
+    if !cfg!(feature = "compiler") {
+        return ExitCode::SUCCESS;
+    }
+
     const SRC: &str = "../compiler/";
     let out = env::var("OUT_DIR").expect("missing OUT_DIR");
     
