@@ -7,8 +7,8 @@ use std::io::{BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
 use std::process::{exit, Command};
 use std::str::FromStr;
-use std::{fs, io};
-
+use std::{fmt, fs, io};
+use std::fmt::{Display, Formatter};
 use rame_driver::create_temp_out;
 
 /// Test an algorithmic program.
@@ -30,9 +30,18 @@ struct UnitTest<T: Integer> {
 }
 
 impl<T: Integer> UnitTest<T> {
-    fn run(&self, code: RoCode<T>) {
+    #[must_use]
+    fn run(&self, code: RoCode<T>) -> Option<Vec<T>> {
         let ram = Ram::new(code, self.input.iter().copied());
-        assert_eq!(ram.run().as_slice(), &self.output);
+        let out = ram.run();
+
+        (out.as_slice() != &self.output).then_some(out)
+    }
+}
+
+impl<T: Integer> Display for UnitTest<T> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "# TEST: {:?} => {:?}", self.input, self.output)
     }
 }
 
@@ -148,25 +157,36 @@ fn scan_file(p: &Path, cc: &Option<PathBuf>) {
         }
     };
 
-    let _ = io::stdout().flush();
-
     // `cli.compiler` use the filename instead of a fd
-    if let Err(e) = fs::remove_file(&path) {
-        eprintln!("warning: failed to delete `{}`: {e}", path.display());
-    }
+    _ = fs::remove_file(&path);
+
+    #[cfg(feature = "optimizer")]
+    let _ = io::stdout().flush();
 
     #[cfg(feature = "optimizer")]
     let opt = rame::optimizer::SeqRewriter::from(&code).optimize().rewritten();
 
     print!("{}... ", p.display());
-    let _ = io::stdout().flush();
+    let mut ok = true;
+
     for test in tests {
-        test.run(code.clone());
+        if let Some(out) = test.run(code.clone()) {
+            if ok {
+                println!("failed");
+                ok = false;
+            }
+
+            eprintln!(" {test}: got {out:?} instead");
+            continue;
+        }
 
         #[cfg(feature = "optimizer")]
-        test.run(opt.clone());
+        assert!(test.run(opt.clone()).is_none(), "optimizer check");
     }
-    println!("ok");
+
+    if ok {
+        println!("ok");
+    }
 }
 
 fn main() {

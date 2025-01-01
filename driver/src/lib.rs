@@ -116,7 +116,7 @@ pub fn compile_tmp<P: AsRef<Path>>(infile: P) -> (File, PathBuf) {
     unsafe { arc_compile_file_fd(c_infile.as_ptr(), c_intermediate.as_ptr(), f.try_clone().expect("cloning tempfile").into_raw_fd()) };
 
     // SAFETY: unix
-    let tmppath = PathBuf::from(unsafe { OsString::from_encoded_bytes_unchecked(c_intermediate.into_bytes()) });
+    let tmppath = PathBuf::from(unsafe { OsString::from_encoded_bytes_unchecked(c_intermediate.into_bytes_with_nul()) });
 
     f.rewind().expect("rewind");
     (f, tmppath)
