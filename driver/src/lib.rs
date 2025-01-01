@@ -225,19 +225,19 @@ macro_rules! monomorphize {
                 $body
             },
             Bits::Int16 => {
-                let $code = $crate::parse::<i8>(infile, &*inpath);
+                let $code = $crate::parse::<i16>(infile, &*inpath);
                 $body
             },
             Bits::Int32 => {
-                let $code = $crate::parse::<i8>(infile, &*inpath);
+                let $code = $crate::parse::<i32>(infile, &*inpath);
                 $body
             },
             Bits::Int64 => {
-                let $code = $crate::parse::<i8>(infile, &*inpath);
+                let $code = $crate::parse::<i64>(infile, &*inpath);
                 $body
             },
             Bits::Int128 => {
-                let $code = $crate::parse::<i8>(infile, &*inpath);
+                let $code = $crate::parse::<i128>(infile, &*inpath);
                 $body
             },
         }
