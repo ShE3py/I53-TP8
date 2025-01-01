@@ -209,7 +209,7 @@ BoolExpr:
 %%
 
 // Private entry point
-void arc_compile_yy(const char *_infile, const char *_outpath, FILE *_outfile) {
+static void arc_compile_yy(const char *_infile, const char *_outpath, FILE *_outfile) {
     extern FILE *yyin;
     extern int yylex_destroy(void);
 

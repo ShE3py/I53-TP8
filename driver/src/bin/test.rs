@@ -1,18 +1,24 @@
 use clap::Parser;
 use rame::model::{Integer, RoCode};
 use rame::runner::Ram;
-use rame_driver::compile_tmp;
-use std::{fs, io};
+use std::ffi::OsString;
 use std::fs::File;
 use std::io::{BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
-use std::process::exit;
+use std::process::{exit, Command};
 use std::str::FromStr;
+use std::{fs, io};
+
+use rame_driver::create_temp_out;
 
 /// Test an algorithmic program.
 #[derive(Parser)]
 #[command(version)]
 struct Cli {
+    /// The path of the compiler to use
+    #[arg(short = 'c', long = "cc", value_name = "compiler", required = !cfg!(feature = "compiler"))]
+    compiler: Option<PathBuf>,
+
     /// The files to test.
     #[arg(value_name = "infile", default_value = "tests", allow_hyphen_values = true)]
     infiles: Vec<PathBuf>,
@@ -87,11 +93,11 @@ fn parse_vec<T: FromStr>(s: &str) -> Result<Vec<T>, T::Err> {
     Ok(v)
 }
 
-fn scan_file(p: &Path) {
+fn scan_file(p: &Path, cc: &Option<PathBuf>) {
     match fs::metadata(p) {
         Ok(m) => if m.is_dir() {
             for entry in fs::read_dir(p).unwrap() {
-                scan_file(&entry.unwrap().path());
+                scan_file(&entry.unwrap().path(), cc);
             }
             
             return;
@@ -107,10 +113,47 @@ fn scan_file(p: &Path) {
         eprintln!("{}: no test", p.display());
         exit(1);
     }
-    
-    let (f, _) = compile_tmp(p);
-    let code = RoCode::<i32>::parse(f).unwrap();
+
+    let (ram, path) = if let Some(cc) = cc {
+        let (_f, path) = create_temp_out(p);
+
+        // SAFETY: unix
+        let path = PathBuf::from(unsafe { OsString::from_encoded_bytes_unchecked(path.into_bytes_with_nul()) });
+
+        let mut cmd = Command::new(cc);
+        cmd.arg(p).arg("-o").arg(&path);
+
+        match cmd.status() {
+            Ok(s) if s.success() => match File::open(&path) {
+                Ok(f) => (f, path),
+                Err(e) => { eprintln!("error: failed to open `{}`: {e}", path.display()); exit(1) }
+            },
+            Ok(s) => { eprintln!("error: {cmd:?}: {s}"); exit(1) },
+            Err(e) => { eprintln!("error: `{}`: {e}", cc.display()); exit(1) },
+        }
+    }
+    else {
+        #[cfg(feature = "compiler")]
+        { rame_driver::compile_tmp(p) }
+
+        #[cfg(not(feature = "compiler"))]
+        unreachable!("no compiler specified")
+    };
+
+    let code = match RoCode::<i32>::parse(ram) {
+        Ok(code) => code,
+        Err(e) => {
+            eprintln!("error: failed to parse `{}`: {e}", path.display());
+            exit(1);
+        }
+    };
+
     let _ = io::stdout().flush();
+
+    // `cli.compiler` use the filename instead of a fd
+    if let Err(e) = fs::remove_file(&path) {
+        eprintln!("warning: failed to delete `{}`: {e}", path.display());
+    }
 
     #[cfg(feature = "optimizer")]
     let opt = rame::optimizer::SeqRewriter::from(&code).optimize().rewritten();
@@ -126,7 +169,7 @@ fn scan_file(p: &Path) {
     println!("ok");
 }
 
-fn main(){
+fn main() {
     let cli = Cli::parse();
-    cli.infiles.iter().for_each(|p| scan_file(&p));
+    cli.infiles.iter().for_each(|p| scan_file(&p, &cli.compiler));
 }

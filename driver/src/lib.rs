@@ -9,11 +9,14 @@ use std::os::unix::ffi::OsStrExt;
 use std::path::Path;
 use std::process::exit;
 
+#[cfg(feature = "optimizer")]
+use rame::optimizer::SeqRewriter;
+
 #[cfg(feature = "compiler")]
 use std::{
     ffi::OsString,
     io::Seek,
-    os::fd::{RawFd, IntoRawFd},
+    os::fd::{IntoRawFd, RawFd},
     path::PathBuf
 };
 
@@ -97,7 +100,7 @@ pub fn compile<P: AsRef<Path>, Q: AsRef<Path>>(infile: P, outfile: Q, optimize: 
         
         // Optimize the artifact.
         f.rewind().expect("rewind");
-        crate::optimize(f, OsStr::from_bytes(c_intermediate.as_bytes_with_nul()).as_ref(), Some(outfile));
+        crate::optimize(f, OsStr::from_bytes(&c_intermediate.into_bytes_with_nul()).as_ref(), Some(outfile));
     }
 }
 
@@ -126,8 +129,6 @@ pub fn optimize<Q: AsRef<Path>>(infile: File, inpath: &Path, outfile: Option<Q>)
     let incode = parse::<i64>(infile, inpath);
 
     #[cfg(feature = "optimizer")] {
-        use rame::optimizer::SeqRewriter;
-
         let outcode = SeqRewriter::from(&incode).optimize().rewritten();
 
         if let Some(outfile) = outfile {

@@ -1,7 +1,7 @@
 //! An emulator for RAM programs.
 
 use crate::error::{format_err, format_help};
-use crate::model::{self, Address, Instruction, Integer, Ir, Register, RoCode, RoLoc, RwLoc, Value};
+use crate::model::{self, Address, Instruction, Integer, Ir, ParseCodeError, Register, RoCode, RoLoc, RwLoc, Value};
 use crate::runner::mem::{Loc, LocEntry};
 use std::cell::{Cell, UnsafeCell};
 use std::hint::assert_unchecked;
@@ -54,10 +54,10 @@ impl<T: Integer, I: Iterator<Item = T>> Ram<T, I> {
     pub fn new(code: RoCode<T>, input: impl IntoIterator<IntoIter = I>) -> Ram<T, I> {
         let Some(inst) = code.first().copied() else {
             if cfg!(test) {
-                panic!("empty instruction table");
+                panic!("{}", ParseCodeError::<T>::NoInst);
             }
             else {
-                eprintln!("error: empty instruction table");
+                eprintln!("error: {}", ParseCodeError::<T>::NoInst);
                 exit(1);
             }
         };
@@ -355,7 +355,7 @@ mod test {
     use crate::{inst, ram};
     
     #[test]
-    #[should_panic = "empty instruction table"]
+    #[should_panic = "empty file"]
     fn run_no_inst() {
         Ram::<i32, _>::run([].into());
     }

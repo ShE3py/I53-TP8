@@ -34,7 +34,6 @@ path = "src/bin/run.rs"
 [[bin]]
 name = "rame-test"
 path = "src/bin/test.rs"
-required-features = ["compiler", "optimizer"]
 
 [dependencies.rame]
 path = "../rame"

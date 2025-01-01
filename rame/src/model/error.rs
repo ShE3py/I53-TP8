@@ -18,7 +18,7 @@ impl<T: Integer> Display for ParseCodeError<T> {
         match self {
             ParseCodeError::Io(e) => Display::fmt(e, f),
             ParseCodeError::Inst(i, l, e) => write!(f, "{}: {l:?}: {e}", i + 1),
-            ParseCodeError::NoInst => f.write_str("empty instruction table"),
+            ParseCodeError::NoInst => f.write_str("empty file"),
         }
     }
 }

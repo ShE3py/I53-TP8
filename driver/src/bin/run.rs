@@ -14,8 +14,8 @@ struct Cli {
     /// The program's arguments.
     #[arg(value_name = "args", value_delimiter = ',', num_args = 0..)]
     args: Vec<i128>,
-    
-    /// The integer's type bits.
+
+    /// The integers' width.
     #[arg(short, long, default_value = "16")]
     bits: Bits,
     
