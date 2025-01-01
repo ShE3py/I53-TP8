@@ -4,6 +4,7 @@ use std::ffi::{c_char, c_int, CString, OsStr};
 use std::fmt::Display;
 use std::fs::File;
 use std::io;
+use std::ops::Neg;
 use std::os::fd::{FromRawFd, OwnedFd};
 use std::os::unix::ffi::OsStrExt;
 use std::path::Path;
@@ -84,7 +85,7 @@ pub fn create_temp_out(model: &Path) -> (File, CString) {
 
 /// Compiles the algorithmic program `infile` into `outfile`.
 #[cfg(feature = "compiler")]
-pub fn compile<P: AsRef<Path>, Q: AsRef<Path>>(infile: P, outfile: Q, optimize: bool) {
+pub fn compile<P: AsRef<Path>, Q: AsRef<Path>, T: Integer + Neg<Output = T>>(infile: P, outfile: Q, optimize: bool) {
     let outfile = outfile.as_ref();
     let c_infile = CString::new(infile.as_ref().as_os_str().as_bytes()).expect("infile");
     
@@ -100,7 +101,7 @@ pub fn compile<P: AsRef<Path>, Q: AsRef<Path>>(infile: P, outfile: Q, optimize: 
         
         // Optimize the artifact.
         f.rewind().expect("rewind");
-        crate::optimize(f, OsStr::from_bytes(&c_intermediate.into_bytes_with_nul()).as_ref(), Some(outfile));
+        crate::optimize::<_, T>(f, OsStr::from_bytes(&c_intermediate.into_bytes_with_nul()).as_ref(), Some(outfile));
     }
 }
 
@@ -125,8 +126,8 @@ pub fn compile_tmp<P: AsRef<Path>>(infile: P) -> (File, PathBuf) {
 
 /// Optimize the RAM program `infile` into `outfile`.
 #[cfg_attr(not(feature = "optimizer"), doc(hidden))]
-pub fn optimize<Q: AsRef<Path>>(infile: File, inpath: &Path, outfile: Option<Q>) -> RoCode<i64> {
-    let incode = parse::<i64>(infile, inpath);
+pub fn optimize<Q: AsRef<Path>, T: Integer + Neg<Output = T>>(infile: File, inpath: &Path, outfile: Option<Q>) -> RoCode<T> {
+    let incode = parse::<T>(infile, inpath);
 
     #[cfg(feature = "optimizer")] {
         let outcode = SeqRewriter::from(&incode).optimize().rewritten();

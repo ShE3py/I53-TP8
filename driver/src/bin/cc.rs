@@ -21,5 +21,5 @@ struct Cli {
 
 fn main() {
     let cli = Cli::parse();
-    compile(cli.infile, cli.outfile, cli.optimize);
+    compile::<_, _, i128>(cli.infile, cli.outfile, cli.optimize);
 }

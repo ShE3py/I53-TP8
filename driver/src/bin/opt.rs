@@ -19,5 +19,5 @@ fn main() {
     let cli = Cli::parse();
     
     let infile = open(&cli.infile);
-    optimize(infile, &cli.infile, Some(&cli.outfile));
+    optimize::<_, i128>(infile, &cli.infile, Some(&cli.outfile));
 }
