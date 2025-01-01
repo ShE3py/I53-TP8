@@ -73,8 +73,8 @@ impl<T: Integer> Display for RunError<T> {
             RunError::InvalidAddress { ref adr, err } => write!(f, "invalid address R{adr}: {err}"),
             RunError::IntegerOverfow => f.write_str("integer overflow"),
             RunError::InexistentJump => f.write_str("jumping to an inexistent location"),
-            #[cfg(feature = "indirect_jumps"
-            )]  RunError::InvalidJump { err } => write!(f, "jumping to an invalid location: {err}"),
+            #[cfg(feature = "indirect_jumps")]
+            RunError::InvalidJump { err } => write!(f, "jumping to an invalid location: {err}"),
             RunError::Eof => f.write_str("unexpected end of file"),
         }
     }

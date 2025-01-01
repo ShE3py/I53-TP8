@@ -19,9 +19,9 @@ use {
 
 /// Test an algorithmic program.
 #[derive(Parser)]
-#[command(version)]
+#[command(version, arg_required_else_help = !cfg!(feature = "compiler"))]
 struct Cli {
-    /// The path of the compiler to use
+    /// The path of the compiler to use.
     #[arg(short = 'c', long = "cc", value_name = "compiler", required = !cfg!(feature = "compiler"))]
     compiler: Option<PathBuf>,
 
