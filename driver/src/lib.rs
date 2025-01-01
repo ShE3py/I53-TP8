@@ -1,6 +1,5 @@
 use clap::ValueEnum;
 use rame::model::{Integer, RoCode};
-use rame::optimizer::SeqRewriter;
 use std::ffi::{c_char, c_int, CString, OsStr, OsString};
 use std::fmt::Display;
 use std::fs::File;
@@ -96,33 +95,52 @@ pub fn compile<P: AsRef<Path>, Q: AsRef<Path>>(infile: P, outfile: Q, optimize: 
 pub fn compile_tmp<P: AsRef<Path>>(infile: P) -> (File, PathBuf) {
     let infile = infile.as_ref();
     let c_infile = CString::new(OsStrExt::as_bytes(infile.as_os_str())).expect("infile");
-    
+
     let (mut f, c_intermediate) = create_temp_out(infile);
-    
+
     // Compile into an intermediate tempfile
     unsafe { arc_compile_file_fd(c_infile.as_ptr(), c_intermediate.as_ptr(), f.try_clone().expect("cloning tempfile").into_raw_fd()) };
-    
+
     // SAFETY: unix
     let tmppath = PathBuf::from(unsafe { OsString::from_encoded_bytes_unchecked(c_intermediate.into_bytes()) });
-    
+
     f.rewind().expect("rewind");
     (f, tmppath)
-    
+
 }
 
 /// Optimize the RAM program `infile` into `outfile`.
+#[cfg_attr(not(feature = "optimizer"), doc(hidden))]
 pub fn optimize<Q: AsRef<Path>>(infile: File, inpath: &Path, outfile: Option<Q>) -> RoCode<i64> {
     let incode = parse::<i64>(infile, inpath);
-    let outcode = SeqRewriter::from(&incode).optimize().rewritten();
-    
-    if let Some(outfile) = outfile {
-        if let Err(e) = outcode.write_to_file(outfile) {
-            eprintln!("error: unable to save optimized code: {e}");
-            exit(1);
+
+    #[cfg(feature = "optimizer")] {
+        use rame::optimizer::SeqRewriter;
+
+        let outcode = SeqRewriter::from(&incode).optimize().rewritten();
+
+        if let Some(outfile) = outfile {
+            if let Err(e) = outcode.write_to_file(outfile) {
+                eprintln!("error: unable to save optimized code: {e}");
+                exit(1);
+            }
         }
+
+        outcode
     }
-    
-    outcode
+
+    #[cfg(not(feature = "optimizer"))] {
+        eprintln!("warning: tried to optimize while the optimizer is opted out");
+
+        if let Some(outpath) = outfile {
+            if let Err(e) = std::fs::copy(inpath, outpath) {
+                eprintln!("error: copy failed: {e}");
+                exit(1);
+            }
+        }
+
+        incode
+    }
 }
 
 /// Open a file, handling potential errors.

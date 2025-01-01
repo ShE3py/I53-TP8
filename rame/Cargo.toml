@@ -11,12 +11,10 @@ rust-version = "1.81"
 publish = false
 
 [features]
-default = ["optimizer"]
+# feat: allow `JUMP @n`, but we can't yet optimize such code.
+indirect_jumps = []
 
-# feat: allow `JUMP @n`, but we can't optimize such code.
-dynamic_jumps = []
-
-# feat: enable to optimizer.
+# feat: enable the optimizer.
 optimizer = []
 
 [dependencies.num-traits]

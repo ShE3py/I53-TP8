@@ -66,7 +66,7 @@ Options:
 
 ## Example
 
-’Tis but a remainder for meowself, as the LLVM backend is still a WIP.
+’Tis but a reminder for meowself, as the LLVM backend is still a WIP.
 
 ```
 FONCTION main()

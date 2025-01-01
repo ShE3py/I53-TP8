@@ -10,6 +10,10 @@ edition = "2021"
 rust-version = "1.81"
 publish = false
 
+[features]
+optimizer = ["rame/optimizer"]
+indirect_jumps = ["rame/indirect_jumps"]
+
 [[bin]]
 name = "rame-cc"
 path = "src/bin/cc.rs"
@@ -17,6 +21,7 @@ path = "src/bin/cc.rs"
 [[bin]]
 name = "rame-opt"
 path = "src/bin/opt.rs"
+required-features = ["optimizer"]
 
 [[bin]]
 name = "rame-run"

@@ -68,10 +68,10 @@ pub enum Register<L: Loc> {
 }
 
 /// Where the instructions can jump to.
-#[cfg(not(feature = "dynamic_jumps"))]
+#[cfg(not(feature = "indirect_jumps"))]
 pub type Address = Ir;
 
-#[cfg(feature = "dynamic_jumps")]
+#[cfg(feature = "indirect_jumps")]
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
 pub enum Address {
     /// A constant address.
@@ -91,7 +91,7 @@ impl<T: Integer> Instruction<T> {
     }
     
     /// Returns the first register read by this instruction, if any.
-    #[cfg_attr(feature = "dynamic_jumps", doc = "Indirect jumps registers *are* returned.")]
+    #[cfg_attr(feature = "indirect_jumps", doc = "Indirect jumps registers *are* returned.")]
     #[must_use] #[inline]
     pub const fn register(self) -> Option<Register<RoLoc>> {
         match self {
@@ -101,8 +101,8 @@ impl<T: Integer> Instruction<T> {
             },
             
             Instruction::Increment(reg) | Instruction::Decrement(reg) => Some(reg.downgrade()),
-            
-            #[cfg(feature = "dynamic_jumps")]
+
+            #[cfg(feature = "indirect_jumps")]
             Instruction::Jump(adr) | Instruction::JumpZero(adr) | Instruction::JumpLtz(adr) | Instruction::JumpGtz(adr) => match adr {
                 Address::Constant(_) => None,
                 Address::Register(reg) => Some(Register::Direct(reg)),
@@ -126,21 +126,36 @@ impl<T: Integer> FromStr for Instruction<T> {
     type Err = ParseInstructionError<T>;
     
     fn from_str(s: &str) -> Result<Self, Self::Err> {
+        #[inline]
+        fn parse_register<L: Loc, T: Integer>(s: &str) -> Result<Register<L>, ParseInstructionError<T>> {
+            Register::from_str(s).map_err(ParseInstructionError::InvalidRegister)
+        }
+
+        #[inline]
+        fn parse_addr<T: Integer>(s: &str) -> Result<Address, ParseInstructionError<T>> {
+            // Manual check as `Ir::from_str` doesn't check
+            if !cfg!(feature = "indirect_jumps") && s.starts_with('@') {
+                return Err(ParseInstructionError::DisabledIndirect);
+            }
+
+            Address::from_str(s).map_err(ParseInstructionError::InvalidAddress)
+        }
+
         Ok(if let Some((inst, param)) = s.split_once(' ') {
             match inst {
                 "LOAD" => Instruction::Load(Value::from_str(param)?),
-                "STORE" => Instruction::Store(Register::from_str(param).map_err(ParseInstructionError::InvalidRegister)?),
-                "INC" => Instruction::Increment(Register::from_str(param).map_err(ParseInstructionError::InvalidRegister)?),
-                "DEC" => Instruction::Decrement(Register::from_str(param).map_err(ParseInstructionError::InvalidRegister)?),
+                "STORE" => Instruction::Store(parse_register(param)?),
+                "INC" => Instruction::Increment(parse_register(param)?),
+                "DEC" => Instruction::Decrement(parse_register(param)?),
                 "ADD" => Instruction::Add(Value::from_str(param)?),
                 "SUB" => Instruction::Sub(Value::from_str(param)?),
                 "MUL" => Instruction::Mul(Value::from_str(param)?),
                 "DIV" => Instruction::Div(Value::from_str(param)?),
                 "MOD" => Instruction::Mod(Value::from_str(param)?),
-                "JUMP" => Instruction::Jump(Address::from_str(param).map_err(ParseInstructionError::InvalidAddress)?),
-                "JUMZ" => Instruction::JumpZero(Address::from_str(param).map_err(ParseInstructionError::InvalidAddress)?),
-                "JUML" => Instruction::JumpLtz(Address::from_str(param).map_err(ParseInstructionError::InvalidAddress)?),
-                "JUMG" => Instruction::JumpGtz(Address::from_str(param).map_err(ParseInstructionError::InvalidAddress)?),
+                "JUMP" => Instruction::Jump(parse_addr(param)?),
+                "JUMZ" => Instruction::JumpZero(parse_addr(param)?),
+                "JUML" => Instruction::JumpLtz(parse_addr(param)?),
+                "JUMG" => Instruction::JumpGtz(parse_addr(param)?),
                 _ => return Err(ParseInstructionError::UnknownInstruction),
             }
         }
@@ -154,6 +169,12 @@ impl<T: Integer> FromStr for Instruction<T> {
             }
         })
     }
+}
+
+#[test]
+#[cfg_attr(not(feature = "indirect_jumps"), should_panic = "the `indirect_jumps` feature is opted out")]
+fn parse_indirect() {
+    Instruction::<i16>::from_str("JUML @4").map_err(|e| format!("{e}")).unwrap();
 }
 
 impl<T: Integer> Display for Instruction<T> {
@@ -340,17 +361,12 @@ impl Register<RwLoc> {
     }
 }
 
-#[cfg(feature = "dynamic_jumps")]
+#[cfg(feature = "indirect_jumps")]
 impl FromStr for Address {
     type Err = ParseIntError;
-    
-    fn from_str(mut s: &str) -> Result<Self, Self::Err> {
-        let at = s.chars().next().is_some_and(|c| c == '@');
-        if at {
-            s = &s['@'.len_utf8()..];
-        }
-        
-        Ok(if at {
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(if let Some(s) = s.strip_prefix('@') {
             Address::Register(RoLoc::from(usize::from_str(s)?))
         } else {
             Address::Constant(Ir::from_str(s)?)
@@ -358,7 +374,7 @@ impl FromStr for Address {
     }
 }
 
-#[cfg(feature = "dynamic_jumps")]
+#[cfg(feature = "indirect_jumps")]
 impl Display for Address {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         if let Address::Register(_) = self {
@@ -372,7 +388,7 @@ impl Display for Address {
     }
 }
 
-#[cfg(feature = "dynamic_jumps")]
+#[cfg(feature = "indirect_jumps")]
 impl From<Ir> for Address {
     fn from(ir: Ir) -> Self {
         Address::Constant(ir)

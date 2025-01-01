@@ -2,7 +2,6 @@ use clap::{Parser, ValueHint};
 use rame::runner::Ram;
 use rame_driver::{cvt, monomorphize, Bits, Stdin};
 use std::path::PathBuf;
-use rame::optimizer::SeqRewriter;
 
 /// Run an algorithmic or RAM program.
 #[derive(Parser)]
@@ -22,6 +21,7 @@ struct Cli {
     
     /// Optimize the RAM program before running it.
     #[arg(short = 'O', default_value_t = false)]
+    #[cfg(feature = "optimizer")]
     optimize: bool,
     
     /// Compile the algorithmic program as a first step.
@@ -33,8 +33,9 @@ fn main() {
     let cli = Cli::parse();
     
     monomorphize!(&cli.infile, cli.compile, cli.bits, code, {
+        #[cfg(feature = "optimizer")]
         let code = if !cli.optimize { code } else {
-            SeqRewriter::from(&code).optimize().rewritten()
+            rame::optimizer::SeqRewriter::from(&code).optimize().rewritten()
         };
         
         let args = cvt(cli.args, &code);

@@ -507,7 +507,7 @@ mod test {
     
     #[test]
     #[should_panic = "jumping to an invalid location"]
-    #[cfg(feature = "dynamic_jumps")]
+    #[cfg(feature = "indirect_jumps")]
     fn jump_negative() {
         Ram::<_, _>::run([
             inst!(LOAD #-2),

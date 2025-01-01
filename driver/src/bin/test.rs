@@ -1,6 +1,5 @@
 use clap::Parser;
 use rame::model::{Integer, RoCode};
-use rame::optimizer::SeqRewriter;
 use rame::runner::Ram;
 use rame_driver::compile_tmp;
 use std::{fs, io};
@@ -112,12 +111,16 @@ fn scan_file(p: &Path) {
     let (f, _) = compile_tmp(p);
     let code = RoCode::<i32>::parse(f).unwrap();
     let _ = io::stdout().flush();
-    let opt = SeqRewriter::from(&code).optimize().rewritten();
-    
+
+    #[cfg(feature = "optimizer")]
+    let opt = rame::optimizer::SeqRewriter::from(&code).optimize().rewritten();
+
     print!("{}... ", p.display());
     let _ = io::stdout().flush();
     for test in tests {
         test.run(code.clone());
+
+        #[cfg(feature = "optimizer")]
         test.run(opt.clone());
     }
     println!("ok");

@@ -53,6 +53,9 @@ pub enum ParseInstructionError<T: Integer> {
     
     /// Invalid `<address>`.
     InvalidAddress(<Ir as FromStr>::Err),
+
+    /// The `indirect_jumps` feature is opted out.
+    DisabledIndirect,
 }
 
 impl<T: Integer> Clone for ParseInstructionError<T> where <T as FromStr>::Err: Clone {
@@ -62,6 +65,7 @@ impl<T: Integer> Clone for ParseInstructionError<T> where <T as FromStr>::Err: C
             ParseInstructionError::InvalidValue(err) => ParseInstructionError::InvalidValue(err.clone()),
             ParseInstructionError::InvalidRegister(err) => ParseInstructionError::InvalidRegister(err.clone()),
             ParseInstructionError::InvalidAddress(err) => ParseInstructionError::InvalidAddress(err.clone()),
+            ParseInstructionError::DisabledIndirect => ParseInstructionError::DisabledIndirect,
         }
     }
 }
@@ -75,6 +79,7 @@ impl<T: Integer> PartialEq for ParseInstructionError<T> where <T as FromStr>::Er
             ParseInstructionError::InvalidValue(err) => matches!(other, ParseInstructionError::InvalidValue(err1) if err == err1),
             ParseInstructionError::InvalidRegister(err) => matches!(other, ParseInstructionError::InvalidRegister(err1) if err == err1),
             ParseInstructionError::InvalidAddress(err) => matches!(other, ParseInstructionError::InvalidAddress(err1) if err == err1),
+            ParseInstructionError::DisabledIndirect => matches!(other, ParseInstructionError::DisabledIndirect),
         }
     }
 }
@@ -97,6 +102,9 @@ impl<T: Integer> Display for ParseInstructionError<T> {
                 f.write_str(concat!("invalid `<address>`: "))?;
                 Display::fmt(e, f)
             },
+            ParseInstructionError::DisabledIndirect => {
+                f.write_str("the `indirect_jumps` feature is opted out")
+            }
         }
     }
 }
@@ -107,7 +115,7 @@ impl<T: Integer> Error for ParseInstructionError<T> {
             ParseInstructionError::UnknownInstruction => None,
             ParseInstructionError::InvalidValue(e) => Some(e),
             ParseInstructionError::InvalidRegister(e) | ParseInstructionError::InvalidAddress(e) => Some(e),
+            ParseInstructionError::DisabledIndirect => None,
         }
     }
 }
-

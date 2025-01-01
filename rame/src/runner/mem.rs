@@ -99,12 +99,12 @@ impl Register<WoLoc> {
 }
 
 impl Address {
-    #[cfg_attr(not(feature = "dynamic_jumps"), expect(clippy::trivially_copy_pass_by_ref))]
+    #[cfg_attr(not(feature = "indirect_jumps"), expect(clippy::trivially_copy_pass_by_ref))]
     pub(super) fn get<T: Integer, I: Iterator<Item = T>>(&self, ram: &Ram<T, I>) -> Result<(Ir, Instruction<T>), RunError<T>> {
-        #[cfg(not(feature = "dynamic_jumps"))]
+        #[cfg(not(feature = "indirect_jumps"))]
         let ir = *self;
-        
-        #[cfg(feature = "dynamic_jumps")]
+
+        #[cfg(feature = "indirect_jumps")]
         let ir = match *self {
             Address::Constant(adr) => adr,
             Address::Register(adr) => {
