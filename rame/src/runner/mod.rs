@@ -113,7 +113,7 @@ impl<T: Integer, I: Iterator<Item = T>> Ram<T, I> {
                 self.binop(v, T::checked_div)?;
             },
             Instruction::Mod(v) => {
-                self.binop(v, |a, b| Some(a.rem(*b)))?;
+                self.binop(v, T::checked_rem)?;
             },
             Instruction::Jump(addr) => {
                 return self.jump(addr);
@@ -461,7 +461,16 @@ mod test {
             inst!(DIV #0),
         ].into());
     }
-    
+
+    #[test]
+    #[should_panic = "integer overflow"]
+    fn rem_zero() {
+        Ram::<u8, _>::run([
+            inst!(LOAD #1),
+            inst!(MOD #0),
+        ].into());
+    }
+
     #[test]
     fn rem() {
         // -5 % 2,
