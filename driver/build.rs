@@ -10,12 +10,6 @@ fn main() -> ExitCode {
     const SRC: &str = "../compiler/";
     let out = env::var("OUT_DIR").expect("missing OUT_DIR");
     
-    if let Err(e) = fs::create_dir(format!("{out}/llvm")) {
-        if e.kind() != ErrorKind::AlreadyExists {
-            eprintln!("mkdir: {e}");
-        }
-    }
-    
     if let Err(e) = fs::create_dir(format!("{out}/ram")) {
         if e.kind() != ErrorKind::AlreadyExists {
             eprintln!("mkdir: {e}");
@@ -38,8 +32,6 @@ fn main() -> ExitCode {
             println!("cargo::rustc-link-search={out}");
             println!("cargo::rustc-link-lib=arc");
             println!("cargo::rustc-link-lib=fl");
-            println!("cargo::rustc-link-lib=LLVM-19");
-            println!("cargo::rustc-link-lib=stdc++");
             ExitCode::SUCCESS
         },
         Ok(status) => {

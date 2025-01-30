@@ -1,16 +1,14 @@
 SHELL = /bin/bash
-CC = clang
-CXX = clang++
+CC = gcc
 
 SRC = src
 OUT = out
 
-OBJS = ts.o asa.o llvm/lowering.o llvm/codegen.o ram/codegen.o parser.o lexer.o
+OBJS = ts.o asa.o ram/codegen.o parser.o lexer.o
 
 OPT_LEVEL ?= 0
 CFLAGS = -Wall -Wextra -Werror -g -O$(OPT_LEVEL) -I$(SRC)
-CXXFLAGS = -std=c++20 $(shell llvm-config --cppflags)
-LFLAGS = -lfl -lLLVM-19
+LFLAGS = -lfl
 
 mkdirs = $(OUT)/grass
 
@@ -18,23 +16,16 @@ all: $(mkdirs) arc
 
 $(mkdirs):
 	mkdir -p $(OUT)/ram/
-	mkdir -p $(OUT)/llvm/
 	touch $@
 
 arc: $(addprefix $(OUT)/,$(OBJS)) $(OUT)/driver.o
-	$(CXX) $^ -o $@ $(LFLAGS)
+	$(CC) $^ -o $@ $(LFLAGS)
 
 $(OUT)/libarc.a: $(addprefix $(OUT)/,$(OBJS))
 	ar rcs $@ $^
 
 $(OUT)/%.o: $(SRC)/%.c $(SRC)/%.h
 	$(CC) -c $< $(CFLAGS) -o $@
-
-$(OUT)/%.o: $(SRC)/%.cxx $(SRC)/%.hxx
-	$(CXX) -c $< $(CFLAGS) $(CXXFLAGS) -o $@
-
-$(OUT)/%.o: $(SRC)/%.cxx $(SRC)/%.h
-	$(CXX) -c $< $(CFLAGS) $(CXXFLAGS) -o $@
 
 $(OUT)/%.o: $(OUT)/%.c
 	$(CC) -c $< $(CFLAGS) -o $@
