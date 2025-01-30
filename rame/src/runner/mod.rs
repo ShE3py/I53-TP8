@@ -32,7 +32,7 @@ type Memory<T> = UnsafeCell<Vec<Cell<Loc<T>>>>;
 ///     inst!(WRITE),
 ///     inst!(STOP),
 /// ]);
-/// let ram = Ram::new(code, [1]);
+/// let mut ram = Ram::new(code, [1]);
 /// assert_eq!(ram.run(), [3]);
 /// ```
 #[derive(Debug)]
@@ -173,12 +173,12 @@ impl<T: Integer, I: Iterator<Item = T>> Ram<T, I> {
     }
     
     /// Runs the whole program, and returns its output.
-    pub fn run(mut self) -> Vec<T> {
+    pub fn run(&mut self) -> &[T] {
         loop {
             let ir = self.ir;
             
             match self.step() {
-                Ok(()) if self.inst == Instruction::Stop => break self.output,
+                Ok(()) if self.inst == Instruction::Stop => break &self.output,
                 Ok(()) => continue,
                 Err(e) => self.emit_err(ir, e),
             }
@@ -249,7 +249,7 @@ impl<T: Integer, I: Iterator<Item = T>> Ram<T, I> {
     }
     
     fn loc<L: model::Loc>(&self, adr: L) -> LocEntry<'_, T, L> {
-        // SAFETY: this function is the only one that uses `self.memory`,
+        // SAFETY: we are not `Sync`,
         //  we don't call code that could call this function a 2nd time,
         //  so there's no references that point to our emulated memory.
         let memory = unsafe { &mut *self.memory.get() };
@@ -340,6 +340,13 @@ impl<T: Integer, const N: usize> From<[Instruction<T>; N]> for Ram<T, iter::Empt
     }
 }
 
+impl<T: Integer, I: Iterator<Item = T>> From<Ram<T, I>> for Vec<T> {
+    /// Takes this process' output.
+    fn from(ram: Ram<T, I>) -> Self {
+        ram.output
+    }
+}
+
 impl<T: Integer> Instruction<T> {
     pub(crate) const fn should_print_acc(&self) -> bool {
         match self {
@@ -357,7 +364,7 @@ mod test {
     #[test]
     #[should_panic = "empty file"]
     fn run_no_inst() {
-        Ram::<i32, _>::run([].into());
+        Ram::<i32, _>::run(&mut [].into());
     }
     
     #[test]
@@ -380,14 +387,14 @@ mod test {
     #[test]
     #[should_panic = "reading uninitialized memory R0"]
     fn load_uninit() {
-        Ram::<i32, _>::run([
+        Ram::<i32, _>::run(&mut [
             inst!(LOAD 0)
         ].into());
     }
     
     #[test]
     fn load_write() {
-        let ram: Ram<_, _> = [
+        let mut ram: Ram<_, _> = [
             inst!(LOAD #-1),
             inst!(WRITE),
             inst!(STOP)
@@ -399,7 +406,7 @@ mod test {
     #[test]
     #[should_panic = "reading uninitialized memory R1"]
     fn load_indirect_uninit() {
-        Ram::<i32, _>::run([
+        Ram::<i32, _>::run(&mut [
             inst!(LOAD #1),
             inst!(LOAD @0)
         ].into());
@@ -408,7 +415,7 @@ mod test {
     #[test]
     #[should_panic = "invalid address R-10"]
     fn load_indirect_negative() {
-        Ram::<i32, _>::run([
+        Ram::<i32, _>::run(&mut [
             inst!(LOAD #-10),
             inst!(LOAD @0)
         ].into());
@@ -417,7 +424,7 @@ mod test {
     #[test]
     #[should_panic = "invalid address R-3"]
     fn store_indirect_negative() {
-        Ram::<i32, _>::run([
+        Ram::<i32, _>::run(&mut [
             inst!(LOAD #-3),
             inst!(STORE 1),
             inst!(STORE @1)
@@ -427,7 +434,7 @@ mod test {
     #[test]
     #[should_panic = "integer overflow"]
     fn dec_overflow() {
-        Ram::<u32, _>::run([
+        Ram::<u32, _>::run(&mut [
             inst!(LOAD #0),
             inst!(DEC 0),
         ].into());
@@ -436,7 +443,7 @@ mod test {
     #[test]
     #[should_panic = "integer overflow"]
     fn inc_overflow() {
-        Ram::<u8, _>::run([
+        Ram::<u8, _>::run(&mut [
             inst!(LOAD #255),
             inst!(INC 0),
         ].into());
@@ -445,7 +452,7 @@ mod test {
     #[test]
     #[should_panic = "integer overflow"]
     fn add_overflow() {
-        Ram::<u8, _>::run([
+        Ram::<u8, _>::run(&mut [
             inst!(LOAD #200),
             inst!(STORE 1),
             inst!(LOAD #70),
@@ -456,7 +463,7 @@ mod test {
     #[test]
     #[should_panic = "integer overflow"]
     fn div_zero() {
-        Ram::<u8, _>::run([
+        Ram::<u8, _>::run(&mut [
             inst!(LOAD #1),
             inst!(DIV #0),
         ].into());
@@ -465,7 +472,7 @@ mod test {
     #[test]
     #[should_panic = "integer overflow"]
     fn rem_zero() {
-        Ram::<u8, _>::run([
+        Ram::<u8, _>::run(&mut [
             inst!(LOAD #1),
             inst!(MOD #0),
         ].into());
@@ -475,7 +482,7 @@ mod test {
     fn rem() {
         // -5 % 2,
         // -5 % -2
-        let ram: Ram<i8, _> = [
+        let mut ram: Ram<i8, _> = [
             inst!(LOAD #2),
             inst!(STORE 1),
             inst!(LOAD #-5),
@@ -495,7 +502,7 @@ mod test {
     
     #[test]
     fn jump() {
-        let ram: Ram<_, _> = [
+        let mut ram: Ram<_, _> = [
             inst!(LOAD #1),
             inst!(JUMP 3),
             inst!(LOAD #0),
@@ -509,7 +516,7 @@ mod test {
     #[test]
     #[should_panic = "jumping to an inexistent location"]
     fn jump_inexistent() {
-        Ram::<i32, _>::run([
+        Ram::<i32, _>::run(&mut [
             inst!(JUMP 100),
         ].into());
     }
@@ -526,7 +533,7 @@ mod test {
     
     #[test]
     fn jumz_inexistent() {
-        Ram::<_, _>::run([
+        Ram::<_, _>::run(&mut [
             inst!(LOAD #-2),
             inst!(JUMZ 100),
             inst!(STOP)

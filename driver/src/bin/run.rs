@@ -36,7 +36,7 @@ fn poly<T: Integer + TryFrom<i128, Error: Display + Debug>>(code: &RoCode<i128>,
     let args: Vec<T> = cvt(&args);
     let offset = args.len();
     let args = args.into_iter().chain(Stdin::new(|i| print!("E{} = ", i + offset)));
-    let ram = Ram::new(code.try_cast().unwrap(), args);
+    let mut ram = Ram::new(code.try_cast().unwrap(), args);
 
     println!("Output = {:?}", ram.run());
 }

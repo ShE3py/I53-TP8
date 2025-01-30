@@ -39,12 +39,13 @@ struct UnitTest<T: Integer> {
 }
 
 impl<T: Integer> UnitTest<T> {
+    /// Returns `Some` with the current output if the test failed.
     #[must_use]
     fn run(&self, code: RoCode<T>) -> Option<Vec<T>> {
-        let ram = Ram::new(code, self.input.iter().copied());
+        let mut ram = Ram::new(code, self.input.iter().copied());
         let out = ram.run();
 
-        (out.as_slice() != &self.output).then_some(out)
+        (out != &self.output).then_some(ram.into())
     }
 }
 
