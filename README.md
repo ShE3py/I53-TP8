@@ -1,6 +1,7 @@
-# Yet Another Compiler
+# Rame
 
 A pseudolanguage compiler;
+
 ```
 FUNCTION fibo(i)
 BEGIN
@@ -8,7 +9,7 @@ BEGIN
         RETURN i;
     ELSE
         RETURN fibo(i - 2) + fibo(i - 1);
-    EIF
+    FI
 END
 
 FUNCTION main()
@@ -23,10 +24,12 @@ See [compiler/LISEZMOI.md](compiler/LISEZMOI.md) (french) for the language refer
 ## Backends
 
 Two backends are available:
+
 - Random-access machine (see [rame/README.md](rame/README.md))
 - LLVM (work in progress)
 
 ## File structure
+
 - `compiler/`: lexing, parsing, AST (Flex, Yacc, C)
 - `compiler/ram/`: RA-machine backend (C)
 - `compiler/llvm/`: LLVM backend (C++)
@@ -74,6 +77,7 @@ DÉBUT
     AFFICHER 1 + 2;
 FIN
 ```
+
 ```
 $ cargo run --bin rame-cc -- ./add.algo -o add.out
 $ clang add.out compiler/src/llvm/intrinsics.c

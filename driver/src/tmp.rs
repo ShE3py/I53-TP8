@@ -1,11 +1,12 @@
-use std::ffi::{c_char, c_int, CString, OsStr};
+use std::ffi::{c_int, CString, OsStr};
 use std::fs::File;
-use std::io;
+use std::{fs, io};
 use std::os::fd::{FromRawFd as _, OwnedFd};
 use std::os::unix::ffi::OsStrExt as _;
 use std::path::Path;
 
 #[derive(Debug)]
+#[must_use]
 pub struct TempFile {
     pub file: File,
     pub path: CString,
@@ -14,6 +15,16 @@ pub struct TempFile {
 impl AsRef<Path> for TempFile {
     fn as_ref(&self) -> &Path {
         Path::new(OsStr::from_bytes(self.path.as_bytes_with_nul()))
+    }
+}
+
+impl Drop for TempFile {
+    fn drop(&mut self) {
+        let path = self.as_ref();
+        
+        if let Err(e) = fs::remove_file(path) {
+            eprintln!("warning: failed to remove {}: {e}", path.display());
+        }
     }
 }
 
@@ -45,20 +56,13 @@ impl TempFile {
         // SAFETY: `template` is writable, we have `prefixXXXXXXsuffix`
         let fd = unsafe {
             libc::mkstemps(
-                template.as_mut_ptr() as *mut c_char,
+                template.as_mut_ptr().cast(),
                 suffix_len,
             )
         };
 
         if fd == -1 {
             panic!("mkstemps: {}", io::Error::last_os_error());
-        }
-
-        // SAFETY: inherently safe.
-        unsafe {
-            libc::unlink(
-                template.as_ptr() as *const c_char,
-            );
         }
 
         // SAFETY: the fd is ours.
