@@ -239,14 +239,14 @@ void st_fprint(FILE *stream, symbol_table *st) {
 			fprintf(stream, "{ }\n");
 		}
 		else {
-			fprintf(stream, "R%d <= { %s +%d", st->mem_offset, n->value.identifier, n->value.base_adr);
-			
+			fprintf(stream, "R%d <= { R%d: %s", st->mem_offset, st->mem_offset + n->value.base_adr, n->value.identifier);
+
 			while(n->next) {
 				n = n->next;
-				
-				fprintf(stream, ", %s +%d", n->value.identifier, n->value.base_adr);
+
+				fprintf(stream, ", R%d: %s", st->mem_offset + n->value.base_adr, n->value.identifier);
 			}
-			
+
 			fprintf(stream, " } < R%d\n", st->mem_offset * 2);
 		}
 	}

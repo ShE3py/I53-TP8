@@ -83,7 +83,7 @@ impl Driver {
             let unoptimized = self.optimize.then(temp_file);
             let outfile = unoptimized.as_ref().map(|tf| tf.as_ref()).or(outfile);
             let compiled = outfile.is_none().then(temp_file);
-            let compiled = outfile.unwrap_or(compiled.as_ref().unwrap().as_ref());
+            let compiled = outfile.unwrap_or_else(|| compiled.as_ref().unwrap().as_ref());
 
             match self.compiler.as_ref() {
                 Some(cc) => {

@@ -875,7 +875,7 @@ asa* create_fn_node(const char id[32], id_list params, asa *body, symbol_table *
 	asa *p = checked_malloc();
 	
 	p->tag = TagFn;
-	p->ninst = 7 + ((body && body != NOP) ? body->ninst : 0);
+	p->ninst = 8 + ((body && body != NOP) ? body->ninst : 0);
 	strcpy(&p->tag_fn.identifier[0], &id[0]);
 	p->tag_fn.params = params;
 	p->tag_fn.body = body;

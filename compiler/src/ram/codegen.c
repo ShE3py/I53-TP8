@@ -164,7 +164,9 @@ void codegen_nc(asa *p, int *ip) {
 					
 					codegen_nc(p->tag_binary_op.lhs, ip);
 					fprintf(outfile, "DEC 2\n");
-					fprintf(outfile, "%s @2\n", binop_name(p->tag_binary_op.op));
+					fprintf(outfile, "%s @2 ; ", binop_name(p->tag_binary_op.op));
+					fprint_asa(outfile, p->tag_binary_op.rhs);
+					fprintf(outfile, "\n");
 					*ip += 2;
 					
 					// on génère ensuite le code de comparaison pour les opérateurs
@@ -411,7 +413,7 @@ void codegen_nc(asa *p, int *ip) {
 			fprintf(outfile, "STORE @2\n");
 			fprintf(outfile, "LOAD 1\n");
 			fprintf(outfile, "ADD #%i\n", var.base_adr);
-			fprintf(outfile, "STORE 3\n");
+			fprintf(outfile, "STORE 3 ; AUX PTR := &%s\n", var.identifier);
 			fprintf(outfile, "LOAD @2\n");
 			fprintf(outfile, "STORE @3 ; %s := ", var.identifier);
 			fprint_asa(outfile, p->tag_assign_scalar.expr);
@@ -561,11 +563,11 @@ void codegen_nc(asa *p, int *ip) {
 			
 			fprintf(outfile, "LOAD 1\n");
 			fprintf(outfile, "ADD #%i\n", var.base_adr);
-			fprintf(outfile, "STORE 3 ; &%s[0]\n", var.identifier);
-			
+			fprintf(outfile, "STORE 3 ; AUX PTR := &%s[0]\n", var.identifier);
+
 			for(int i = 0; i < var.size; ++i) {
 				fprintf(outfile, "READ\n");
-				fprintf(outfile, "STORE @3 ; %s[%d]\n", var.identifier, i);
+				fprintf(outfile, "STORE @3 ; LIRE %s[%d]\n", var.identifier, i);
 				fprintf(outfile, "INC 3\n");
 			}
 			
@@ -585,8 +587,8 @@ void codegen_nc(asa *p, int *ip) {
 			
 			fprintf(outfile, "LOAD 1\n");
 			fprintf(outfile, "ADD #%i\n", var.base_adr);
-			fprintf(outfile, "STORE 3 ; &%s[0]\n", var.identifier);
-			
+			fprintf(outfile, "STORE 3 ; AUX PTR := &%s[0]\n", var.identifier);
+
 			for(int i = 0; i < var.size; ++i) {
 				fprintf(outfile, "LOAD @3 ; %s[%d]\n", var.identifier, i);
 				fprintf(outfile, "WRITE\n");
@@ -611,7 +613,8 @@ void codegen_nc(asa *p, int *ip) {
 		
 		case TagFn: {
 			st_make_current(p->tag_fn.st);
-			
+
+			fprintf(outfile, "NOP ;\n");
 			fprintf(outfile, "NOP ; ");
 			fprint_asa(outfile, p);
 			
@@ -619,11 +622,11 @@ void codegen_nc(asa *p, int *ip) {
 			st_fprint_current(outfile);
 			fprintf(outfile, "LOAD 1\n");
 			fprintf(outfile, "ADD #%i\n", st_temp_offset());
-			fprintf(outfile, "STORE 2\n");
-			
+			fprintf(outfile, "STORE 2 ; STACK HI\n");
+
 			fprintf(outfile, "NOP ; DEBUT\n");
-			*ip += 6;
-			
+			*ip += 7;
+
 			codegen_nc(p->tag_fn.body, ip);
 			fprintf(outfile, "STOP ; FIN\n");
 			++(*ip);
@@ -732,7 +735,9 @@ void codegen_nc(asa *p, int *ip) {
 	}
 	
 	if((before_codegen_ip + p->ninst) != *ip) {
-		fprintf(stderr, "generated %i instructions for current node, but ninst is %i\n", *ip - before_codegen_ip, p->ninst);
+		fprintf(stderr, "generated %i instructions for current node (`", *ip - before_codegen_ip);
+		fprint_asa(stderr, p);
+		fprintf(stderr, "`), but ninst is %i\n", p->ninst);
 		exit(1);
 	}
 	
@@ -953,12 +958,13 @@ void codegen_ram(asa_list fns) {
 		fprintf(stderr, "avertissement: le fichier source est vide\n");
 		exit(1);
 	}
-	
+
+	fprintf(outfile, "NOP ; R0 = ACC, R1 = STACK LO, R2 = STACK HI, R3 = AUX PTR\n");
 	fprintf(outfile, "LOAD #4\n");
-	fprintf(outfile, "STORE 1\n");
-	
-	int ip = 2;
-	
+	fprintf(outfile, "STORE 1 ; STACK LO\n");
+
+	int ip = 3;
+
 	allocate_fn_space(fns, ip);
 	
 	fn_location_node *n = &fn_locations;

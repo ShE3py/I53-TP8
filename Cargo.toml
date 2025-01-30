@@ -4,3 +4,7 @@ members = [
     "driver",
 ]
 resolver = "2"
+
+[profile.release]
+debug = "limited"
+lto = "fat"
