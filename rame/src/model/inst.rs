@@ -81,8 +81,58 @@ pub enum Address {
 }
 
 impl<T: Integer> Instruction<T> {
+    /// Maps an `Instruction<T>` to `Instruction<U>` by applying a function.
+    #[must_use]
+    #[inline]
+    pub fn map<U: Integer, F: FnOnce(T) -> U>(self, f: F) -> Instruction<U> {
+        match self {
+            Instruction::Read => Instruction::Read,
+            Instruction::Write => Instruction::Write,
+            Instruction::Load(v) => Instruction::Load(v.map(f)),
+            Instruction::Store(reg) => Instruction::Store(reg),
+            Instruction::Increment(reg) => Instruction::Increment(reg),
+            Instruction::Decrement(reg) => Instruction::Decrement(reg),
+            Instruction::Add(v) => Instruction::Add(v.map(f)),
+            Instruction::Sub(v) => Instruction::Sub(v.map(f)),
+            Instruction::Mul(v) => Instruction::Mul(v.map(f)),
+            Instruction::Div(v) => Instruction::Div(v.map(f)),
+            Instruction::Mod(v) => Instruction::Mod(v.map(f)),
+            Instruction::Jump(adr) => Instruction::Jump(adr),
+            Instruction::JumpZero(adr) => Instruction::JumpZero(adr),
+            Instruction::JumpLtz(adr) => Instruction::JumpLtz(adr),
+            Instruction::JumpGtz(adr) => Instruction::JumpGtz(adr),
+            Instruction::Stop => Instruction::Stop,
+            Instruction::Nop => Instruction::Nop,
+        }
+    }
+
+    /// Maps an `Instruction<T>` to `Instruction<U>` by applying a function.
+    #[inline]
+    pub fn try_map<U: Integer, E, F: FnOnce(T) -> Result<U, E>>(self, f: F) -> Result<Instruction<U>, E> {
+        Ok(match self {
+            Instruction::Read => Instruction::Read,
+            Instruction::Write => Instruction::Write,
+            Instruction::Load(v) => Instruction::Load(v.try_map(f)?),
+            Instruction::Store(reg) => Instruction::Store(reg),
+            Instruction::Increment(reg) => Instruction::Increment(reg),
+            Instruction::Decrement(reg) => Instruction::Decrement(reg),
+            Instruction::Add(v) => Instruction::Add(v.try_map(f)?),
+            Instruction::Sub(v) => Instruction::Sub(v.try_map(f)?),
+            Instruction::Mul(v) => Instruction::Mul(v.try_map(f)?),
+            Instruction::Div(v) => Instruction::Div(v.try_map(f)?),
+            Instruction::Mod(v) => Instruction::Mod(v.try_map(f)?),
+            Instruction::Jump(adr) => Instruction::Jump(adr),
+            Instruction::JumpZero(adr) => Instruction::JumpZero(adr),
+            Instruction::JumpLtz(adr) => Instruction::JumpLtz(adr),
+            Instruction::JumpGtz(adr) => Instruction::JumpGtz(adr),
+            Instruction::Stop => Instruction::Stop,
+            Instruction::Nop => Instruction::Nop,
+        })
+    }
+
     /// Returns the value read by this instruction, if any.
-    #[must_use] #[inline]
+    #[must_use]
+    #[inline]
     pub const fn value(self) -> Option<Value<T>> {
         match self {
             Instruction::Load(v) | Instruction::Add(v) | Instruction::Sub(v) | Instruction::Mul(v) | Instruction::Div(v) | Instruction::Mod(v) => Some(v),
@@ -92,7 +142,8 @@ impl<T: Integer> Instruction<T> {
     
     /// Returns the first register read by this instruction, if any.
     #[cfg_attr(feature = "indirect_jumps", doc = "Indirect jumps registers *are* returned.")]
-    #[must_use] #[inline]
+    #[must_use]
+    #[inline]
     pub const fn register(self) -> Option<Register<RoLoc>> {
         match self {
             Instruction::Load(v) | Instruction::Add(v) | Instruction::Sub(v) | Instruction::Mul(v) | Instruction::Div(v) | Instruction::Mod(v) => match v {
@@ -113,7 +164,8 @@ impl<T: Integer> Instruction<T> {
     }
     
     /// Returns the address this instruction jumps to, if any.
-    #[must_use] #[inline]
+    #[must_use]
+    #[inline]
     pub const fn jump(self) -> Option<Address> {
         match self {
             Instruction::Jump(adr) | Instruction::JumpZero(adr) | Instruction::JumpLtz(adr) | Instruction::JumpGtz(adr) => Some(adr),
@@ -245,6 +297,29 @@ impl<T: Integer> Display for Instruction<T> {
                 f.write_str("NOP")
             },
         }
+    }
+}
+
+impl<T: Integer> Value<T> {
+    /// Maps a `Value<T>` to `Value<U>` by applying a function to a contained value (if `Constant`)
+    /// or returns `Register` (if `Register`).
+    #[must_use]
+    #[inline]
+    pub fn map<U: Integer, F: FnOnce(T) -> U>(self, f: F) -> Value<U> {
+        match self {
+            Value::Constant(n) => Value::Constant(f(n)),
+            Value::Register(reg) => Value::Register(reg),
+        }
+    }
+
+    /// Maps a `Value<T>` to `Value<U>` by applying a function to a contained value (if `Constant`)
+    /// or returns `Register` (if `Register`).
+    #[inline]
+    pub fn try_map<U: Integer, E, F: FnOnce(T) -> Result<U, E>>(self, f: F) -> Result<Value<U>, E> {
+        Ok(match self {
+            Value::Constant(n) => Value::Constant(f(n)?),
+            Value::Register(reg) => Value::Register(reg),
+        })
     }
 }
 

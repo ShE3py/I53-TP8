@@ -57,15 +57,49 @@ impl<T: Integer> RoCode<T> {
         let f = File::create(path)?;
         self.write(BufWriter::new(f))
     }
-    
+
+    /// Maps a `RoCode<T>` to `RoCode<U>` by applying a function.
+    #[must_use]
+    #[inline]
+    pub fn map<U: Integer, F: Fn(T) -> U>(&self, f: F) -> RoCode<U> {
+        RoCode(self.iter().map(|inst| inst.map(&f)).collect())
+    }
+
+    /// Maps a `RoCode<T>` to `RoCode<U>`.
+    #[must_use]
+    #[inline]
+    pub fn cast<U: Integer + From<T>>(&self) -> RoCode<U> {
+        self.map(<U as From<T>>::from)
+    }
+
+    /// Maps a `RoCode<T>` to `RoCode<U>` by applying a function.
+    #[inline]
+    pub fn try_map<U: Integer, E, F: Fn(T) -> Result<U, E>>(&self, f: F) -> Result<RoCode<U>, E> {
+        let mut vec = Vec::with_capacity(self.len());
+        for v in self.iter() {
+            vec.push(v.try_map(&f)?);
+        }
+        Ok(RoCode(vec))
+    }
+
+    /// Maps a `RoCode<T>` to `RoCode<U>`.
+    #[inline]
+    pub fn try_cast<U: Integer + TryFrom<T>>(&self) -> Result<RoCode<U>, <U as TryFrom<T>>::Error> {
+        self.try_map(U::try_from)
+    }
+
     #[inline]
     #[must_use]
     pub fn get(&self, ir: Ir) -> Option<Instruction<T>> {
         ir.index(self)
     }
-    
-    pub fn iter(&self) -> impl Iterator<Item = (Ir, Instruction<T>)> + '_ {
-        Ir::enumerate((**self).iter().copied())
+
+    pub fn iter(&self) -> impl Iterator<Item = Instruction<T>> + '_ {
+        (**self).iter().copied()
+    }
+
+    pub fn enumerate(&self) -> impl Iterator<Item = (Ir, Instruction<T>)> + '_ {
+        Ir::enumerate(self.iter())
     }
 }
 
@@ -74,6 +108,15 @@ impl<T: Integer> Deref for RoCode<T> {
     
     fn deref(&self) -> &Self::Target {
         self.0.deref()
+    }
+}
+
+impl<T: Integer> IntoIterator for RoCode<T> {
+    type Item = Instruction<T>;
+    type IntoIter = <Vec<Instruction<T>> as IntoIterator>::IntoIter;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
     }
 }
 
@@ -96,6 +139,20 @@ impl<T: Integer> Default for RoCode<T> {
     /// Returns a program with only a [`STOP` instruction.](`Instruction::Stop`)
     fn default() -> Self {
         RoCode(vec![Instruction::Stop])
+    }
+}
+
+impl<T: Integer> TryFrom<Vec<Instruction<T>>> for RoCode<T> {
+    type Error = ParseCodeError<T>;
+
+    /// Transforms a vector of [`Instruction`]s into a [`RoCode`].
+    fn try_from(value: Vec<Instruction<T>>) -> Result<RoCode<T>, ParseCodeError<T>> {
+        if value.is_empty() {
+            Err(ParseCodeError::NoInst)
+        }
+        else {
+            Ok(RoCode(value))
+        }
     }
 }
 

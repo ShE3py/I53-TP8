@@ -1,14 +1,13 @@
+use std::any::type_name;
 use clap::Parser;
 use rame::model::{Integer, RoCode};
 use rame::runner::Ram;
-use rame_driver::{create_temp_out, Bits};
-use std::ffi::OsString;
-use std::fmt::{self, Display, Formatter};
+use rame_driver::{Bits, Driver};
+use std::fmt::{self, Debug, Display, Formatter};
 use std::fs::{self, File};
 use std::io::{BufRead, BufReader};
-use std::ops::Neg;
 use std::path::{Path, PathBuf};
-use std::process::{exit, Command};
+use std::process::exit;
 use std::str::FromStr;
 
 #[cfg(feature = "optimizer")]
@@ -109,7 +108,7 @@ fn parse_vec<T: FromStr<Err: Display>>(s: &str, path: &Path) -> Vec<T> {
         v.push(match T::from_str(elem.trim()) {
             Ok(v) => v,
             Err(e) => {
-                eprintln!("error: {}: parsing {elem:?}: {e}", path.display());
+                eprintln!("error: {}: parsing {elem:?} as {}: {e}", path.display(), type_name::<T>());
                 exit(1)
             }
         });
@@ -118,75 +117,50 @@ fn parse_vec<T: FromStr<Err: Display>>(s: &str, path: &Path) -> Vec<T> {
     v
 }
 
-fn scan_file<T: Integer + Neg<Output = T>>(p: &Path, cc: &Option<PathBuf>) {
+fn scan_file<T: Integer + TryFrom<i128, Error: Debug>>(p: &Path, cc: &Option<PathBuf>) {
     match fs::metadata(p) {
         Ok(m) => if m.is_dir() {
             for entry in fs::read_dir(p).unwrap() {
                 scan_file::<T>(&entry.unwrap().path(), cc);
             }
-            
+
             return;
         },
         Err(e) => {
-            eprintln!("{}: {e}", p.display());
+            eprintln!("{}: {}: {e}", env!("CARGO_BIN_NAME"), p.display());
             exit(1);
         },
     }
 
     let tests = parse_headers::<T>(p);
     if tests.is_empty() {
-        eprintln!("{}: no test", p.display());
+        eprintln!("{}: {}: no test", env!("CARGO_BIN_NAME"), p.display());
         exit(1);
     }
 
-    let (ram, path) = if let Some(cc) = cc {
-        let (_f, path) = create_temp_out(p);
+    let code = Driver::new()
+        .infile(p)
+        .compile(true)
+        .compiler(cc.as_ref())
+        .try_drive();
 
-        // SAFETY: unix
-        let path = PathBuf::from(unsafe { OsString::from_encoded_bytes_unchecked(path.into_bytes_with_nul()) });
-
-        let mut cmd = Command::new(cc);
-        cmd.arg(p).arg("-o").arg(&path);
-
-        match cmd.status() {
-            Ok(s) if s.success() => match File::open(&path) {
-                Ok(f) => (f, path),
-                Err(e) => { eprintln!("error: failed to open `{}`: {e}", path.display()); exit(1) }
-            },
-            Ok(s) => { eprintln!("error: {cmd:?}: {s}"); exit(1) },
-            Err(e) => { eprintln!("error: `{}`: {e}", cc.display()); exit(1) },
-        }
-    }
-    else {
-        #[cfg(feature = "compiler")]
-        { rame_driver::compile_tmp(p) }
-
-        #[cfg(not(feature = "compiler"))]
-        unreachable!("no compiler specified")
-    };
-
-    let code = match RoCode::<T>::parse(ram) {
+    let code = match code {
         Ok(code) => code,
         Err(e) => {
-            eprintln!("error: failed to parse `{}`: {e}", path.display());
-            exit(1);
+            eprintln!("error: failed to compiled `{}`: {e}", p.display());
+            return;
         }
     };
-
-    // `cli.compiler` use the filename instead of a fd
-    _ = fs::remove_file(&path);
-
-    #[cfg(feature = "optimizer")]
-    let _ = io::stdout().flush();
 
     #[cfg(feature = "optimizer")]
     let opt = SeqRewriter::from(&code).optimize().rewritten();
 
     print!("{}... ", p.display());
+    _ = io::stdout().flush();
     let mut ok = true;
 
     for test in tests {
-        if let Some(out) = test.run(code.clone()) {
+        if let Some(out) = test.run(code.try_cast().unwrap()) {
             if ok {
                 println!("failed");
                 ok = false;
@@ -197,7 +171,7 @@ fn scan_file<T: Integer + Neg<Output = T>>(p: &Path, cc: &Option<PathBuf>) {
         }
 
         #[cfg(feature = "optimizer")]
-        assert!(test.run(opt.clone()).is_none(), "optimizer check");
+        assert!(test.run(opt.try_cast().unwrap()).is_none(), "optimizer check");
     }
 
     if ok {

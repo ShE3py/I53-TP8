@@ -1,6 +1,6 @@
 //! The implementation model of a [random-access machine.](https://en.wikipedia.org/wiki/Random-access_machine)
 
-use num_traits::{CheckedRem, PrimInt};
+use num_traits::{CheckedNeg, CheckedRem, PrimInt};
 use std::error::Error;
 use std::fmt::{Debug, Display};
 use std::str::FromStr;
@@ -19,6 +19,7 @@ pub use ro::RoCode;
 /// The value type this model can works on.
 pub trait Integer: PrimInt
     + CheckedRem<Output = Self>
+    + CheckedNeg
     + Debug + Display
     + FromStr<Err: Error + 'static>
     + TryInto<usize, Error: Error + 'static>
@@ -26,6 +27,7 @@ pub trait Integer: PrimInt
 
 impl<T: PrimInt
     + CheckedRem<Output = Self>
+    + CheckedNeg
     + Debug + Display
     + FromStr<Err: Error + 'static>
     + TryInto<usize, Error: Error + 'static>

@@ -91,11 +91,11 @@ impl<T: Integer> Display for ParseInstructionError<T> {
                 f.write_str("unknown instruction")
             },
             ParseInstructionError::InvalidValue(e) => {
-                f.write_fmt(format_args!("invalid `<value>` ({}): ", type_name::<T>()))?;
+                f.write_fmt(format_args!("invalid value ({}): ", type_name::<T>()))?;
                 Display::fmt(e, f)
             },
             ParseInstructionError::InvalidRegister(e) => {
-                f.write_str(concat!("invalid `<register>`: "))?;
+                f.write_str(concat!("invalid register: "))?;
                 Display::fmt(e, f)
             },
             ParseInstructionError::InvalidAddress(e) => {

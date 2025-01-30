@@ -1,6 +1,6 @@
 use clap::{Parser, ValueHint};
-use rame_driver::compile;
 use std::path::PathBuf;
+use rame_driver::Driver;
 
 /// Compiles an algorithmic program into a RAM one.
 #[derive(Parser)]
@@ -21,5 +21,11 @@ struct Cli {
 
 fn main() {
     let cli = Cli::parse();
-    compile::<_, _, i128>(cli.infile, cli.outfile, cli.optimize);
+
+    Driver::new()
+        .infile(&cli.infile)
+        .outfile(&cli.outfile)
+        .compile(true)
+        .optimize(cli.optimize)
+        .drive();
 }

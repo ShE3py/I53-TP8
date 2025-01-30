@@ -1,182 +1,163 @@
 use clap::ValueEnum;
-use rame::model::{Integer, RoCode};
-use std::ffi::{c_char, c_int, CString, OsStr};
+use rame::model::{Integer, ParseCodeError, RoCode};
+use rame::optimizer::SeqRewriter;
+use std::ffi::{c_char, CString};
 use std::fmt::Display;
 use std::fs::File;
-use std::io;
-use std::ops::Neg;
-use std::os::fd::{FromRawFd, OwnedFd};
 use std::os::unix::ffi::OsStrExt;
-use std::path::Path;
-use std::process::exit;
-
-#[cfg(feature = "optimizer")]
-use rame::optimizer::SeqRewriter;
-
-#[cfg(feature = "compiler")]
-use std::{
-    ffi::OsString,
-    io::Seek,
-    os::fd::{IntoRawFd, RawFd},
-    path::PathBuf
-};
+use std::path::{Path, PathBuf};
+use std::process::{exit, Command};
 
 mod stdin;
+mod tmp;
 
 pub use stdin::Stdin;
+pub use tmp::TempFile;
 
 #[cfg(feature = "compiler")]
 extern "C" {
     pub fn arc_compile_file(infile: *const c_char, outfile: *const c_char);
-    pub fn arc_compile_file_fd(infile: *const c_char, outpath: *const c_char, outfile: RawFd);
 }
 
-pub fn create_temp_out(model: &Path) -> (File, CString) {
-    let prefix = model.file_stem().unwrap_or(OsStr::new("a")).as_bytes();
-    let infix = OsStr::new("XXXXXX").as_bytes();
-    let suffix = OsStr::new("tmp").as_bytes();
-    
-    let mut buf = Vec::with_capacity(prefix.len() + '.'.len_utf8() + infix.len() + '.'.len_utf8() + suffix.len() + '\0'.len_utf8());
-    buf.extend_from_slice(prefix);
-    buf.push(b'.');
-    buf.extend_from_slice(infix);
-    buf.push(b'.');
-    buf.extend_from_slice(suffix);
-    buf.push(b'\0');
-    
-    // SAFETY: `c_outfile` was `Ok` so no null interior byte, we just
-    //  pushed a null byte as the last element.
-    let template = unsafe { CString::from_vec_with_nul_unchecked(buf) };
-    
-    // The roundtrip is for Miri.
-    let mut template = template.into_bytes();
-    
-    // More checks.
-    let suffix_len: c_int = ('.'.len_utf8() + suffix.len()).try_into().expect("file extension too large");
-    debug_assert_eq!(&template[template.len() - suffix_len as usize - 6..template.len() - suffix_len as usize], b"XXXXXX");
-    
-    // SAFETY: `template` is writable, we have `prefixXXXXXXsuffix`
-    let fd = unsafe {
-        libc::mkstemps(
-            template.as_mut_ptr() as *mut c_char,
-            suffix_len,
-        )
-    };
-    
-    if fd == -1 {
-        panic!("mkstemps: {}", io::Error::last_os_error());
-    }
-    
-    // SAFETY: inherently safe.
-    unsafe {
-        libc::unlink(
-            template.as_ptr() as *const c_char,
-        );
-    }
-    
-    // SAFETY: the fd is ours.
-    let fd = unsafe { OwnedFd::from_raw_fd(fd) };
-    
-    // SAFETY: `mkstemps` should have preserved our safety rules
-    let c_template = unsafe { CString::from_vec_with_nul_unchecked(template) };
-    
-    (File::from(fd), c_template)
+/// Builder pattern for [`RoCode`].
+#[derive(Debug, Default)]
+#[must_use]
+pub struct Driver {
+    infile: Option<PathBuf>,
+    outfile: Option<PathBuf>,
+    compile: bool,
+    compiler: Option<PathBuf>,
+    optimize: bool,
 }
 
-/// Compiles the algorithmic program `infile` into `outfile`.
-#[cfg(feature = "compiler")]
-pub fn compile<P: AsRef<Path>, Q: AsRef<Path>, T: Integer + Neg<Output = T>>(infile: P, outfile: Q, optimize: bool) {
-    let outfile = outfile.as_ref();
-    let c_infile = CString::new(infile.as_ref().as_os_str().as_bytes()).expect("infile");
-    
-    if !optimize {
-        let c_outfile = CString::new(outfile.as_os_str().as_bytes()).expect("outfile");
-        unsafe { arc_compile_file(c_infile.as_ptr(), c_outfile.as_ptr()) };
+impl Driver {
+    pub fn new() -> Driver {
+        Driver::default()
     }
-    else {
-        let (mut f, c_intermediate) = create_temp_out(outfile);
-        
-        // Compile into an intermediate tempfile
-        unsafe { arc_compile_file_fd(c_infile.as_ptr(), c_intermediate.as_ptr(), f.try_clone().expect("cloning tempfile").into_raw_fd()) };
-        
-        // Optimize the artifact.
-        f.rewind().expect("rewind");
-        crate::optimize::<_, T>(f, OsStr::from_bytes(&c_intermediate.into_bytes_with_nul()).as_ref(), Some(outfile));
+
+    pub fn infile(&mut self, infile: &Path) -> &mut Self {
+        self.infile = Some(infile.to_owned()).filter(|infile| infile.as_os_str() != "-");
+        self
     }
-}
 
-/// Compiles the algorithmic program `infile` into a tempfile.
-#[cfg(feature = "compiler")]
-pub fn compile_tmp<P: AsRef<Path>>(infile: P) -> (File, PathBuf) {
-    let infile = infile.as_ref();
-    let c_infile = CString::new(OsStrExt::as_bytes(infile.as_os_str())).expect("infile");
+    pub fn outfile(&mut self, outfile: &Path) -> &mut Self {
+        self.outfile = Some(outfile.to_owned());
+        self
+    }
 
-    let (mut f, c_intermediate) = create_temp_out(infile);
+    pub fn compile(&mut self, compile: bool) -> &mut Self {
+        self.compile = compile;
+        self
+    }
 
-    // Compile into an intermediate tempfile
-    unsafe { arc_compile_file_fd(c_infile.as_ptr(), c_intermediate.as_ptr(), f.try_clone().expect("cloning tempfile").into_raw_fd()) };
+    pub fn compiler(&mut self, compiler: Option<&PathBuf>) -> &mut Self {
+        self.compiler = compiler.cloned();
+        self
+    }
 
-    // SAFETY: unix
-    let tmppath = PathBuf::from(unsafe { OsString::from_encoded_bytes_unchecked(c_intermediate.into_bytes_with_nul()) });
+    pub fn optimize(&mut self, optimize: bool) -> &mut Self {
+        self.optimize = optimize;
+        self
+    }
 
-    f.rewind().expect("rewind");
-    (f, tmppath)
+    pub fn try_drive(&self) -> Result<RoCode<i128>, ParseCodeError<i128>> {
+        let infile = self.infile.as_ref().map(|pb| pb.as_path());
+        let outfile = self.outfile.as_ref().map(|pb| pb.as_path());
 
-}
+        let code = if !self.compile {
+            // The code is already in RAM format;
+            infile.map_or_else(
+                || RoCode::try_from(Stdin::new(|i| print!("{i} | ")).fuse().collect::<Vec<_>>()),
+                |path| RoCode::parse(open(path))
+            )
+        }
+        else {
+            // Compile algorithmic code to RAM/LLVM.
+            let Some(infile) = infile else {
+                eprintln!("{}: cannot yet read algorithmic code from stdin", env!("CARGO_PKG_NAME"));
+                exit(1);
+            };
 
-/// Optimize the RAM program `infile` into `outfile`.
-#[cfg_attr(not(feature = "optimizer"), doc(hidden))]
-pub fn optimize<Q: AsRef<Path>, T: Integer + Neg<Output = T>>(infile: File, inpath: &Path, outfile: Option<Q>) -> RoCode<T> {
-    let incode = parse::<T>(infile, inpath);
+            let temp_file = || TempFile::new(outfile.unwrap_or(infile));
 
-    #[cfg(feature = "optimizer")] {
-        let outcode = SeqRewriter::from(&incode).optimize().rewritten();
+            let unoptimized = self.optimize.then(temp_file);
+            let outfile = unoptimized.as_ref().map(|tf| tf.as_ref()).or(outfile);
+            let compiled = outfile.is_none().then(temp_file);
+            let compiled = outfile.unwrap_or(compiled.as_ref().unwrap().as_ref());
+
+            match self.compiler.as_ref() {
+                Some(cc) => {
+                    let mut cmd = Command::new(cc);
+                    cmd.arg(infile).arg("-o").arg(compiled);
+
+                    match cmd.status() {
+                        Ok(s) if s.success() => {},
+                        Ok(s) => { eprintln!("error: {cmd:?}: {s}"); exit(1) },
+                        Err(e) => { eprintln!("error: `{}`: {e}", cc.display()); exit(1) },
+                    }
+                },
+
+                None => {
+                    let infile = to_cstring(infile);
+                    let outfile = to_cstring(compiled);
+
+                    unsafe { arc_compile_file(infile.as_ptr(), outfile.as_ptr()) };
+                }
+            }
+
+            RoCode::parse(open(compiled))
+        };
+
+        if !self.optimize {
+            return code;
+        };
+
+        let optimized = SeqRewriter::from(&code?).optimize().rewritten();
 
         if let Some(outfile) = outfile {
-            if let Err(e) = outcode.write_to_file(outfile) {
-                eprintln!("error: unable to save optimized code: {e}");
+            if let Err(e) = optimized.write_to_file(outfile) {
+                eprintln!("{}: {}: {e}", env!("CARGO_PKG_NAME"), outfile.display());
                 exit(1);
             }
         }
 
-        outcode
+        Ok(optimized)
     }
 
-    #[cfg(not(feature = "optimizer"))] {
-        eprintln!("warning: tried to optimize while the optimizer is opted out");
-
-        if let Some(outpath) = outfile {
-            if let Err(e) = std::fs::copy(inpath, outpath) {
-                eprintln!("error: copy failed: {e}");
+    pub fn drive(&self) -> RoCode<i128> {
+        match self.try_drive() {
+            Ok(c) => c,
+            Err(e) => {
+                eprintln!("{}: {e}", env!("CARGO_PKG_NAME"));
                 exit(1);
-            }
+            },
         }
-
-        incode
     }
 }
 
 /// Open a file, handling potential errors.
 #[must_use]
-pub fn open(inpath: &Path) -> File {
-    match File::open(inpath) {
+pub fn open<P: AsRef<Path>>(path: P) -> File {
+    let path = path.as_ref();
+    match File::open(path) {
         Ok(f) => f,
         Err(e) => {
-            eprintln!("{}: {e}", &inpath.display());
+            eprintln!("{}: {}: {e}", env!("CARGO_PKG_NAME"), path.display());
             exit(1);
         },
     }
 }
 
-/// Parse a RAM program, handling potential errors.
+/// Converts a [`Path`] into a [`CString`].
 #[must_use]
-pub fn parse<T: Integer>(infile: File, inpath: &Path) -> RoCode<T> {
-    match RoCode::<T>::parse(infile) {
-        Ok(code) => code,
+pub fn to_cstring<P: AsRef<Path>>(path: P) -> CString {
+    let path = path.as_ref();
+    match CString::new(OsStrExt::as_bytes(path.as_os_str())) {
+        Ok(s) => s,
         Err(e) => {
-            eprintln!("{}: {e}", inpath.display());
+            eprintln!("{}: {}: {e}", env!("CARGO_PKG_NAME"), path.display());
             exit(1);
-        }
+        },
     }
 }
 
@@ -190,56 +171,13 @@ pub enum Bits {
     #[clap(name = "128")] Int128,
 }
 
-pub fn cvt<T: Integer + TryFrom<i128, Error: Display>>(args: Vec<i128>, _ty: &RoCode<T>) -> Vec<T> {
-    args.into_iter().map(|v| match T::try_from(v) {
+/// Convert CLI args
+pub fn cvt<T: Integer + TryFrom<i128, Error: Display>>(args: &[i128]) -> Vec<T> {
+    args.iter().copied().map(|v| match T::try_from(v) {
         Ok(v) => v,
         Err(e) => {
             eprintln!("invalid integer {v}: {e}");
             exit(1);
         }
     }).collect()
-}
-
-#[macro_export]
-macro_rules! monomorphize {
-    ($inpath:expr, $compile:expr, $bits:expr, $code:ident, $body:tt) => {
-        let inpath: &::std::path::Path = $inpath;
-
-        let (infile, inpath) = {
-            #[cfg(feature = "compiler")]
-            if $compile {
-                let (tmpfile, tmppath) = $crate::compile_tmp(inpath);
-                (tmpfile, ::std::borrow::Cow::Owned(tmppath))
-            }
-            else {
-                ($crate::open(inpath), ::std::borrow::Cow::Borrowed(inpath))
-            }
-
-            #[cfg(not(feature = "compiler"))]
-            ($crate::open(inpath), ::std::borrow::Cow::Borrowed(inpath))
-        };
-
-        match $bits {
-            Bits::Int8 => {
-                let $code = $crate::parse::<i8>(infile, &*inpath);
-                $body
-            },
-            Bits::Int16 => {
-                let $code = $crate::parse::<i16>(infile, &*inpath);
-                $body
-            },
-            Bits::Int32 => {
-                let $code = $crate::parse::<i32>(infile, &*inpath);
-                $body
-            },
-            Bits::Int64 => {
-                let $code = $crate::parse::<i64>(infile, &*inpath);
-                $body
-            },
-            Bits::Int128 => {
-                let $code = $crate::parse::<i128>(infile, &*inpath);
-                $body
-            },
-        }
-    };
 }

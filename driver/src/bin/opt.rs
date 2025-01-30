@@ -1,6 +1,6 @@
 use clap::{Parser, ValueHint};
-use rame_driver::{open, optimize};
 use std::path::PathBuf;
+use rame_driver::Driver;
 
 /// Optimize a RAM program.
 #[derive(Parser)]
@@ -17,7 +17,10 @@ struct Cli {
 
 fn main() {
     let cli = Cli::parse();
-    
-    let infile = open(&cli.infile);
-    optimize::<_, i128>(infile, &cli.infile, Some(&cli.outfile));
+
+    Driver::new()
+        .infile(&cli.infile)
+        .outfile(&cli.outfile)
+        .optimize(true)
+        .drive();
 }

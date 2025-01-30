@@ -38,7 +38,7 @@ fn main() -> ExitCode {
             println!("cargo::rustc-link-search={out}");
             println!("cargo::rustc-link-lib=arc");
             println!("cargo::rustc-link-lib=fl");
-            println!("cargo::rustc-link-lib=LLVM-18");
+            println!("cargo::rustc-link-lib=LLVM-19");
             println!("cargo::rustc-link-lib=stdc++");
             ExitCode::SUCCESS
         },

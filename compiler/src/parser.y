@@ -3,7 +3,7 @@
   #include <stdlib.h>
   #include <string.h>
   #include "ts.h"
-  #include "llvm/codegen.h"
+  #include "ram/codegen.h"
 
   extern int yylex();
   extern void yyerror(const char *s);
@@ -78,7 +78,7 @@
 
 %%
 
-Program: Fns { codegen_llvm($1); asa_list_destroy($1); };
+Program: Fns { codegen_ram($1); asa_list_destroy($1); };
 
 Fns:
   FnScope Fns { $$ = asa_list_append($1, $2); }

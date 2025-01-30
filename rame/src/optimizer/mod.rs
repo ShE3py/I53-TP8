@@ -3,13 +3,12 @@
 use crate::model::{Address, Instruction, Integer, Ir, RoCode, Value};
 use std::cmp::Ordering;
 use std::collections::HashMap;
-use std::ops::Neg;
 
 fn collect_jump_targets<T: Integer>(code: &RoCode<T>, modified_ir: &HashMap<Ir, Instruction<T>>) -> Vec<Ir> {
     let mut jt = Vec::new();
-    for (ir, inst) in code.iter() {
+    for (ir, inst) in code.enumerate() {
         let inst = modified_ir.get(&ir).copied().unwrap_or(inst);
-        
+
         match inst {
             Instruction::Jump(adr) | Instruction::JumpZero(adr) | Instruction::JumpLtz(adr) | Instruction::JumpGtz(adr) => {
                 jt.push(adr);
@@ -134,7 +133,7 @@ impl<T: Integer> SeqRewriter<'_, T> {
 impl<'ro, T: Integer> From<&mut SeqRewriter<'ro, T>> for RoCode<T> {
     fn from(rewriter: &mut SeqRewriter<'ro, T>) -> Self {
         rewriter.deleted_ir.sort_unstable();
-        rewriter.code.iter()
+        rewriter.code.enumerate()
             .filter(|(ir, _)| rewriter.deleted_ir.binary_search(ir).is_err())
             .map(|(ir, inst)| (ir, rewriter.modified_ir.get(&ir).copied().unwrap_or(inst)))
             .map(|(_, inst)| rewriter.rewrite_inst(inst))
@@ -144,7 +143,7 @@ impl<'ro, T: Integer> From<&mut SeqRewriter<'ro, T>> for RoCode<T> {
 
 impl<T: Integer> SeqRewriter<'_, T> {
     pub fn remove_nops(&mut self) -> &mut Self {
-        self.code.iter().filter(|(_, inst)| *inst == Instruction::Nop).for_each(|(ir, _)| self.delete_ir(ir));
+        self.code.enumerate().filter(|(_, inst)| *inst == Instruction::Nop).for_each(|(ir, _)| self.delete_ir(ir));
         self
     }
     
@@ -164,8 +163,8 @@ impl<T: Integer> SeqRewriter<'_, T> {
             
             Some(adr).filter(|adr| *adr != initial_adr)
         };
-        
-        for (ir, inst) in self.code.iter() {
+
+        for (ir, inst) in self.code.enumerate() {
             match inst {
                 Instruction::Jump(adr) => {
                     if let Some(adr) = final_adr(adr) {
@@ -258,7 +257,7 @@ impl<T: Integer> SeqRewriter<'_, T> {
     }
     
     pub fn combine_jumps(&mut self) -> &mut Self {
-        for (ir, inst) in self.code.iter() {
+        for (ir, inst) in self.code.enumerate() {
             match inst {
                 Instruction::Jump(adr) | Instruction::JumpZero(adr) | Instruction::JumpLtz(adr) | Instruction::JumpGtz(adr) => {
                     let next_ir = self.next_ir(ir);
@@ -274,16 +273,14 @@ impl<T: Integer> SeqRewriter<'_, T> {
         
         self
     }
-}
 
-impl<T: Integer + Neg<Output = T>> SeqRewriter<'_, T> {
     /// Simplifies add/subs; returns where to continue the search.
     fn combine_adds(&mut self, ir0: Ir) -> Ir {
         let mut ir1 = ir0 + 1;
         
         let mut v = match self.code.get(ir0) {
             Some(Instruction::Add(Value::Constant(v))) => v,
-            Some(Instruction::Sub(Value::Constant(v))) => -v,
+            Some(Instruction::Sub(Value::Constant(v))) => v.checked_neg().unwrap(),
             _ => return ir0,
         };
         
@@ -298,7 +295,7 @@ impl<T: Integer + Neg<Output = T>> SeqRewriter<'_, T> {
         loop {
             let v1 = match self.code.get(ir1) {
                 Some(Instruction::Add(Value::Constant(v))) => v,
-                Some(Instruction::Sub(Value::Constant(v))) => -v,
+                Some(Instruction::Sub(Value::Constant(v))) => v.checked_neg().unwrap(),
                 Some(Instruction::Mul(Value::Constant(v))) if v == T::one() => T::zero(),
                 Some(Instruction::Div(Value::Constant(v))) if v == T::one() => T::zero(),
                 _ => break,
@@ -314,7 +311,7 @@ impl<T: Integer + Neg<Output = T>> SeqRewriter<'_, T> {
         }
         
         match v.cmp(&T::zero()) {
-            Ordering::Less => self.set_ir(ir0, Instruction::Sub(Value::Constant(-v))),
+            Ordering::Less => self.set_ir(ir0, Instruction::Sub(Value::Constant(v.checked_neg().unwrap()))),
             Ordering::Equal => self.delete_ir(ir0),
             Ordering::Greater => self.set_ir(ir0, Instruction::Add(Value::Constant(v))),
         }
