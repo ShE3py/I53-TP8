@@ -155,20 +155,27 @@ void codegen_nc(asa *p, int *ip) {
 					
 					// pour les opérateurs comparatifs, on calcul en premier lieu
 					// x - y (binop_name(op comparatif) == 'SUB')
-					
-					
-					codegen_nc(p->tag_binary_op.rhs, ip);
-					fprintf(outfile, "STORE @2\n");
-					fprintf(outfile, "INC 2\n");
-					*ip += 2;
-					
-					codegen_nc(p->tag_binary_op.lhs, ip);
-					fprintf(outfile, "DEC 2\n");
-					fprintf(outfile, "%s @2 ; ", binop_name(p->tag_binary_op.op));
-					fprint_asa(outfile, p->tag_binary_op.rhs);
-					fprintf(outfile, "\n");
-					*ip += 2;
-					
+
+                    // Spécialisation pour les constantes
+                    if(p->tag_binary_op.rhs->tag == TagInt) {
+                        codegen_nc(p->tag_binary_op.lhs, ip);
+                        fprintf(outfile, "%s #%i\n", binop_name(p->tag_binary_op.op), p->tag_binary_op.rhs->tag_int.value);
+                        ++(*ip);
+                    }
+                    else {
+                        codegen_nc(p->tag_binary_op.rhs, ip);
+                        fprintf(outfile, "STORE @2\n");
+                        fprintf(outfile, "INC 2\n");
+                        *ip += 2;
+
+                        codegen_nc(p->tag_binary_op.lhs, ip);
+                        fprintf(outfile, "DEC 2\n");
+                        fprintf(outfile, "%s @2 ; ", binop_name(p->tag_binary_op.op));
+                        fprint_asa(outfile, p->tag_binary_op.rhs);
+                        fprintf(outfile, "\n");
+                        *ip += 2;
+					}
+
 					// on génère ensuite le code de comparaison pour les opérateurs
 					// comparatifs
 					
@@ -735,7 +742,7 @@ void codegen_nc(asa *p, int *ip) {
 	}
 	
 	if((before_codegen_ip + p->ninst) != *ip) {
-		fprintf(stderr, "generated %i instructions for current node (`", *ip - before_codegen_ip);
+		fprintf(stderr, "error: generated %i instructions for current node (`", *ip - before_codegen_ip);
 		fprint_asa(stderr, p);
 		fprintf(stderr, "`), but ninst is %i\n", p->ninst);
 		exit(1);

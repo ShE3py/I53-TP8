@@ -1,0 +1,20 @@
+# TEST: [1, 1] => [2, 0, 1, 1, 0, 0, 0, 0, 2]
+# TEST: [-2, 2] => [0, -4, -4, -1, 0, -3, 3, 1, 1]
+# TEST: [-7, -3] => [-10, -4, 21, 2, -1, -8, 8, -1, 0]
+FONCTION main()
+DÉBUT
+	LIRE a;
+	LIRE b;
+
+	AFFICHER a + b;
+	AFFICHER a - b;
+	AFFICHER a * b;
+	AFFICHER a / b;
+	AFFICHER a % b;
+
+	AFFICHER a - 1;
+	AFFICHER 1 - a;
+
+	AFFICHER b / 2;
+	AFFICHER 2 / b;
+FIN

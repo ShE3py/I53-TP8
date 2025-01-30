@@ -425,7 +425,7 @@ asa* create_binop_node(BinaryOp binop, asa *lhs, asa *rhs) {
 		case OpMul:
 		case OpDiv:
 		case OpMod:
-			p->ninst = lhs->ninst + rhs->ninst + 4;
+			p->ninst = lhs->ninst + ((rhs->tag == TagInt) ? 1 : rhs->ninst + 4);
 			break;
 		
 		case OpGe:
@@ -434,7 +434,7 @@ asa* create_binop_node(BinaryOp binop, asa *lhs, asa *rhs) {
 		case OpLt:
 		case OpEq:
 		case OpNe:
-			p->ninst = lhs->ninst + rhs->ninst + 8;
+			p->ninst = lhs->ninst + ((rhs->tag == TagInt) ? 1 : rhs->ninst + 4) + 4;
 			break;
 		
 		case OpAnd:

@@ -132,6 +132,9 @@ fn scan_file<T: Integer + TryFrom<i128, Error: Debug>>(p: &Path, cc: &Option<Pat
         },
     }
 
+    print!("{}... ", p.display());
+    _ = io::stdout().flush();
+
     let tests = parse_headers::<T>(p);
     if tests.is_empty() {
         eprintln!("{}: {}: no test", env!("CARGO_BIN_NAME"), p.display());
@@ -155,8 +158,6 @@ fn scan_file<T: Integer + TryFrom<i128, Error: Debug>>(p: &Path, cc: &Option<Pat
     #[cfg(feature = "optimizer")]
     let opt = SeqRewriter::from(&code).optimize().rewritten();
 
-    print!("{}... ", p.display());
-    _ = io::stdout().flush();
     let mut ok = true;
 
     for test in tests {
