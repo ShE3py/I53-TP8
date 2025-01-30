@@ -26,7 +26,7 @@ make
 ### Description des fichiers
 
 - `src/asa.[ch]`: l'arbre syntaxique abstrait, et analyse sémantique pendant la
-construction de celui-ci.
+  construction de celui-ci.
 - `src/codegen.[ch]`: génération du code à partir d'un ASA.
 - `src/ts.[ch]`: table des symboles, uniquement les variables.
 - `src/parser.y`: l'analyse syntaxique
@@ -275,7 +275,7 @@ Des exemples sont disponibles dans le dossier `examples/` ;
 - `sum.algo`: la somme des nombres d'un tableau à 3 cases.
 - `max.algo`: le plus grand nombre parmi les 5 premiers nombres sur la bande d'entrée.
 - `bubble_sort.algo`: un tri à bulles sur les 5 premiers nombres de la bande d'entrée,
-le résultat est ensuite écrit sur la bande de sortie.
+  le résultat est ensuite écrit sur la bande de sortie.
 - `sub.algo`: une fonction qui renvoie la différence entre ses deux paramètres.
 - `pow.algo`: une fonction d'exponentiation rapide.
 - `fibo.algo`: une fonction de Fibonacci récursive.
