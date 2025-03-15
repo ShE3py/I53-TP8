@@ -47,3 +47,4 @@ out/ram/%.out: examples/%.algo arc $(mkdirs)
 clean:
 	rm -rf $(OUT)
 	rm -f arc
+
