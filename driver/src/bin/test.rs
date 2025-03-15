@@ -7,7 +7,7 @@ use std::fmt::{self, Debug, Display, Formatter};
 use std::fs::{self, File};
 use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
-use std::process::exit;
+use std::process::{exit, ExitCode, Termination};
 use std::str::FromStr;
 
 #[cfg(feature = "optimizer")]
@@ -118,18 +118,20 @@ fn parse_vec<T: FromStr<Err: Display>>(s: &str, path: &Path) -> Vec<T> {
     v
 }
 
-fn scan_file<T: Integer + TryFrom<i128, Error: Debug>>(p: &Path, cc: &Option<PathBuf>) {
+#[must_use]
+fn scan_file<T: Integer + TryFrom<i128, Error: Debug>>(p: &Path, cc: &Option<PathBuf>) -> bool {
     match fs::metadata(p) {
         Ok(m) => if m.is_dir() {
+            let mut ok = true;
             for entry in fs::read_dir(p).unwrap() {
-                scan_file::<T>(&entry.unwrap().path(), cc);
+                ok &= scan_file::<T>(&entry.unwrap().path(), cc);
             }
 
-            return;
+            return ok;
         },
         Err(e) => {
             eprintln!("{}: {}: {e}", env!("CARGO_BIN_NAME"), p.display());
-            exit(1);
+            return false;
         },
     }
 
@@ -139,7 +141,7 @@ fn scan_file<T: Integer + TryFrom<i128, Error: Debug>>(p: &Path, cc: &Option<Pat
     let tests = parse_headers::<T>(p);
     if tests.is_empty() {
         eprintln!("{}: {}: no test", env!("CARGO_BIN_NAME"), p.display());
-        exit(1);
+        return false;
     }
 
     let code = Driver::new()
@@ -152,7 +154,7 @@ fn scan_file<T: Integer + TryFrom<i128, Error: Debug>>(p: &Path, cc: &Option<Pat
         Ok(code) => code,
         Err(e) => {
             eprintln!("error: failed to compiled `{}`: {e}", p.display());
-            return;
+            return false;
         }
     };
 
@@ -179,16 +181,19 @@ fn scan_file<T: Integer + TryFrom<i128, Error: Debug>>(p: &Path, cc: &Option<Pat
     if ok {
         println!("ok");
     }
+    ok
 }
 
-fn main() {
+fn main() -> impl Termination {
     let cli = Cli::parse();
 
-    match cli.bits {
-        Bits::Int8 => cli.infiles.iter().for_each(|p| scan_file::<i8>(&p, &cli.compiler)),
-        Bits::Int16 => cli.infiles.iter().for_each(|p| scan_file::<i16>(&p, &cli.compiler)),
-        Bits::Int32 => cli.infiles.iter().for_each(|p| scan_file::<i32>(&p, &cli.compiler)),
-        Bits::Int64 => cli.infiles.iter().for_each(|p| scan_file::<i64>(&p, &cli.compiler)),
-        Bits::Int128 => cli.infiles.iter().for_each(|p| scan_file::<i128>(&p, &cli.compiler)),
-    }
+    let ok = match cli.bits {
+        Bits::Int8 => cli.infiles.iter().all(|p| scan_file::<i8>(&p, &cli.compiler)),
+        Bits::Int16 => cli.infiles.iter().all(|p| scan_file::<i16>(&p, &cli.compiler)),
+        Bits::Int32 => cli.infiles.iter().all(|p| scan_file::<i32>(&p, &cli.compiler)),
+        Bits::Int64 => cli.infiles.iter().all(|p| scan_file::<i64>(&p, &cli.compiler)),
+        Bits::Int128 => cli.infiles.iter().all(|p| scan_file::<i128>(&p, &cli.compiler)),
+    };
+    
+    if ok { ExitCode::SUCCESS } else { ExitCode::FAILURE }
 }
