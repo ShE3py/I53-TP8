@@ -4,18 +4,10 @@ Flex est utilisé pour l'analyse lexicale, et Bison pour l'analyse syntaxique.
 Les actions sémantiques dans Bison construisent l'arbre syntaxique abstrait, et font
 l'analyse sémantique pendant la création des nœuds.
 
-L'abre est ensuite converti en instructions RAM via un `codegen(...)`, qui fait lui
+L'arbre est ensuite converti en instructions RAM via un `codegen(...)`, qui fait lui
 aussi quelques éléments de l'analyse sémantique, en vérifiant par exemple que toutes les
 fonctions existent (à l'instar d'un éditeur de liens) et que la fonction principale
 existe.
-
-Le langage ignore les espaces, cependant ne pas en mettre sur les opérations risque
-de causer des problèmes :
-```
-1-1
-```
-Car l'analyse lexicale produira `[(Nombre, 1), (Nombre, -1)]`, c.-à-d. la négation et
-non la soustraction.
 
 ### Utilisation du programme
 ```bash

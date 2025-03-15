@@ -7,7 +7,7 @@ identities (i.e. `0` and `1`).
 
 ## Model
 
-Based on Jean-Pierre Zanotti's course, University of Toulon;  
+Based on Jean-Pierre Zanotti's course, Université de Toulon;  
 <https://zanotti.univ-tln.fr/ALGO/II/MachineRAM.html>
 
 ### Operand set

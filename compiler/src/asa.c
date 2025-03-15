@@ -1001,21 +1001,21 @@ void fprint_asa(FILE *stream, asa *p) {
             break;
         
         case TagTest:
-            fprintf(stream, "SI ");
+            fprintf(stream, "IF ");
             fprint_asa(stream, p->tag_test.expr);
             break;
         
         case TagWhile:
-            fprintf(stream, "TQ ");
+            fprintf(stream, "WHILE ");
             fprint_asa(stream, p->tag_test.expr);
             break;
         
         case TagRead:
-            fprintf(stream, "LIRE %s", p->tag_read.identifier);
+            fprintf(stream, "READ %s", p->tag_read.identifier);
             break;
         
         case TagReadIndexed:
-            fprintf(stream, "LIRE %s[", p->tag_read_indexed.identifier);
+            fprintf(stream, "READ %s[", p->tag_read_indexed.identifier);
             fprint_asa(stream, p->tag_read_indexed.index);
             fprintf(stream, "]");
             break;
@@ -1023,17 +1023,17 @@ void fprint_asa(FILE *stream, asa *p) {
         case TagReadArray: {
             symbol var = st_find_or_internal_error(p->tag_read_array.identifier);
             
-            fprintf(stream, "LIRE[%i] %s", var.size, var.identifier);
+            fprintf(stream, "READ[%i] %s", var.size, var.identifier);
             break;
         }
         
         case TagPrint:
-            fprintf(stream, "AFFICHER ");
+            fprintf(stream, "PRINT ");
             fprint_asa(stream, p->tag_print.expr);
             break;
         
         case TagPrintArray:
-            fprintf(stream, "AFFICHER [%s]", p->tag_print_array.identifier);
+            fprintf(stream, "PRINT [%s]", p->tag_print_array.identifier);
             break;
         
         case TagBlock:
@@ -1043,7 +1043,7 @@ void fprint_asa(FILE *stream, asa *p) {
             break;
         
         case TagFn:
-            fprintf(stream, "FONCTION %s", p->tag_fn.identifier);
+            fprintf(stream, "FUNCTION %s", p->tag_fn.identifier);
             id_list_fprint(stream, p->tag_fn.params);
             break;
         
@@ -1053,7 +1053,7 @@ void fprint_asa(FILE *stream, asa *p) {
             break;
         
         case TagReturn:
-            fprintf(stream, "RENVOYER ");
+            fprintf(stream, "RETURN ");
             fprint_asa(stream, p->tag_return.expr);
             break;
     }

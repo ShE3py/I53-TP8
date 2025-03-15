@@ -18,31 +18,31 @@ void yyerror(const char *s) {
 %%
 
  /* Mots-clefs */
-"FONCTION"      { return Fn; }
-"RENVOYER"      { return Return; }
+"FONCTION"|"FUNCTION"   { return Fn; }
+"RENVOYER"|"RETURN"     { return Return; }
 
-"DEBUT"|"DÉBUT" { return Start; }
-"FIN"           { return End; }
+"DEBUT"|"DÉBUT"|"BEGIN" { return Start; }
+"FIN"|"END"             { return End; }
 
-"VAR"           { return Var; }
+"VAR"                   { return Var; }
 
-"SI"            { return If; }
-"ALORS"         { return Then; }
-"SINON"         { return Else; }
-"FSI"           { return EndIf; }
+"SI"|"IF"               { return If; }
+"ALORS"|"THEN"          { return Then; }
+"SINON"|"ELSE"          { return Else; }
+"FSI"|"FI"              { return EndIf; }
 
-"TQ"            { return While; }
-"FAIRE"         { return Do; }
-"FTQ"           { return EndWhile; }
+"TQ"|"WHILE"           { return While; }
+"FAIRE"|"DO"           { return Do; }
+"FTQ"|"DONE"           { return EndWhile; }
 
-"LIRE"          { return Read; }
-"AFFICHER"      { return Print; }
+"LIRE"|"READ"          { return Read; }
+"AFFICHER"|"PRINT"     { return Print; }
 
  /* Opérateurs logiques */
-"ET"          { return And; }
-"OU"          { return Or; }
-"OU EXCLUSIF" { return Xor; }
-"NON"         { return Not; }
+"ET"|"AND"          { return And; }
+"OU"|"OR"           { return Or; }
+"OU EXCLUSIF"|"XOR" { return Xor; }
+"NON"|"NOT"         { return Not; }
 
  /* Littéraux et identifiants */
 [0-9]+                 { yylval.ival = atoi(yytext); return Int; }

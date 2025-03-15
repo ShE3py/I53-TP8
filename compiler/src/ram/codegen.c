@@ -355,7 +355,7 @@ void codegen_nc(asa *p, int *ip) {
                             ++(*ip);
                             
                             codegen_nc(p->tag_binary_op.rhs, ip);
-                            fprintf(outfile, "NOP ; OU EXCLUSIF\n");
+                            fprintf(outfile, "NOP ; XOR\n");
                             fprintf(outfile, "DEC 2\n");
                             fprintf(outfile, "JUMZ %i\n", *ip + 5);
                             fprintf(outfile, "SUB @2\n");
@@ -500,20 +500,20 @@ void codegen_nc(asa *p, int *ip) {
             codegen_nc(p->tag_test.expr, ip);
             
             fprintf(outfile, "JUMZ %i\n", *ip + (p->tag_test.therefore ? p->tag_test.therefore->ninst : 0) + 2 + (p->tag_test.alternative ? 1 : 0));
-            fprintf(outfile, "NOP ; ALORS\n");
+            fprintf(outfile, "NOP ; THEN\n");
             
             *ip += 2;
             codegen_nc(p->tag_test.therefore, ip);
             
             if(p->tag_test.alternative) {
                 fprintf(outfile, "JUMP %i\n", *ip + p->tag_test.alternative->ninst + 2);
-                fprintf(outfile, "NOP ; SINON\n");
+                fprintf(outfile, "NOP ; ELSE\n");
                 
                 *ip += 2;
                 codegen_nc(p->tag_test.alternative, ip);
             }
             
-            fprintf(outfile, "NOP ; FSI\n");
+            fprintf(outfile, "NOP ; FI\n");
             
             ++(*ip);
             break;
@@ -574,7 +574,7 @@ void codegen_nc(asa *p, int *ip) {
 
             for(int i = 0; i < var.size; ++i) {
                 fprintf(outfile, "READ\n");
-                fprintf(outfile, "STORE @3 ; LIRE %s[%d]\n", var.identifier, i);
+                fprintf(outfile, "STORE @3 ; READ %s[%d]\n", var.identifier, i);
                 fprintf(outfile, "INC 3\n");
             }
             
@@ -631,11 +631,11 @@ void codegen_nc(asa *p, int *ip) {
             fprintf(outfile, "ADD #%i\n", st_temp_offset());
             fprintf(outfile, "STORE 2 ; STACK HI\n");
 
-            fprintf(outfile, "NOP ; DEBUT\n");
+            fprintf(outfile, "NOP ; BEGIN\n");
             *ip += 7;
 
             codegen_nc(p->tag_fn.body, ip);
-            fprintf(outfile, "STOP ; FIN\n");
+            fprintf(outfile, "STOP ; END\n");
             ++(*ip);
             break;
         }
@@ -686,7 +686,7 @@ void codegen_nc(asa *p, int *ip) {
                     fprintf(outfile, "STORE 3\n");
                     
                     fprintf(outfile, "LOAD @2\n");
-                    fprintf(outfile, "STORE @3 ; arg %s = ", param->value);
+                    fprintf(outfile, "STORE @3 ; arg%d %s = ", i, param->value);
                     fprint_asa(outfile, aargs[i]);
                     fprintf(outfile, "\n");
                     
