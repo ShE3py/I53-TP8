@@ -34,7 +34,7 @@ $(OUT)/driver.o: $(SRC)/driver.c
 	$(CC) -c $< $(CFLAGS) -o $@
 
 $(OUT)/parser.c: $(SRC)/parser.y
-	bison $< -d -o $@
+	bison $< -d -Werror -Wcounterexamples -o $@
 
 $(OUT)/lexer.c: $(SRC)/lexer.lex $(OUT)/parser.h
 	flex -o $@ $<

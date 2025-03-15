@@ -78,11 +78,14 @@
 
 %%
 
-Program: Fns { codegen_ram($1); asa_list_destroy($1); };
+Program:
+  Fns        { codegen_ram($1); asa_list_destroy($1); }
+| Statements { codegen_ram_asa($1); }
+;
 
 Fns:
   FnScope Fns { $$ = asa_list_append($1, $2); }
-| %empty      { $$ = asa_list_empty(); st_destroy_current(); }
+| FnScope     { $$ = asa_list_append($1, asa_list_empty()); st_destroy_current(); }
 ;
 
 FnScope: Fn Identifier LeftParenthesis Params RightParenthesis Start Statements End { $$ = create_fn_node($2, $4, $7, st_pop_push_empty()); }
@@ -214,7 +217,7 @@ static void arc_compile_yy(const char *_infile, const char *_outpath, FILE *_out
     extern int yylex_destroy(void);
 
     infile = _infile;
-    FILE *f = fopen(_infile, "r");
+    FILE *f = strcmp(_infile, "-") == 0 ? stdin : fopen(_infile, "r");
     if(!f) {
         fprintf(stderr, "%s: %s\n", _infile, strerror(errno));
         exit(1);
@@ -235,7 +238,7 @@ static void arc_compile_yy(const char *_infile, const char *_outpath, FILE *_out
     fclose(outfile);
 }
 
-// Called by the Rust driver
+// Called by the C driver
 void arc_compile_file_fd(const char *_infile, const char *_outpath, int _outfd) {
     arc_compile_yy(_infile, _outpath, fdopen(_outfd, "w"));
 }

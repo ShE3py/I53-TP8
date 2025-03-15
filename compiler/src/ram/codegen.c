@@ -986,3 +986,17 @@ void codegen_ram(asa_list fns) {
 	destroy_fn_space();
 }
 
+/**
+ * Génère le code pour la machine RAM correspondant au programme spécifié.
+ */
+void codegen_ram_asa(asa *p) {
+    const char main[32] = "main";
+    asa_list fns =
+        asa_list_append(
+            create_fn_node(main, id_list_empty(), p, st_current()),
+            asa_list_empty()
+        );
+    codegen_ram(fns);
+    asa_list_destroy(fns);
+}
+

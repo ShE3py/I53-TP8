@@ -28,6 +28,18 @@ void st_make_current(symbol_table *st) {
 }
 
 /**
+ * Renvoie la table de symboles actuelle.
+ */
+symbol_table* st_current() {
+    if(!cst) {
+		fprintf(stderr, "no current st\n");
+		exit(1);
+	}
+    
+    return cst;
+}
+
+/**
  * Créer et active une nouvelle table vide de symboles, et renvoie la table de symboles précédemment courante.
  */
 symbol_table* st_pop_push_empty() {

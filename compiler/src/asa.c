@@ -168,6 +168,19 @@ const char* unop_symbol(UnaryOp unop) {
 }
 
 /**
+ * Créer une nouvelle liste vide.
+ */
+asa_list asa_list_empty() {
+	asa_list l;
+	l.len = 0;
+	l.ninst = 0;
+	l.head = NULL;
+	l.is_nop = 0;
+	
+	return l;
+}
+
+/**
  * Créer une nouvelle liste à partir de son premier élément et des éléments suivants.
  */
 asa_list asa_list_append(asa *head, asa_list next) {
@@ -199,19 +212,6 @@ asa_list asa_list_append(asa *head, asa_list next) {
 	n->next = next.head;
 	
 	l.head = n;
-	return l;
-}
-
-/**
- * Créer une nouvelle liste vide.
- */
-asa_list asa_list_empty() {
-	asa_list l;
-	l.len = 0;
-	l.ninst = 0;
-	l.head = NULL;
-	l.is_nop = 0;
-	
 	return l;
 }
 

@@ -4,6 +4,8 @@ use rame::optimizer::SeqRewriter;
 use std::ffi::{c_char, CString};
 use std::fmt::Display;
 use std::fs::File;
+use std::io;
+use std::io::BufWriter;
 use std::os::unix::ffi::OsStrExt;
 use std::path::{Path, PathBuf};
 use std::process::{exit, Command};
@@ -73,16 +75,25 @@ impl Driver {
         }
         else {
             // Compile algorithmic code to RAM/LLVM.
-            let Some(infile) = infile else {
-                eprintln!("{}: cannot yet read algorithmic code from stdin", env!("CARGO_PKG_NAME"));
-                exit(1);
-            };
+            let create_temp_file = || TempFile::new(outfile.or(infile).unwrap_or("stdin".as_ref()));
+            
+            let stdin = infile.is_none().then(|| {
+                let temp_file = create_temp_file();
+                let mut writer = BufWriter::new(&temp_file.file);
+                if let Err(e) = io::copy(&mut io::stdin().lock(), &mut writer) {
+                    eprintln!("error: failed to read stdin: {e}");
+                    exit(1);
+                }
+                
+                drop(writer);
+                temp_file
+            });
+            
+            let infile = infile.unwrap_or_else(|| stdin.as_ref().unwrap().as_ref());
 
-            let temp_file = || TempFile::new(outfile.unwrap_or(infile));
-
-            let unoptimized = self.optimize.then(temp_file);
+            let unoptimized = self.optimize.then(create_temp_file);
             let outfile = unoptimized.as_ref().map(|tf| tf.as_ref()).or(outfile);
-            let compiled = outfile.is_none().then(temp_file);
+            let compiled = outfile.is_none().then(create_temp_file);
             let compiled = outfile.unwrap_or_else(|| compiled.as_ref().unwrap().as_ref());
 
             match self.compiler.as_ref() {

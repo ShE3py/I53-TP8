@@ -563,14 +563,14 @@ typedef struct asa {
 static asa *const NOP = (asa *const) sizeof(asa);
 
 /**
- * Créer une nouvelle liste à partir de son premier élément et des éléments suivants.
- */
-asa_list asa_list_append(asa *head, asa_list next);
-
-/**
  * Créer une nouvelle liste vide.
  */
 asa_list asa_list_empty();
+
+/**
+ * Créer une nouvelle liste à partir de son premier élément et des éléments suivants.
+ */
+asa_list asa_list_append(asa *head, asa_list next);
 
 /**
  * Affiche une liste dans un fichier.
