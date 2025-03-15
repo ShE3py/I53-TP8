@@ -13,18 +13,18 @@ static symbol_table *cst = NULL;
  * Créer une nouvelle table vide de symboles.
  */
 symbol_table* st_empty() {
-	symbol_table *st = malloc(sizeof(symbol_table));
-	st->head = NULL;
-	st->mem_offset = 0;
-	
-	return st;
+    symbol_table *st = malloc(sizeof(symbol_table));
+    st->head = NULL;
+    st->mem_offset = 0;
+    
+    return st;
 }
 
 /**
  * Définie une table de symboles comme étant celle courante.
  */
 void st_make_current(symbol_table *st) {
-	cst = st;
+    cst = st;
 }
 
 /**
@@ -32,9 +32,9 @@ void st_make_current(symbol_table *st) {
  */
 symbol_table* st_current() {
     if(!cst) {
-		fprintf(stderr, "no current st\n");
-		exit(1);
-	}
+        fprintf(stderr, "no current st\n");
+        exit(1);
+    }
     
     return cst;
 }
@@ -43,75 +43,75 @@ symbol_table* st_current() {
  * Créer et active une nouvelle table vide de symboles, et renvoie la table de symboles précédemment courante.
  */
 symbol_table* st_pop_push_empty() {
-	symbol_table *old = cst;
-	
-	cst = st_empty();
-	return old;
+    symbol_table *old = cst;
+    
+    cst = st_empty();
+    return old;
 }
 
 /**
  * Enregistre un nouveau symbole dans une table de symboles.
  */
 static symbol st_create_symbol(symbol_table *st, const char id[32], int size) {
-	if(!st) {
-		fprintf(stderr, "called `st_create_symbol()` with `st == NULL`\n");
-		exit(1);
-	}
-	
-	symbol_table_node *n = malloc(sizeof(symbol_table_node));
-	strcpy(n->value.identifier, id);
-	n->value.base_adr = st->mem_offset;
-	n->value.size = size;
-	n->next = NULL;
-	
-	symbol_table_node *m = st->head;
-	if(!m) {
-		st->head = n;
-	}
-	else {
-		while(1) {
-			if(strcmp(m->value.identifier, id) == 0) {
-				extern const char *infile;
-				extern int yylineno;
-				
-				fprintf(stderr, "%s:%i: variable dupliquée: '%s'\n", infile, yylineno, id);
-				free(n);
-				exit(1);
-			}
-			
-			if(!m->next) {
-				m->next = n;
-				break;
-			}
-			
-			m = m->next;
-		}
-	}
-	
-	st->mem_offset += (size == SCALAR_SIZE) ? 1 : size;
-	return n->value;
+    if(!st) {
+        fprintf(stderr, "called `st_create_symbol()` with `st == NULL`\n");
+        exit(1);
+    }
+    
+    symbol_table_node *n = malloc(sizeof(symbol_table_node));
+    strcpy(n->value.identifier, id);
+    n->value.base_adr = st->mem_offset;
+    n->value.size = size;
+    n->next = NULL;
+    
+    symbol_table_node *m = st->head;
+    if(!m) {
+        st->head = n;
+    }
+    else {
+        while(1) {
+            if(strcmp(m->value.identifier, id) == 0) {
+                extern const char *infile;
+                extern int yylineno;
+                
+                fprintf(stderr, "%s:%i: variable dupliquée: '%s'\n", infile, yylineno, id);
+                free(n);
+                exit(1);
+            }
+            
+            if(!m->next) {
+                m->next = n;
+                break;
+            }
+            
+            m = m->next;
+        }
+    }
+    
+    st->mem_offset += (size == SCALAR_SIZE) ? 1 : size;
+    return n->value;
 }
 
 /**
  * Enregistre un nouveau scalaire dans la table de symboles courante.
  */
 symbol st_create_scalar(const char id[32]) {
-	return st_create_symbol(cst, id, SCALAR_SIZE);
+    return st_create_symbol(cst, id, SCALAR_SIZE);
 }
 
 /**
  * Enregistre un nouveau tableau statique dans la table de symboles courante.
  */
 symbol st_create_array(const char id[32], int size) {
-	if(size < 0) {
-		extern const char *infile;
-		extern int yylineno;
-		
-		fprintf(stderr, "%s:%i: '%s' doit avoir une taille positive\n", infile, yylineno, id);
-		exit(1);
-	}
-	
-	return st_create_symbol(cst, id, size);
+    if(size < 0) {
+        extern const char *infile;
+        extern int yylineno;
+        
+        fprintf(stderr, "%s:%i: '%s' doit avoir une taille positive\n", infile, yylineno, id);
+        exit(1);
+    }
+    
+    return st_create_symbol(cst, id, size);
 }
 
 /**
@@ -119,42 +119,42 @@ symbol st_create_array(const char id[32], int size) {
  * `NULL` si le symbole n'existe pas.
  */
 symbol* st_find(const char id[32]) {
-	if(!cst) {
-		fprintf(stderr, "no current st\n");
-		exit(1);
-	}
-	
-	symbol_table_node *n = cst->head;
-	while(n) {
-		if(strcmp(n->value.identifier, id) == 0) {
-			return &n->value;
-		}
-		
-		n = n->next;
-	}
-	
-	return NULL;
+    if(!cst) {
+        fprintf(stderr, "no current st\n");
+        exit(1);
+    }
+    
+    symbol_table_node *n = cst->head;
+    while(n) {
+        if(strcmp(n->value.identifier, id) == 0) {
+            return &n->value;
+        }
+        
+        n = n->next;
+    }
+    
+    return NULL;
 }
 
 /**
  * Créer ou renvoie un nouveau scalaire dans la table de symboles courante.
  */
 symbol st_find_or_create_scalar(const char id[32]) {
-	symbol *s = st_find(id);
-	if(s) {
-		if(s->size != SCALAR_SIZE) {
-			extern const char *infile;
-			extern int yylineno;
-			
-			fprintf(stderr, "%s:%i: '%s' doit être un scalaire\n", infile, yylineno, id);
-			exit(1);
-		}
-		
-		return *s;
-	}
-	else {
-		return st_create_scalar(id);
-	}
+    symbol *s = st_find(id);
+    if(s) {
+        if(s->size != SCALAR_SIZE) {
+            extern const char *infile;
+            extern int yylineno;
+            
+            fprintf(stderr, "%s:%i: '%s' doit être un scalaire\n", infile, yylineno, id);
+            exit(1);
+        }
+        
+        return *s;
+    }
+    else {
+        return st_create_scalar(id);
+    }
 }
 
 /**
@@ -163,27 +163,27 @@ symbol st_find_or_create_scalar(const char id[32]) {
  * et que la taille ne correspond pas au paramètre de cette fonction.
  */
 symbol st_find_or_create_array(const char id[32], int size) {
-	symbol *s = st_find(id);
-	if(s) {
-		if(s->size != size) {
-			extern const char *infile;
-			extern int yylineno;
-			
-			if(size < 0) {
-				fprintf(stderr, "%s:%i: '%s' doit avoir une taille positive\n", infile, yylineno, id);
-			}
-			else {
-				fprintf(stderr, "%s:%i: '%s' doit être un tableau de taille %i, taille actuelle: %i\n", infile, yylineno, id, size, s->size);
-			}
-			
-			exit(1);
-		}
-		
-		return *s;
-	}
-	else {
-		return st_create_array(id, size);
-	}
+    symbol *s = st_find(id);
+    if(s) {
+        if(s->size != size) {
+            extern const char *infile;
+            extern int yylineno;
+            
+            if(size < 0) {
+                fprintf(stderr, "%s:%i: '%s' doit avoir une taille positive\n", infile, yylineno, id);
+            }
+            else {
+                fprintf(stderr, "%s:%i: '%s' doit être un tableau de taille %i, taille actuelle: %i\n", infile, yylineno, id, size, s->size);
+            }
+            
+            exit(1);
+        }
+        
+        return *s;
+    }
+    else {
+        return st_create_array(id, size);
+    }
 }
 
 /**
@@ -193,16 +193,16 @@ symbol st_find_or_create_array(const char id[32], int size) {
  * Cette fonction doit être appelée pendant la création de l'asa.
  */
 symbol st_find_or_yyerror(const char id[32]) {
-	symbol *s = st_find(id);
-	if(!s) {
-		extern const char *infile;
-		extern int yylineno;
-		
-		fprintf(stderr, "%s:%i: variable inconnue: '%s'\n", infile, yylineno, id);
-		exit(1);
-	}
-	
-	return *s;
+    symbol *s = st_find(id);
+    if(!s) {
+        extern const char *infile;
+        extern int yylineno;
+        
+        fprintf(stderr, "%s:%i: variable inconnue: '%s'\n", infile, yylineno, id);
+        exit(1);
+    }
+    
+    return *s;
 }
 
 /**
@@ -210,84 +210,84 @@ symbol st_find_or_yyerror(const char id[32]) {
  * écrit un message d'erreur puis quitte le programme si le symbole n'existe pas.
  */
 symbol st_find_or_internal_error(const char id[32]) {
-	symbol *s = st_find(id);
-	if(!s) {
-		fprintf(stderr, "illegal state: '%s' should exists at this stage but it does not\n", id);
-		exit(1);
-	}
-	
-	return *s;
+    symbol *s = st_find(id);
+    if(!s) {
+        fprintf(stderr, "illegal state: '%s' should exists at this stage but it does not\n", id);
+        exit(1);
+    }
+    
+    return *s;
 }
 
 /**
  * Renvoie l'adresse en mémoire de la première variable intermédiaire.
  */
 int st_temp_offset() {
-	if(!cst) {
-		fprintf(stderr, "no current st\n");
-		exit(1);
-	}
-	
-	return cst->mem_offset;
+    if(!cst) {
+        fprintf(stderr, "no current st\n");
+        exit(1);
+    }
+    
+    return cst->mem_offset;
 }
 
 /**
  * Affiche la table de symboles actuelle.
  */
 void st_fprint_current(FILE *stream) {
-	st_fprint(stream, cst);
+    st_fprint(stream, cst);
 }
 
 /**
  * Affiche une table de symboles.
  */
 void st_fprint(FILE *stream, symbol_table *st) {
-	if(!st) {
-		fprintf(stream, "NULL\n");
-	}
-	else {
-		symbol_table_node *n = st->head;
-		if(!n) {
-			fprintf(stream, "{ }\n");
-		}
-		else {
-			fprintf(stream, "R%d <= { R%d: %s", st->mem_offset, st->mem_offset + n->value.base_adr, n->value.identifier);
+    if(!st) {
+        fprintf(stream, "NULL\n");
+    }
+    else {
+        symbol_table_node *n = st->head;
+        if(!n) {
+            fprintf(stream, "{ }\n");
+        }
+        else {
+            fprintf(stream, "R%d <= { R%d: %s", st->mem_offset, st->mem_offset + n->value.base_adr, n->value.identifier);
 
-			while(n->next) {
-				n = n->next;
+            while(n->next) {
+                n = n->next;
 
-				fprintf(stream, ", R%d: %s", st->mem_offset + n->value.base_adr, n->value.identifier);
-			}
+                fprintf(stream, ", R%d: %s", st->mem_offset + n->value.base_adr, n->value.identifier);
+            }
 
-			fprintf(stream, " } < R%d\n", st->mem_offset * 2);
-		}
-	}
+            fprintf(stream, " } < R%d\n", st->mem_offset * 2);
+        }
+    }
 }
 
 /**
  * Libère la mémoire allouée à la table de symboles courante.
  */
 void st_destroy_current() {
-	st_destroy(cst);
+    st_destroy(cst);
 }
 
 /**
  * Libère la mémoire allouée à une table de symboles.
  */
 void st_destroy(symbol_table *st) {
-	if(!st) {
-		return;
-	}
-	else if(st == cst) {
-		cst = NULL;
-	}
-	
-	symbol_table_node *n = st->head;
-	while(n) {
-		symbol_table_node *m = n->next;
-		free(n);
-		n = m;
-	}
-	
-	free(st);
+    if(!st) {
+        return;
+    }
+    else if(st == cst) {
+        cst = NULL;
+    }
+    
+    symbol_table_node *n = st->head;
+    while(n) {
+        symbol_table_node *m = n->next;
+        free(n);
+        n = m;
+    }
+    
+    free(st);
 }

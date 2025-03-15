@@ -64,16 +64,16 @@
 %left UnaryPlus UnaryMinus
 
 %code requires {
-	#include "asa.h"
+    #include "asa.h"
 }
 
 // yylval
 %union {
-	int ival;
-	char sval[32];
-	struct asa *nval;
-	asa_list nlval;
-	id_list idlval;
+    int ival;
+    char sval[32];
+    struct asa *nval;
+    asa_list nlval;
+    id_list idlval;
 }
 
 %%

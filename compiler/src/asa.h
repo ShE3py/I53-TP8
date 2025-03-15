@@ -14,105 +14,105 @@ namespace ast {
  * Les valeurs possibles d'un noeud.
  */
 typedef enum {
-	/**
-	 * Un nombre entier.
-	 */
-	TagInt,
-	
-	/**
-	 * Une variable.
-	 */
-	TagVar,
-	
-	/**
-	 * Une opération d'indexation.
-	 */
-	TagIndex,
-	
-	/**
-	 * Une opération binaire.
-	 */
-	TagBinaryOp,
-	
-	/**
-	 * Une opération unaire.
-	 */
-	TagUnaryOp,
-	
-	/**
-	 * Une affectation d'un scalaire à un scalaire.
-	 */
-	TagAssignScalar,
-	
-	/**
-	 * Une affectation à un élément d'un tableau.
-	 */
-	TagAssignIndexed,
-	
-	/**
-	 * Une affectation d'un tableau à une liste d'entiers.
-	 */
-	TagAssignIntList,
-	
-	/**
-	 * Une affectation d'un tableau à un autre tableau.
-	 */
-	TagAssignArray,
-	
-	/**
-	 * Une structure si-alors-sinon.
-	 */
-	TagTest,
-	
-	/**
-	 * Une structure tant que-faire.
-	 */
-	TagWhile,
-	
-	/**
-	 * La fonction intrinsèque `LIRE`.
-	 */
-	TagRead,
-	
-	/**
-	 * La fonction intrinsèque `LIRE` sur un élément d'un tableau.
-	 */
-	TagReadIndexed,
-	
-	/**
-	 * La fonction intrinsèque `LIRE` sur un tableau entier.
-	 */
-	TagReadArray,
-	
-	/**
-	 * La fonction intrinsèque `AFFICHER`.
-	 */
-	TagPrint,
-	
-	/**
-	 * La fonction intrinsèque `AFFICHER` sur un tableau.
-	 */
-	TagPrintArray,
-	
-	/**
-	 * Un bloc d'instructions.
-	 */
-	TagBlock,
-	
-	/**
-	 * Une fonction.
-	 */
-	TagFn,
-	
-	/**
-	 * Un appel de fonction.
-	 */
-	TagFnCall,
-	
-	/**
-	 * Un retour de fonction.
-	 */
-	TagReturn
+    /**
+     * Un nombre entier.
+     */
+    TagInt,
+    
+    /**
+     * Une variable.
+     */
+    TagVar,
+    
+    /**
+     * Une opération d'indexation.
+     */
+    TagIndex,
+    
+    /**
+     * Une opération binaire.
+     */
+    TagBinaryOp,
+    
+    /**
+     * Une opération unaire.
+     */
+    TagUnaryOp,
+    
+    /**
+     * Une affectation d'un scalaire à un scalaire.
+     */
+    TagAssignScalar,
+    
+    /**
+     * Une affectation à un élément d'un tableau.
+     */
+    TagAssignIndexed,
+    
+    /**
+     * Une affectation d'un tableau à une liste d'entiers.
+     */
+    TagAssignIntList,
+    
+    /**
+     * Une affectation d'un tableau à un autre tableau.
+     */
+    TagAssignArray,
+    
+    /**
+     * Une structure si-alors-sinon.
+     */
+    TagTest,
+    
+    /**
+     * Une structure tant que-faire.
+     */
+    TagWhile,
+    
+    /**
+     * La fonction intrinsèque `LIRE`.
+     */
+    TagRead,
+    
+    /**
+     * La fonction intrinsèque `LIRE` sur un élément d'un tableau.
+     */
+    TagReadIndexed,
+    
+    /**
+     * La fonction intrinsèque `LIRE` sur un tableau entier.
+     */
+    TagReadArray,
+    
+    /**
+     * La fonction intrinsèque `AFFICHER`.
+     */
+    TagPrint,
+    
+    /**
+     * La fonction intrinsèque `AFFICHER` sur un tableau.
+     */
+    TagPrintArray,
+    
+    /**
+     * Un bloc d'instructions.
+     */
+    TagBlock,
+    
+    /**
+     * Une fonction.
+     */
+    TagFn,
+    
+    /**
+     * Un appel de fonction.
+     */
+    TagFnCall,
+    
+    /**
+     * Un retour de fonction.
+     */
+    TagReturn
 } NodeTag;
 
 /**
@@ -131,9 +131,9 @@ const char* tag_name(NodeTag tag);
  * Les types d'opérateurs.
  */
 typedef enum {
-	Arithmetic,
-	Comparative,
-	Logic
+    Arithmetic,
+    Comparative,
+    Logic
 } OpKind;
 
 
@@ -141,22 +141,22 @@ typedef enum {
  * Un opérateur binaire.
  */
 typedef enum {
-	OpAdd,
-	OpSub,
-	OpMul,
-	OpDiv,
-	OpMod,
-	
-	OpGe,
-	OpGt,
-	OpLe,
-	OpLt,
-	OpEq,
-	OpNe,
-	
-	OpAnd,
-	OpOr,
-	OpXor
+    OpAdd,
+    OpSub,
+    OpMul,
+    OpDiv,
+    OpMod,
+    
+    OpGe,
+    OpGt,
+    OpLe,
+    OpLt,
+    OpEq,
+    OpNe,
+    
+    OpAnd,
+    OpOr,
+    OpXor
 } BinaryOp;
 
 /**
@@ -174,15 +174,15 @@ OpKind binop_kind(BinaryOp binop);
  * Un opérateur unaire.
  */
 typedef enum {
-	/**
-	 * La négation arithmétique.
-	 */
-	OpNeg,
-	
-	/**
-	 * La négation logique.
-	 */
-	OpNot
+    /**
+     * La négation arithmétique.
+     */
+    OpNeg,
+    
+    /**
+     * La négation logique.
+     */
+    OpNot
 } UnaryOp;
 
 /**
@@ -194,365 +194,365 @@ const char* unop_symbol(UnaryOp unop);
  * Un élément d'une liste chaînée d'expressions.
  */
 typedef struct asa_list_node {
-	struct asa *value;
-	struct asa_list_node *next;
+    struct asa *value;
+    struct asa_list_node *next;
 } asa_list_node;
 
 /**
  * Une liste d'expressions, utilisée par `TagAssignIntList`.
  */
 typedef struct {
-	/**
-	 * La longueur de la liste.
-	 */
-	size_t len;
-	
-	/**
-	 * Le nombre d'instructions générés par tous
-	 * les éléments de cette liste.
-	 */
-	size_t ninst;
-	
-	/**
-	 * Le premier élément de la liste chaînée.
-	 */
-	asa_list_node *head;
-	
-	/**
-	 * L'ajout d'un élément NoOp transforme toute cette liste en NoOp.
-	 */
-	int is_nop;
+    /**
+     * La longueur de la liste.
+     */
+    size_t len;
+    
+    /**
+     * Le nombre d'instructions générés par tous
+     * les éléments de cette liste.
+     */
+    size_t ninst;
+    
+    /**
+     * Le premier élément de la liste chaînée.
+     */
+    asa_list_node *head;
+    
+    /**
+     * L'ajout d'un élément NoOp transforme toute cette liste en NoOp.
+     */
+    int is_nop;
 } asa_list;
 
 /**
  * Un élément d'une liste chaînée d'identifiants.
  */
 typedef struct id_list_node {
-	char value[32];
-	struct id_list_node *next;
+    char value[32];
+    struct id_list_node *next;
 } id_list_node;
 
 /**
  * Une liste d'identifiants, utilisée par `TagFn`.
  */
 typedef struct {
-	/**
-	 * La longueur de la liste.
-	 */
-	size_t len;
-	
-	/**
-	 * Le premier élément de la liste chaînée.
-	 */
-	id_list_node *head;
+    /**
+     * La longueur de la liste.
+     */
+    size_t len;
+    
+    /**
+     * Le premier élément de la liste chaînée.
+     */
+    id_list_node *head;
 } id_list;
 
 /**
  * Un noeud d'un arbre syntaxique abstrait.
  */
 typedef struct asa {
-	/**
-	 * L'étiquette du type somme.
-	 */
-	NodeTag tag;
-	
-	/**
-	 * Le nombre d'instructions en machine RAM
-	 * générées par ce noeud.
-	 */
-	int ninst;
-	
-	union {
-		/**
-		 * La valeur d'un noeud `TagInt`.
-		 */
-		struct {
-			/**
-			 * La constante.
-			 */
-			int value;
-		} tag_int;
-		
-		/**
-		 * La valeur d'un noeud `TagVar`.
-		 */
-		struct {
-			/**
-			 * L'identifiant de la variable.
-			 */
-			char identifier[32];
-		} tag_var;
-		
-		/**
-		 * La valeur d'un noeud `TagIndex`.
-		 */
-		struct {
-			/**
-			 * L'identifiant de la variable.
-			 */
-			char identifier[32];
-			
-			/**
-			 * L'indice.
-			 */
-			struct asa *index;
-		} tag_index;
-		
-		/**
-		 * La valeur d'un noeud `TagBinaryOp`.
-		 */
-		struct {
-			/**
-			 * L'opérateur binaire.
-			 */
-			BinaryOp op;
-			
-			/**
-			 * L'opérande gauche.
-			 */
-			struct asa *lhs;
-			
-			/**
-			 * L'opérande droite.
-			 */
-			struct asa *rhs;
-		} tag_binary_op;
-		
-		/**
-		 * La valeur d'un noeud `TagUnaryOp`.
-		 */
-		struct {
-			/**
-			 * L'opérateur unaire.
-			 */
-			UnaryOp op;
-			
-			/**
-			 * L'opérande.
-			 */
-			struct asa *expr;
-		} tag_unary_op;
-		
-		/**
-		 * La valeur d'un noeud `TagAssignScalar`
-		 */
-		struct {
-			/**
-			 * L'identifiant de la variable receveuse.
-			 */
-			char identifier[32];
-			
-			/**
-			 * L'expression à évaluer.
-			 */
-			struct asa *expr;
-		} tag_assign_scalar;
-		
-		/**
-		 * La valeur d'un noeud `TagAssignIndexed`.
-		 */
-		struct {
-			/**
-			 * L'identifiant du tableau à modifier.
-			 */
-			char identifier[32];
-			
-			/**
-			 * L'indice de l'élément à modifier.
-			 */
-			struct asa *index;
-			
-			/**
-			 * L'expression à évaluer.
-			 */
-			struct asa *expr;
-		} tag_assign_indexed;
-		
-		/**
-		 * La valeur d'un noeud `TagAssignIntList`.
-		 */
-		struct {
-			/**
-			 * L'identifiant du tableau à modifier.
-			 */
-			char identifier[32];
-			
-			/**
-			 * La liste d'entiers.
-			 */
-			asa_list values;
-		} tag_assign_int_list;
-		
-		/**
-		 * La valeur d'un noeud `TagAssignArray`.
-		 */
-		struct {
-			/**
-			 * L'identifiant du tableau à modifier.
-			 */
-			char dst[32];
-			
-			/**
-			 * L'identifiant du tableau source;
-			 */
-			char src[32];
-		} tag_assign_array;
-		
-		/**
-		 * La valeur d'un noeud `TagTest`.
-		 */
-		struct {
-			/**
-			 * L'expression à tester.
-			 */
-			struct asa *expr;
-			
-			/**
-			 * Les instructions à exécuter si le test a réussi.
-			 */
-			struct asa *therefore; // nullable
-			
-			/**
-			 * Les instructions à exécuter si le test a échoué.
-			 */
-			struct asa *alternative;  // nullable
-		} tag_test;
-		
-		/**
-		 * La valeur d'un noeud `TagWhile`.
-		 */
-		struct {
-			/**
-			 * L'expression à tester.
-			 */
-			struct asa *expr;
-			
-			/**
-			 * Les instructions à exécuter dans le corps de la boucle.
-			 */
-			struct asa *body; // nonnull
-		} tag_while;
-		
-		/**
-		 * La valeur d'un noeud `TagRead`.
-		 */
-		struct {
-			/**
-			 * L'identifiant de la variable receveuse.
-			 */
-			char identifier[32];
-		} tag_read;
-		
-		/**
-		 * La valeur d'un noeud `TagReadIndexed`.
-		 */
-		struct {
-			/**
-			 * L'identifiant du tableau à modifier.
-			 */
-			char identifier[32];
-			
-			/**
-			 * L'indice dans le tableau.
-			 */
-			struct asa *index;
-		} tag_read_indexed;
-		
-		/**
-		 * La valeur d'un noeud `TagReadArray`.
-		 */
-		struct {
-			/**
-			 * L'identifiant du tableau receveur.
-			 */
-			char identifier[32];
-		} tag_read_array;
-		
-		/**
-		 * La valeur d'un noeud `TagPrint`.
-		 */
-		struct {
-			/**
-			 * L'expression à évaluer puis afficher.
-			 */
-			struct asa *expr;
-		} tag_print;
-		
-		/**
-		 * La valeur d'un noeud `TagPrintArray`.
-		 */
-		struct {
-			/**
-			 * L'identifiant du tableau à afficher.
-			 */
-			char identifier[32];
-		} tag_print_array;
-		
-		/**
-		 * La valeur d'un noeud `TagBlock`.
-		 */
-		struct {
-			/**
-			 * L'instruction actuelle.
-			 */
-			struct asa *stmt; // nonnull, tag != TagBlock
-			
-			/**
-			 * Les instructions suivantes.
-			 */
-			struct asa *next; // nullable, tag == TagBlock
-		} tag_block;
-		
-		/**
-		 * La valeur d'un noeud `TagFn`.
-		 */
-		struct {
-			/**
-			 * Le nom de la fonction.
-			 */
-			char identifier[32];
-			
-			/**
-			 * Les paramètres de la fonction.
-			 */
-			id_list params;
-			
-			/**
-			 * Le corps de la fonction.
-			 */
-			struct asa *body;
-			
-			/**
-			 * La table de symboles de la fonction.
-			 */
-			symbol_table *st;
-		} tag_fn;
-		
-		/**
-		 * La valeur d'un noeud `TagFnCall`.
-		 */
-		struct {
-			/**
-			 * Le nom de la fonction.
-			 */
-			char identifier[32];
-			
-			/**
-			 * Les arguments de l'appel.
-			 */
-			asa_list args;
-		} tag_fn_call;
-		
-		/**
-		 * La valeur d'un noeud `TagReturn`.
-		 */
-		struct {
-			/**
-			 * L'expression à renvoyer.
-			 */
-			struct asa *expr;
-		} tag_return;
-	};
+    /**
+     * L'étiquette du type somme.
+     */
+    NodeTag tag;
+    
+    /**
+     * Le nombre d'instructions en machine RAM
+     * générées par ce noeud.
+     */
+    int ninst;
+    
+    union {
+        /**
+         * La valeur d'un noeud `TagInt`.
+         */
+        struct {
+            /**
+             * La constante.
+             */
+            int value;
+        } tag_int;
+        
+        /**
+         * La valeur d'un noeud `TagVar`.
+         */
+        struct {
+            /**
+             * L'identifiant de la variable.
+             */
+            char identifier[32];
+        } tag_var;
+        
+        /**
+         * La valeur d'un noeud `TagIndex`.
+         */
+        struct {
+            /**
+             * L'identifiant de la variable.
+             */
+            char identifier[32];
+            
+            /**
+             * L'indice.
+             */
+            struct asa *index;
+        } tag_index;
+        
+        /**
+         * La valeur d'un noeud `TagBinaryOp`.
+         */
+        struct {
+            /**
+             * L'opérateur binaire.
+             */
+            BinaryOp op;
+            
+            /**
+             * L'opérande gauche.
+             */
+            struct asa *lhs;
+            
+            /**
+             * L'opérande droite.
+             */
+            struct asa *rhs;
+        } tag_binary_op;
+        
+        /**
+         * La valeur d'un noeud `TagUnaryOp`.
+         */
+        struct {
+            /**
+             * L'opérateur unaire.
+             */
+            UnaryOp op;
+            
+            /**
+             * L'opérande.
+             */
+            struct asa *expr;
+        } tag_unary_op;
+        
+        /**
+         * La valeur d'un noeud `TagAssignScalar`
+         */
+        struct {
+            /**
+             * L'identifiant de la variable receveuse.
+             */
+            char identifier[32];
+            
+            /**
+             * L'expression à évaluer.
+             */
+            struct asa *expr;
+        } tag_assign_scalar;
+        
+        /**
+         * La valeur d'un noeud `TagAssignIndexed`.
+         */
+        struct {
+            /**
+             * L'identifiant du tableau à modifier.
+             */
+            char identifier[32];
+            
+            /**
+             * L'indice de l'élément à modifier.
+             */
+            struct asa *index;
+            
+            /**
+             * L'expression à évaluer.
+             */
+            struct asa *expr;
+        } tag_assign_indexed;
+        
+        /**
+         * La valeur d'un noeud `TagAssignIntList`.
+         */
+        struct {
+            /**
+             * L'identifiant du tableau à modifier.
+             */
+            char identifier[32];
+            
+            /**
+             * La liste d'entiers.
+             */
+            asa_list values;
+        } tag_assign_int_list;
+        
+        /**
+         * La valeur d'un noeud `TagAssignArray`.
+         */
+        struct {
+            /**
+             * L'identifiant du tableau à modifier.
+             */
+            char dst[32];
+            
+            /**
+             * L'identifiant du tableau source;
+             */
+            char src[32];
+        } tag_assign_array;
+        
+        /**
+         * La valeur d'un noeud `TagTest`.
+         */
+        struct {
+            /**
+             * L'expression à tester.
+             */
+            struct asa *expr;
+            
+            /**
+             * Les instructions à exécuter si le test a réussi.
+             */
+            struct asa *therefore; // nullable
+            
+            /**
+             * Les instructions à exécuter si le test a échoué.
+             */
+            struct asa *alternative;  // nullable
+        } tag_test;
+        
+        /**
+         * La valeur d'un noeud `TagWhile`.
+         */
+        struct {
+            /**
+             * L'expression à tester.
+             */
+            struct asa *expr;
+            
+            /**
+             * Les instructions à exécuter dans le corps de la boucle.
+             */
+            struct asa *body; // nonnull
+        } tag_while;
+        
+        /**
+         * La valeur d'un noeud `TagRead`.
+         */
+        struct {
+            /**
+             * L'identifiant de la variable receveuse.
+             */
+            char identifier[32];
+        } tag_read;
+        
+        /**
+         * La valeur d'un noeud `TagReadIndexed`.
+         */
+        struct {
+            /**
+             * L'identifiant du tableau à modifier.
+             */
+            char identifier[32];
+            
+            /**
+             * L'indice dans le tableau.
+             */
+            struct asa *index;
+        } tag_read_indexed;
+        
+        /**
+         * La valeur d'un noeud `TagReadArray`.
+         */
+        struct {
+            /**
+             * L'identifiant du tableau receveur.
+             */
+            char identifier[32];
+        } tag_read_array;
+        
+        /**
+         * La valeur d'un noeud `TagPrint`.
+         */
+        struct {
+            /**
+             * L'expression à évaluer puis afficher.
+             */
+            struct asa *expr;
+        } tag_print;
+        
+        /**
+         * La valeur d'un noeud `TagPrintArray`.
+         */
+        struct {
+            /**
+             * L'identifiant du tableau à afficher.
+             */
+            char identifier[32];
+        } tag_print_array;
+        
+        /**
+         * La valeur d'un noeud `TagBlock`.
+         */
+        struct {
+            /**
+             * L'instruction actuelle.
+             */
+            struct asa *stmt; // nonnull, tag != TagBlock
+            
+            /**
+             * Les instructions suivantes.
+             */
+            struct asa *next; // nullable, tag == TagBlock
+        } tag_block;
+        
+        /**
+         * La valeur d'un noeud `TagFn`.
+         */
+        struct {
+            /**
+             * Le nom de la fonction.
+             */
+            char identifier[32];
+            
+            /**
+             * Les paramètres de la fonction.
+             */
+            id_list params;
+            
+            /**
+             * Le corps de la fonction.
+             */
+            struct asa *body;
+            
+            /**
+             * La table de symboles de la fonction.
+             */
+            symbol_table *st;
+        } tag_fn;
+        
+        /**
+         * La valeur d'un noeud `TagFnCall`.
+         */
+        struct {
+            /**
+             * Le nom de la fonction.
+             */
+            char identifier[32];
+            
+            /**
+             * Les arguments de l'appel.
+             */
+            asa_list args;
+        } tag_fn_call;
+        
+        /**
+         * La valeur d'un noeud `TagReturn`.
+         */
+        struct {
+            /**
+             * L'expression à renvoyer.
+             */
+            struct asa *expr;
+        } tag_return;
+    };
 } asa;
 
 

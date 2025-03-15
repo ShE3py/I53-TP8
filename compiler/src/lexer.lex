@@ -6,8 +6,8 @@
 extern const char *infile;
 
 void yyerror(const char *s) {
-	fprintf(stderr, "%s:%i: %s\n", infile, yylineno, s);
-	exit(1);
+    fprintf(stderr, "%s:%i: %s\n", infile, yylineno, s);
+    exit(1);
 }
 %}
 

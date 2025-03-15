@@ -13,44 +13,44 @@ extern "C" {
  * L'enregistrement d'une variable.
  */
 typedef struct {
-	/**
-	 * L'identifiant du symbole.
-	 */
-	char identifier[32];
-	
-	/**
-	 * L'adresse mémoire du symbole.
-	 */
-	int base_adr;
-	
-	/**
-	 * Le nombre de cellules allouées au symbole dans le cas d'un tableau.
-	 * `SCALAR_SIZE` pour un scalaire.
-	 */
-	int size;
+    /**
+     * L'identifiant du symbole.
+     */
+    char identifier[32];
+    
+    /**
+     * L'adresse mémoire du symbole.
+     */
+    int base_adr;
+    
+    /**
+     * Le nombre de cellules allouées au symbole dans le cas d'un tableau.
+     * `SCALAR_SIZE` pour un scalaire.
+     */
+    int size;
 } symbol;
 
 /**
  * Un élément d'une liste chaînée de symboles.
  */
 typedef struct symbol_table_node {
-	symbol value;
-	struct symbol_table_node *next;
+    symbol value;
+    struct symbol_table_node *next;
 } symbol_table_node;
 
 /**
  * Une table de symboles.
  */
 typedef struct {
-	/**
-	 * Le premier élément de la liste chaînée.
-	 */
-	symbol_table_node *head;
-	
-	/**
-	 * L'adresse de base en mémoire de la prochaine variable.
-	 */
-	int mem_offset;
+    /**
+     * Le premier élément de la liste chaînée.
+     */
+    symbol_table_node *head;
+    
+    /**
+     * L'adresse de base en mémoire de la prochaine variable.
+     */
+    int mem_offset;
 } symbol_table;
 
 /**
