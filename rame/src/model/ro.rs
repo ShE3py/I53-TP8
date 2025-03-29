@@ -10,7 +10,7 @@ use std::str::FromStr;
 
 /// Represents a read-only code segment.
 ///
-/// It may be executed with [`Ram`](crate::runner::Ram), and modified with [`SeqRewriter`](crate::optimizer::SeqRewriter).
+/// It may be executed with [`Ram`](crate::runner::Ram), and modified with [`RwCode`](crate::optimizer::WoCode).
 #[derive(Clone, Eq, PartialEq, Hash, Debug)]
 pub struct RoCode<T: Integer>(Vec<Instruction<T>>);
 
@@ -86,6 +86,14 @@ impl<T: Integer> RoCode<T> {
     #[inline]
     pub fn try_cast<U: Integer + TryFrom<T>>(&self) -> Result<RoCode<U>, <U as TryFrom<T>>::Error> {
         self.try_map(U::try_from)
+    }
+    
+    /// Optimize this code using all passes.
+    #[inline]
+    #[must_use]
+    #[cfg(feature = "optimizer")]
+    pub fn optimize(&self) -> RoCode<T> {
+        crate::optimizer::run_passes(self)
     }
 
     #[inline]

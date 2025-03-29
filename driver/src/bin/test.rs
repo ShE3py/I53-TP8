@@ -11,10 +11,7 @@ use std::process::{exit, ExitCode, Termination};
 use std::str::FromStr;
 
 #[cfg(feature = "optimizer")]
-use {
-    rame::optimizer::SeqRewriter,
-    std::io::{self, Write},
-};
+use std::io::{self, Write};
 
 /// Test an algorithmic program.
 #[derive(Parser)]
@@ -159,7 +156,7 @@ fn scan_file<T: Integer + TryFrom<i128, Error: Debug>>(p: &Path, cc: &Option<Pat
     };
 
     #[cfg(feature = "optimizer")]
-    let opt = SeqRewriter::from(&code).optimize().rewritten();
+    let opt = code.optimize();
 
     let mut ok = true;
 
@@ -175,7 +172,15 @@ fn scan_file<T: Integer + TryFrom<i128, Error: Debug>>(p: &Path, cc: &Option<Pat
         }
 
         #[cfg(feature = "optimizer")]
-        assert!(test.run(opt.try_cast().unwrap()).is_none(), "optimizer check");
+        if let Some(out) = test.run(opt.try_cast().unwrap()) {
+            if ok {
+                println!("failed");
+                ok = false;
+            }
+            
+            eprintln!("opt: {test}: got {out:?} instead");
+            continue;
+        }
     }
 
     if ok {

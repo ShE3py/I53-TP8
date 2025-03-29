@@ -1,6 +1,5 @@
 use clap::ValueEnum;
 use rame::model::{Integer, ParseCodeError, RoCode};
-use rame::optimizer::SeqRewriter;
 use std::ffi::{c_char, CString};
 use std::fmt::Display;
 use std::fs::File;
@@ -123,7 +122,7 @@ impl Driver {
             return code;
         };
 
-        let optimized = SeqRewriter::from(&code?).optimize().rewritten();
+        let optimized = code?.optimize();
 
         if let Some(outfile) = outfile {
             if let Err(e) = optimized.write_to_file(outfile) {

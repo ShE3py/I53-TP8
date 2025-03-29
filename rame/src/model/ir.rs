@@ -34,6 +34,11 @@ impl Ir {
     }
     
     #[inline]
+    pub fn abs_diff(self, other: Ir) -> usize {
+        self.0.abs_diff(other.0)
+    }
+    
+    #[inline]
     pub(super) fn index<T: Integer>(self, code: &[Instruction<T>]) -> Option<Instruction<T>> {
         code.get(self.0).copied()
     }

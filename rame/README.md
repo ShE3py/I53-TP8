@@ -56,7 +56,7 @@ Left is original, right is optimized.
 6 | JUMP 3         |
 ```
 
-### `combine_consts`
+### `fold_consts`
 
 ```
 0 | ADD #0       0 | ADD #3
@@ -75,7 +75,7 @@ Left is original, right is optimized.
 4 | JUMP 3         |
 ```
 
-### `follow_jumps`
+### `simplify_jumps`
 
 ```
 0 | JUMZ 1       0 | JUMZ 3
@@ -84,7 +84,7 @@ Left is original, right is optimized.
 3 | JUML 4       3 | JUML 4
 ```
 
-### `remove_dead_code`
+### `remove_unreachable_code`
 
 ```
 0 | LOAD #0      0 | LOAD #0
