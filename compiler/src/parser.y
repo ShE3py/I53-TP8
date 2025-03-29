@@ -3,7 +3,7 @@
   #include <stdlib.h>
   #include <string.h>
   #include "ts.h"
-  #include "ram/codegen.h"
+  #include "llvm/codegen.h"
 
   extern int yylex();
   extern void yyerror(const char *s);
@@ -79,8 +79,8 @@
 %%
 
 Program:
-  Fns        { codegen_ram($1); asa_list_destroy($1); }
-| Statements { codegen_ram_asa($1); }
+  Fns        { codegen_llvm($1); asa_list_destroy($1); }
+//| Statements { codegen_llvm_asa($1); }
 ;
 
 Fns:

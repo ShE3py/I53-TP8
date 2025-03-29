@@ -1,3 +1,13 @@
+Work-in-progress LLVM backend
+
+```
+cargo run --bin rame-cc -- add.algo -o add.out
+clang add.out compiler/src/llvm/intrinsics.c
+./a.out
+```
+
+---
+
 A pseudolanguage to abstract machine optimizing compiler;
 ```
 $ cargo run --bin rame-run -- -cO - 20

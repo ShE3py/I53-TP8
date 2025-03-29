@@ -114,8 +114,9 @@ impl Driver {
                     unsafe { arc_compile_file(infile.as_ptr(), outfile.as_ptr()) };
                 }
             }
-
-            RoCode::parse(open(compiled))
+            
+            Ok(RoCode::default()) // LLVM backend
+            //RoCode::parse(open(compiled))
         };
 
         if !self.optimize {

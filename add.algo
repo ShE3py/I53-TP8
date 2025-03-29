@@ -1,0 +1,6 @@
+FUNCTION main()
+BEGIN
+    READ a;
+    READ b;
+    PRINT a + b;
+END
